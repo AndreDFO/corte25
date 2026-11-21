@@ -154,6 +154,9 @@ export default function UploadForm() {
             <span className="text-sm font-bold" style={{ color: b.color }}>
               {b.title} <span className="text-foreground/50 font-normal">{clips[b.key].length}/{MAX_PER_BLOCK}</span>
             </span>
+            <a href={`#dica-${b.key}`} className="-mt-1 text-[10px] font-semibold text-foreground/50 underline hover:text-foreground">
+              ver dicas
+            </a>
             {clips[b.key].map((f, i) => (
               <div key={i} className="flex items-center gap-1 rounded-md bg-foreground/5 px-2 py-1 text-xs">
                 <span className="truncate flex-1" title={f.name}>
@@ -188,12 +191,11 @@ export default function UploadForm() {
 
       <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl bg-brand/15 border border-brand/40 px-3 py-2 text-sm">
         <span className="text-foreground/60">
-          {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} ={" "}
-          <b className="text-foreground">{total}</b> combinaç{total === 1 ? "ão" : "ões"}:
+          {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} →
         </span>
-        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">{FREE_VIDEOS} grátis</span>
+        <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">{BATCH_VIDEOS} vídeos</span>
         <span className="text-foreground/40">+</span>
-        <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">{BATCH_VIDEOS} no lote</span>
+        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">{FREE_VIDEOS} grátis</span>
         {total > 0 && total < FREE_VIDEOS + BATCH_VIDEOS && (
           <span className="w-full text-center text-[11px] text-foreground/50">
             Com menos de 3 clipes por bloco, algumas combinações se repetem com textos diferentes.

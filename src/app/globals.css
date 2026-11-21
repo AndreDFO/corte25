@@ -80,3 +80,14 @@ body {
     var(--background);
   background-attachment: fixed;
 }
+
+/* Animações das dicas de gravação (exemplos em loop, tipo GIF) */
+@keyframes dica-entra { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes dica-pula { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.15) rotate(-6deg); } }
+@keyframes dica-barra { from { width: 0; } to { width: 100%; } }
+.dica-cena { animation: dica-entra 0.35s ease-out; }
+.dica-emoji { display: inline-block; animation: dica-pula 1s ease-in-out infinite; }
+.dica-barra { animation: dica-barra 2s linear forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .dica-cena, .dica-emoji, .dica-barra { animation: none; }
+}
