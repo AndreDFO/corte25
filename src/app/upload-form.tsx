@@ -94,8 +94,32 @@ export default function UploadForm() {
   const sending = progress !== null;
 
   return (
-    <form onSubmit={submit} className="rounded-3xl bg-surface p-6 grid gap-5 shadow-[0_20px_60px_-20px_rgba(60,40,160,0.35)] ring-1 ring-foreground/10 border-t-8 border-brand">
+    <form id="criar" onSubmit={submit} className="scroll-mt-20 rounded-3xl bg-surface p-6 grid gap-5 shadow-[0_20px_60px_-20px_rgba(60,40,160,0.35)] ring-1 ring-foreground/10 border-t-8 border-brand">
       <h2 className="text-xl font-bold">Criar vídeos</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => setPlan("free")}
+          className={`rounded-xl border p-3 text-left ${plan === "free" ? "border-accent bg-accent/10" : "border-foreground/15 hover:bg-foreground/5"}`}
+        >
+          <span className="flex items-center gap-2 font-bold">
+            Teste grátis
+            <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-black uppercase text-white">Sem pagar</span>
+          </span>
+          <span className="block text-sm text-foreground/60">{FREE_VIDEOS} vídeos, com marca d&apos;água</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setPlan("full")}
+          className={`rounded-xl border p-3 text-left ${plan === "full" ? "border-brand bg-brand/10" : "border-foreground/15 hover:bg-foreground/5"}`}
+        >
+          <span className="block font-bold">Lote completo</span>
+          <span className="block text-sm text-foreground/60">
+            {BATCH_VIDEOS} vídeos · {FULL_PRICE}
+          </span>
+        </button>
+      </div>
+
 
       <label className="grid gap-2">
         <span className="text-sm font-medium">Nome do produto</span>
@@ -211,27 +235,6 @@ export default function UploadForm() {
           className="text-sm text-foreground/70 file:mr-3 file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-foreground"
         />
       </label>
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={() => setPlan("free")}
-          className={`rounded-xl border p-3 text-left ${plan === "free" ? "border-accent bg-accent/10" : "border-foreground/15 hover:bg-foreground/5"}`}
-        >
-          <span className="block font-bold">Teste grátis</span>
-          <span className="block text-sm text-foreground/60">{FREE_VIDEOS} vídeos, com marca d&apos;água</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setPlan("full")}
-          className={`rounded-xl border p-3 text-left ${plan === "full" ? "border-brand bg-brand/10" : "border-foreground/15 hover:bg-foreground/5"}`}
-        >
-          <span className="block font-bold">Lote completo</span>
-          <span className="block text-sm text-foreground/60">
-            {BATCH_VIDEOS} vídeos · {FULL_PRICE}
-          </span>
-        </button>
-      </div>
 
       {error && <p className="text-sm text-brand-ink">{error}</p>}
 

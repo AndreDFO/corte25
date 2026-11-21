@@ -4,10 +4,10 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-12 grid gap-12 lg:grid-cols-[1.1fr_1fr] items-start">
       <section>
-        <p className="inline-block rounded-full bg-accent text-white text-xs font-bold px-3 py-1.5 mb-6 shadow-sm">
+        <p className="inline-block rounded-full bg-accent text-white text-xs font-bold px-3 py-1.5 mb-4 sm:mb-6 shadow-sm">
           Para vendedores do TikTok Shop
         </p>
-        <h1 className="text-4xl sm:text-[52px] font-black leading-[1.05] tracking-tight">
+        <h1 className="text-[34px] sm:text-[52px] font-black leading-[1.05] tracking-tight">
           Grave 5 ganchos e 5 corpos.
           <br />
           Receba{" "}
@@ -16,7 +16,15 @@ export default function Home() {
           </span>{" "}
           prontos para vender.
         </h1>
-        <p className="mt-6 text-foreground/70 text-lg max-w-xl">
+        <a
+          href="#criar"
+          className="mt-6 flex w-full sm:w-auto sm:inline-flex items-center justify-center gap-3 rounded-2xl bg-accent px-6 py-4 text-lg font-black text-white shadow-[4px_4px_0_0_var(--brand)] hover:translate-y-[-1px] transition lg:hidden"
+        >
+          Testar grátis agora
+          <span className="rounded-full bg-white/20 px-2 py-0.5 text-sm font-bold">2 vídeos</span>
+        </a>
+        <p className="mt-2 text-sm text-foreground/50 lg:hidden">Sem cartão, sem cadastro.</p>
+        <p className="mt-6 lg:mt-6 text-foreground/70 text-lg max-w-xl">
           Todo vídeo de TikTok Shop tem três blocos. Trocando um bloco por vez, cada gravação vira dezenas de
           criativos diferentes para testar. O Corte25 monta 25 combinações em 9:16, com texto de gancho, chamada
           para o carrinho e legenda.
