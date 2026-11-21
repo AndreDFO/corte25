@@ -4,7 +4,6 @@ import path from "path";
 import { Job, Variation, jobDir, loadJob, saveJob } from "./jobs";
 import { generateCopy } from "./copy";
 import { VIDEO_CTA_BG, VIDEO_CTA_TEXT } from "./theme";
-import { FREE_VIDEOS } from "./pricing";
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH || "ffprobe";
@@ -312,11 +311,10 @@ async function processJob(id: string) {
   };
   // Sempre entrega job.count vídeos. Se houver menos combinações que isso, elas se repetem
   // com outro texto de gancho, outra legenda e pequenas mudanças visuais.
-  // A ordem das combinações não depende da tarefa: o teste grátis usa as 2 primeiras
-  // e o lote pago as 25 seguintes. Com 3 × 3 × 3 = 27, juntos cobrem todas sem repetir.
+  // O lote pago entrega 25 + 2 de bônus (27): com 3 × 3 × 3, todas as combinações sem repetir.
+  // O teste grátis entrega só as 2 primeiras.
   const unique = allCombos(blocks.hooks.length, blocks.bodies.length, blocks.ctas.length, "corte25");
-  const offset = job.plan === "full" && unique.length > FREE_VIDEOS ? FREE_VIDEOS : 0;
-  const combos = Array.from({ length: job.count }, (_, i) => unique[(offset + i) % unique.length]);
+  const combos = Array.from({ length: job.count }, (_, i) => unique[i % unique.length]);
 
   job.status = "writing";
   job.message = "Criando hooks e legendas…";

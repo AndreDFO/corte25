@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     blocks,
     music: musicName,
     plan,
-    count: plan === "full" ? BATCH_VIDEOS : FREE_VIDEOS,
+    count: plan === "full" ? BATCH_VIDEOS + FREE_VIDEOS : FREE_VIDEOS,
     durationMode,
     status: "queued",
     message: "Na fila…",

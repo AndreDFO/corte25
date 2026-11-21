@@ -81,7 +81,7 @@ export default function JobView({ id }: { id: string }) {
       {job.plan === "free" && finished && done > 0 && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand/40 bg-brand/10 p-5">
           <div>
-            <p className="font-bold text-lg">Gostou? Libere seus 25 vídeos sem marca d&apos;água.</p>
+            <p className="font-bold text-lg">Gostou? Libere 25 vídeos + 2 de bônus, sem marca d&apos;água.</p>
             <p className="text-sm text-foreground/70">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
           </div>
           <Link href="/" className="rounded-lg bg-brand text-on-brand hover:bg-brand-dark px-5 py-3 font-bold">

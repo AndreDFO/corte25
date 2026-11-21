@@ -118,7 +118,7 @@ export default function UploadForm() {
         >
           <span className="block text-sm font-bold">Lote completo</span>
           <span className="block text-xs text-foreground/60">
-            {BATCH_VIDEOS} vídeos · {FULL_PRICE}
+            {BATCH_VIDEOS} + {FREE_VIDEOS} grátis · {FULL_PRICE}
           </span>
         </button>
       </div>
@@ -144,7 +144,7 @@ export default function UploadForm() {
         {BLOCKS.map((b) => (
           <div
             key={b.key}
-            className="rounded-xl border p-2 grid gap-1.5 content-start"
+            className="min-w-0 rounded-xl border p-2 grid grid-cols-[minmax(0,1fr)] gap-1.5 content-start"
             style={{
               borderColor: `color-mix(in srgb, ${b.color} 45%, transparent)`,
               background: `color-mix(in srgb, ${b.color} 8%, transparent)`,
@@ -158,15 +158,15 @@ export default function UploadForm() {
               ver dicas
             </a>
             {clips[b.key].map((f, i) => (
-              <div key={i} className="flex items-center gap-1 rounded-md bg-foreground/5 px-2 py-1 text-xs">
-                <span className="truncate flex-1" title={f.name}>
-                  {i + 1}. {f.name}
+              <div key={i} className="flex min-w-0 items-center gap-1 rounded-md bg-foreground/5 px-2 py-1 text-xs">
+                <span className="min-w-0 flex-1 truncate" title={f.name}>
+                  ✓ <span className="hidden sm:inline">{b.one} </span>{i + 1}
                 </span>
                 <button
                   type="button"
                   aria-label="remover"
                   onClick={() => remove(b.key, i)}
-                  className="text-foreground/40 hover:text-foreground"
+                  className="shrink-0 text-foreground/40 hover:text-foreground"
                 >
                   ✕
                 </button>
@@ -238,7 +238,7 @@ export default function UploadForm() {
           ? `Enviando… ${progress}%`
           : plan === "free"
             ? `Gerar ${FREE_VIDEOS} vídeos grátis`
-            : `🔒 Gerar ${BATCH_VIDEOS} vídeos · ${FULL_PRICE}`}
+            : `🔒 Gerar ${BATCH_VIDEOS} + ${FREE_VIDEOS} vídeos · ${FULL_PRICE}`}
       </button>
       {plan === "free" && (
         <p className="-mt-2 text-center text-[11px] text-foreground/40">1 teste grátis por pessoa · sem cartão</p>
@@ -252,7 +252,7 @@ export default function UploadForm() {
           >
             <h3 className="text-xl font-bold">Compre créditos</h3>
             <p className="text-foreground/70 text-sm">
-              Cada crédito gera um lote de {BATCH_VIDEOS} vídeos combinando seus ganchos, corpos e CTAs, sem marca
+              Cada crédito gera um lote de {BATCH_VIDEOS} vídeos + {FREE_VIDEOS} de bônus, combinando seus ganchos, corpos e CTAs, sem marca
               d&apos;água, com legendas e download em ZIP.
             </p>
             {PACKAGES.map((p) => (
