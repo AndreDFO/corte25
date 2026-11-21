@@ -119,12 +119,13 @@ export default function UploadForm() {
 
       <div className="grid gap-2">
         <span className="text-sm font-medium">Duração dos vídeos</span>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {[
             ["mix", "Misturar"],
             ["15", "15 s"],
+            ["20", "20 s"],
+            ["25", "25 s"],
             ["30", "30 s"],
-            ["60", "60 s"],
           ].map(([value, label]) => (
             <button
               key={value}
@@ -137,7 +138,7 @@ export default function UploadForm() {
           ))}
         </div>
         <span className="text-xs text-white/40">
-          {duration === "mix" ? "10 vídeos de 15 s, 10 de 30 s e 5 de 60 s." : `Os 25 vídeos com ${duration} segundos.`}
+          {duration === "mix" ? "7 vídeos de 15 s e 6 de cada: 20 s, 25 s e 30 s." : `Os 25 vídeos com ${duration} segundos.`}
         </span>
       </div>
 

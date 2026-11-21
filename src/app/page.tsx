@@ -19,7 +19,7 @@ export default function Home() {
         <ul className="mt-8 grid gap-3 text-white/80">
           {[
             "25 hooks com ângulos diferentes (dor, curiosidade, prova social, oferta…)",
-            "Vídeos de 15, 30 ou 60 segundos, com cenas, cortes, zoom e ritmo diferentes",
+            "Vídeos de 15, 20, 25 ou 30 segundos, com cenas, cortes, zoom e ritmo diferentes",
             "Chamada para o carrinho no final e legenda com hashtags",
             "Música de fundo opcional e download de tudo em ZIP",
           ].map((t) => (

@@ -5,7 +5,7 @@ Site onde o vendedor envia cerca de 5 vídeos de um produto e recebe 25 vídeos 
 Cada um dos 25 vídeos sai diferente:
 
 - **Hook** diferente na tela nos 3 primeiros segundos (criado pelo Claude, ou de modelos prontos sem chave).
-- **Ordem das cenas**, trechos usados, duração (15, 30 ou 60 s; no modo "Misturar" saem 10 de 15 s, 10 de 30 s e 5 de 60 s), zoom, velocidade e cor diferentes.
+- **Ordem das cenas**, trechos usados, duração (15, 20, 25 ou 30 s; no modo "Misturar" saem 7 de 15 s e 6 de cada uma das outras), zoom, velocidade e cor diferentes.
 - **Chamada para o carrinho** no final ("Toca no carrinho laranja").
 - **Legenda e hashtags** para colar no post.
 - **Música de fundo** opcional (enviada pelo usuário) misturada ao áudio original.

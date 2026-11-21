@@ -112,19 +112,19 @@ export interface Recipe {
   musicOffset: number;
 }
 
-export const DURATION_OPTIONS = [15, 30, 60] as const;
-export type DurationMode = "mix" | "15" | "30" | "60";
+export const DURATION_OPTIONS = [15, 20, 25, 30] as const;
+export type DurationMode = "mix" | "15" | "20" | "25" | "30";
 
-// "mix": a cada 5 vídeos, 2 de 15 s, 2 de 30 s e 1 de 60 s (10 + 10 + 5 em 25).
+// "mix": alterna 15, 20, 25 e 30 s (em 25 vídeos: 7 de 15 s e 6 de cada uma das outras).
 export function targetDuration(mode: DurationMode, index: number): number {
-  if (mode === "15" || mode === "30" || mode === "60") return Number(mode);
-  return [15, 30, 15, 30, 60][index % 5];
+  if (mode !== "mix" && (DURATION_OPTIONS as readonly number[]).includes(Number(mode))) return Number(mode);
+  return DURATION_OPTIONS[index % DURATION_OPTIONS.length];
 }
 
 export function buildRecipe(clips: ClipInfo[], seed: string, index: number, target: number): Recipe {
   const r = rng(`${seed}:${index}`);
   // Cenas mais longas em vídeos mais longos.
-  const [minSeg, maxSeg] = target <= 15 ? [1.5, 3.5] : target <= 30 ? [2, 4.5] : [2.5, 5.5];
+  const [minSeg, maxSeg] = target <= 15 ? [1.5, 3.5] : target <= 20 ? [1.8, 4] : [2, 4.5];
 
   // Ordem das cenas: começa por um clipe diferente a cada variação e percorre os outros embaralhados.
   // Quando os vídeos enviados não bastam para preencher o tempo, volta a eles usando outros trechos.
