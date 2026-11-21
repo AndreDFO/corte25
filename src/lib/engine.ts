@@ -309,7 +309,10 @@ async function processJob(id: string) {
     bodies: await probeAll(job.blocks.bodies),
     ctas: await probeAll(job.blocks.ctas),
   };
-  const combos = allCombos(blocks.hooks.length, blocks.bodies.length, blocks.ctas.length, id).slice(0, job.count);
+  // Sempre entrega job.count vídeos. Se houver menos combinações que isso, elas se repetem
+  // com outro texto de gancho, outra legenda e pequenas mudanças visuais.
+  const unique = allCombos(blocks.hooks.length, blocks.bodies.length, blocks.ctas.length, id);
+  const combos = Array.from({ length: job.count }, (_, i) => unique[i % unique.length]);
 
   job.status = "writing";
   job.message = "Criando hooks e legendas…";

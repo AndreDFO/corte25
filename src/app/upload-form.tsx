@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FREE_VIDEOS, FULL_PRICE, MAX_PER_BATCH, MAX_PER_BLOCK, PACKAGES, comboCount } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_VIDEOS, FULL_PRICE, MAX_PER_BLOCK, PACKAGES, comboCount } from "@/lib/pricing";
 
 function clientId() {
   try {
@@ -39,8 +39,6 @@ export default function UploadForm() {
   const [payOpen, setPayOpen] = useState(false);
 
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
-  const fullCount = Math.min(total, MAX_PER_BATCH);
-  const freeCount = Math.min(total, FREE_VIDEOS);
 
   function add(key: BlockKey, list: FileList | null) {
     if (!list) return;
@@ -159,14 +157,18 @@ export default function UploadForm() {
             )}
           </div>
         ))}
-        <div className="rounded-xl bg-brand/10 border border-brand/30 px-4 py-3 text-center">
+        <div className="rounded-xl bg-brand/15 border border-brand/40 px-4 py-3 text-center">
           <span className="text-foreground/60 text-sm">
-            {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} ={" "}
+            {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} = {total} combinaç{total === 1 ? "ão" : "ões"} →{" "}
           </span>
-          <span className="text-2xl font-extrabold">{total}</span>
-          <span className="text-foreground/60 text-sm"> vídeos possíveis</span>
-          {total > MAX_PER_BATCH && (
-            <p className="text-xs text-foreground/40 mt-1">Cada lote gera até {MAX_PER_BATCH} vídeos.</p>
+          <span className="text-2xl font-black">{BATCH_VIDEOS}</span>
+          <span className="text-foreground/60 text-sm"> vídeos</span>
+          {total > 0 && (
+            <p className="text-xs text-foreground/50 mt-1">
+              {total >= BATCH_VIDEOS
+                ? `Escolhemos as ${BATCH_VIDEOS} combinações mais diferentes entre si.`
+                : `As ${total} combinações se repetem com hooks e legendas diferentes até fechar ${BATCH_VIDEOS}. Ideal: 5 ganchos e 5 corpos.`}
+            </p>
           )}
         </div>
       </div>
@@ -226,7 +228,7 @@ export default function UploadForm() {
         >
           <span className="block font-bold">Lote completo</span>
           <span className="block text-sm text-foreground/60">
-            {fullCount ? `${fullCount} vídeos` : "Todas as combinações"} · {FULL_PRICE}
+            {BATCH_VIDEOS} vídeos · {FULL_PRICE}
           </span>
         </button>
       </div>
@@ -240,8 +242,8 @@ export default function UploadForm() {
         {sending
           ? `Enviando… ${progress}%`
           : plan === "free"
-            ? `Gerar ${freeCount === 1 ? "1 vídeo" : `${FREE_VIDEOS} vídeos`} grátis`
-            : `🔒 Gerar ${fullCount ? `${fullCount} ` : ""}vídeos · ${FULL_PRICE}`}
+            ? `Gerar ${FREE_VIDEOS} vídeos grátis`
+            : `🔒 Gerar ${BATCH_VIDEOS} vídeos · ${FULL_PRICE}`}
       </button>
       {plan === "free" && <p className="-mt-2 text-center text-xs text-foreground/40">1 teste grátis por pessoa.</p>}
 
@@ -253,8 +255,8 @@ export default function UploadForm() {
           >
             <h3 className="text-xl font-bold">Compre créditos</h3>
             <p className="text-foreground/70 text-sm">
-              Cada crédito gera um lote completo: todas as combinações dos seus ganchos, corpos e CTAs (até{" "}
-              {MAX_PER_BATCH} vídeos), sem marca d&apos;água, com legendas e download em ZIP.
+              Cada crédito gera um lote de {BATCH_VIDEOS} vídeos combinando seus ganchos, corpos e CTAs, sem marca
+              d&apos;água, com legendas e download em ZIP.
             </p>
             {PACKAGES.map((p) => (
               <button

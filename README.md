@@ -8,7 +8,7 @@ O vendedor grava os vídeos em três blocos e o site monta todas as combinaçõe
 - **Corpos** (até 5): o produto em uso, benefícios, demonstração.
 - **CTAs** (até 5): o fechamento, com chamada para o carrinho.
 
-3 × 3 × 3 = 27 vídeos; 5 × 5 × 5 = 125 (até 30 por lote). Em cada vídeo:
+Cada lote entrega sempre **25 vídeos** (5 ganchos × 5 corpos × 1 CTA = 25). Com mais combinações, escolhemos as 25 mais diferentes; com menos, as combinações se repetem com hooks e legendas diferentes até fechar 25. Em cada vídeo:
 
 - Texto de **hook** na tela durante o gancho (criado pelo Claude, ou de modelos prontos sem chave).
 - Texto de **chamada para o carrinho** durante o CTA.
@@ -21,7 +21,7 @@ Download de cada vídeo, de todos em ZIP e das legendas em .txt.
 ## Planos
 
 - **Teste grátis:** gera 2 combinações com marca d'água "Corte25 · teste grátis". Limite de 1 teste por pessoa (contado pelo endereço de internet e pelo navegador; fica em `data/trials.json`).
-- **Lote completo (1 crédito):** todas as combinações, até 30 vídeos. Créditos em pacotes: 10 lotes por R$ 29,90 e 40 lotes por R$ 89,99. O botão fica travado até o pagamento ser configurado. Para testar sem pagar, coloque `UNLOCK_FULL=true` no `.env.local`.
+- **Lote completo (1 crédito):** 25 vídeos. Créditos em pacotes: 10 lotes por R$ 29,90 e 40 lotes por R$ 89,99. O botão fica travado até o pagamento ser configurado. Para testar sem pagar, coloque `UNLOCK_FULL=true` no `.env.local`.
 - Preços e limites ficam em `src/lib/pricing.ts`.
 
 ## Como rodar

@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
-import { FREE_VIDEOS, MAX_PER_BATCH, MAX_PER_BLOCK, comboCount } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
 
 const MAX_FILE_MB = Number(process.env.MAX_FILE_MB || 300);
@@ -72,7 +72,6 @@ export async function POST(req: Request) {
     await fs.writeFile(path.join(dir, "inputs", musicName), Buffer.from(await music.arrayBuffer()));
   }
 
-  const total = comboCount(hooks.length, bodies.length, ctas.length);
   const job: Job = {
     id,
     createdAt: new Date().toISOString(),
@@ -82,7 +81,7 @@ export async function POST(req: Request) {
     blocks,
     music: musicName,
     plan,
-    count: Math.min(total, plan === "full" ? MAX_PER_BATCH : FREE_VIDEOS),
+    count: plan === "full" ? BATCH_VIDEOS : FREE_VIDEOS,
     durationMode,
     status: "queued",
     message: "Na fila…",
