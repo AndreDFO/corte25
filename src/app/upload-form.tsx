@@ -96,7 +96,7 @@ export default function UploadForm() {
   const sending = progress !== null;
 
   return (
-    <form onSubmit={submit} className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-6 grid gap-5">
+    <form onSubmit={submit} className="rounded-3xl bg-surface p-6 grid gap-5 shadow-[0_20px_60px_-20px_rgba(60,40,160,0.35)] ring-1 ring-foreground/10 border-t-8 border-brand">
       <h2 className="text-xl font-bold">Criar vídeos</h2>
 
       <label className="grid gap-2">
@@ -127,7 +127,7 @@ export default function UploadForm() {
           Seus clipes <span className="text-foreground/40">(até {MAX_PER_BLOCK} de cada bloco)</span>
         </span>
         {BLOCKS.map((b) => (
-          <div key={b.key} className="rounded-xl border p-3 grid gap-2" style={{ borderColor: `color-mix(in srgb, ${b.color} 35%, transparent)` }}>
+          <div key={b.key} className="rounded-xl border p-3 grid gap-2" style={{ borderColor: `color-mix(in srgb, ${b.color} 45%, transparent)`, background: `color-mix(in srgb, ${b.color} 8%, transparent)` }}>
             <div className="flex items-baseline justify-between gap-2">
               <span className="font-bold" style={{ color: b.color }}>
                 {b.title} <span className="text-foreground/50 font-normal">({clips[b.key].length})</span>

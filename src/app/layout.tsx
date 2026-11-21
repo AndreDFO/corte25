@@ -11,10 +11,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" data-theme="claro" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <header className="border-b border-foreground/10">
+        <header className="border-b border-foreground/10 bg-surface/70 backdrop-blur">
           <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
             <Link href="/" className="font-extrabold text-xl tracking-tight">
-              Corte<span className="text-brand-ink">25</span>
+              Corte<span className="ml-0.5 rounded-md bg-brand px-1.5 text-on-brand">25</span>
             </Link>
             <span className="text-sm text-foreground/60">3 × 3 × 3 = 27 vídeos</span>
           </div>
