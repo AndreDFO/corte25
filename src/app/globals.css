@@ -1,13 +1,56 @@
 @import "tailwindcss";
 
+/*
+  Identidade visual do Corte25.
+  Para trocar as cores do site, mude os valores abaixo (e BRAND em src/lib/theme.ts para os vídeos).
+  Os temas "b" e "c" existem só para comparar opções.
+*/
 :root {
-  --background: #0b0b0f;
-  --foreground: #f4f4f5;
+  --background: #0f1011;
+  --surface: #17181b;
+  --foreground: #f4f4f2;
+  --brand: #c8f135; /* verde-limão */
+  --brand-dark: #b2d927;
+  --on-brand: #101106;
+  --accent: #8b7bff; /* lilás */
+  --accent-dark: #7666f0;
+  --on-accent: #0d0b1f;
+  --muted: #a1a1aa;
+}
+
+[data-theme="b"] {
+  --background: #0d1117;
+  --surface: #151b24;
+  --brand: #ff7a1a; /* laranja */
+  --brand-dark: #e86a0e;
+  --on-brand: #1a0d02;
+  --accent: #3ec7ff; /* azul-céu */
+  --accent-dark: #22b4ef;
+  --on-accent: #02141c;
+}
+
+[data-theme="c"] {
+  --background: #120f17;
+  --surface: #1b1722;
+  --brand: #ffcc33; /* amarelo-ouro */
+  --brand-dark: #f0bb1c;
+  --on-brand: #1a1402;
+  --accent: #b06bff; /* roxo */
+  --accent-dark: #9c55f2;
+  --on-accent: #12051f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-on-brand: var(--on-brand);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-on-accent: var(--on-accent);
+  --color-muted: var(--muted);
 }
 
 body {

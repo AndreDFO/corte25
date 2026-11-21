@@ -14,7 +14,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <header className="border-b border-white/10">
           <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
             <Link href="/" className="font-extrabold text-xl tracking-tight">
-              Corte<span className="text-[#FE2C55]">25</span>
+              Corte<span className="text-brand">25</span>
             </Link>
             <span className="text-sm text-white/60">3 × 3 × 3 = 27 vídeos</span>
           </div>

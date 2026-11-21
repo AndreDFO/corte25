@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Job, Variation, jobDir, loadJob, saveJob } from "./jobs";
 import { generateCopy } from "./copy";
+import { VIDEO_CTA_BG, VIDEO_CTA_TEXT } from "./theme";
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH || "ffprobe";
@@ -240,7 +241,7 @@ async function renderVariation(
       `drawtext=fontfile=font.otf:textfile=${hookFile}:fontsize=78:line_spacing=14:text_align=C` +
       `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,${esc(Math.min(3.2, rc.segments[0].dur))})',` +
       `drawtext=fontfile=font.otf:textfile=${ctaFile}:fontsize=64:line_spacing=10:text_align=C` +
-      `:fontcolor=white:box=1:boxcolor=0xFE2C55@0.95:boxborderw=26` +
+      `:fontcolor=${VIDEO_CTA_TEXT}:box=1:boxcolor=${VIDEO_CTA_BG}@0.95:boxborderw=26` +
       `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - Math.min(2.8, rc.segments[2].dur)))})'` +
       (job.plan === "free"
         ? `,drawtext=fontfile=font.otf:textfile=marca.txt:fontsize=46:fontcolor=white@0.55` +

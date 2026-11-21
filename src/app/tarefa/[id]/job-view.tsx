@@ -60,7 +60,7 @@ export default function JobView({ id }: { id: string }) {
             </a>
             <a
               href={`/api/jobs/${id}/zip`}
-              className={`rounded-lg px-4 py-2.5 font-bold ${finished ? "bg-[#FE2C55] hover:bg-[#e0244a]" : "bg-white/10 pointer-events-none text-white/50"}`}
+              className={`rounded-lg px-4 py-2.5 font-bold ${finished ? "bg-brand text-on-brand hover:bg-brand-dark" : "bg-white/10 pointer-events-none text-white/50"}`}
             >
               {finished ? `Baixar tudo (ZIP, ${done} vídeos)` : "ZIP disponível ao terminar"}
             </a>
@@ -70,7 +70,7 @@ export default function JobView({ id }: { id: string }) {
 
       <div className="mt-6 h-2 rounded-full bg-white/10 overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-[#25F4EE] to-[#FE2C55] transition-all"
+          className="h-full bg-gradient-to-r from-accent to-brand transition-all"
           style={{ width: `${job.status === "writing" || job.status === "queued" ? 3 : pct}%` }}
         />
       </div>
@@ -79,19 +79,19 @@ export default function JobView({ id }: { id: string }) {
       </p>
 
       {job.plan === "free" && finished && done > 0 && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#FE2C55]/40 bg-[#FE2C55]/10 p-5">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand/40 bg-brand/10 p-5">
           <div>
             <p className="font-bold text-lg">Gostou? Gere todas as combinações sem marca d&apos;água.</p>
             <p className="text-sm text-white/70">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
           </div>
-          <Link href="/" className="rounded-lg bg-[#FE2C55] hover:bg-[#e0244a] px-5 py-3 font-bold">
+          <Link href="/" className="rounded-lg bg-brand text-on-brand hover:bg-brand-dark px-5 py-3 font-bold">
             🔒 Lote completo · {FULL_PRICE}
           </Link>
         </div>
       )}
 
       {job.status === "error" && done === 0 && (
-        <p className="mt-6 rounded-lg bg-[#FE2C55]/10 border border-[#FE2C55]/40 p-4 text-sm">{job.message}</p>
+        <p className="mt-6 rounded-lg bg-brand/10 border border-brand/40 p-4 text-sm">{job.message}</p>
       )}
 
       <div className="mt-8 grid gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -113,14 +113,14 @@ function Card({ id, v }: { id: string; v: Variation }) {
         {v.status === "done" ? (
           <video src={src} controls playsInline preload="metadata" className="h-full w-full object-cover" />
         ) : v.status === "error" ? (
-          <span className="text-xs text-[#FE2C55] p-3 text-center">Falhou</span>
+          <span className="text-xs text-brand p-3 text-center">Falhou</span>
         ) : (
           <span className="text-xs text-white/40 animate-pulse">{v.status === "rendering" ? "Montando…" : "Na fila"}</span>
         )}
       </div>
       <div className="p-3 grid gap-2 text-xs">
         <p className="font-bold text-sm leading-snug">
-          #{v.index + 1} · <span className="text-[#25F4EE]">{v.durationSec}s</span> · {v.hook}
+          #{v.index + 1} · <span className="text-accent">{v.durationSec}s</span> · {v.hook}
         </p>
         <p className="text-white/40">{v.recipe}</p>
         <p className="text-white/60 line-clamp-3">{fullCaption}</p>
@@ -136,7 +136,7 @@ function Card({ id, v }: { id: string; v: Variation }) {
             {copied ? "Copiado!" : "Copiar legenda"}
           </button>
           {v.status === "done" && (
-            <a href={`${src}?download=1`} className="flex-1 text-center rounded-md bg-[#FE2C55]/90 hover:bg-[#FE2C55] py-1.5 font-semibold">
+            <a href={`${src}?download=1`} className="flex-1 text-center rounded-md bg-brand text-on-brand hover:bg-brand-dark py-1.5 font-semibold">
               Baixar
             </a>
           )}

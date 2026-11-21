@@ -21,9 +21,9 @@ const isVideo = (f: File) => f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm
 
 type BlockKey = "hooks" | "bodies" | "ctas";
 const BLOCKS: { key: BlockKey; title: string; one: string; hint: string; color: string }[] = [
-  { key: "hooks", title: "Ganchos", one: "Gancho", hint: "Os primeiros segundos, que fazem parar de rolar", color: "#FE2C55" },
-  { key: "bodies", title: "Corpos", one: "Corpo", hint: "O produto em uso, benefícios, demonstração", color: "#A1A1AA" },
-  { key: "ctas", title: "CTAs", one: "CTA", hint: "O fechamento: chamada para o carrinho", color: "#25F4EE" },
+  { key: "hooks", title: "Ganchos", one: "Gancho", hint: "Os primeiros segundos, que fazem parar de rolar", color: "var(--color-brand)" },
+  { key: "bodies", title: "Corpos", one: "Corpo", hint: "O produto em uso, benefícios, demonstração", color: "var(--color-muted)" },
+  { key: "ctas", title: "CTAs", one: "CTA", hint: "O fechamento: chamada para o carrinho", color: "var(--color-accent)" },
 ];
 
 export default function UploadForm() {
@@ -105,7 +105,7 @@ export default function UploadForm() {
           value={product}
           onChange={(e) => setProduct(e.target.value)}
           placeholder="Ex.: Mini processador elétrico"
-          className="rounded-lg bg-black/40 border border-white/15 px-3 py-2.5 outline-none focus:border-[#FE2C55]"
+          className="rounded-lg bg-black/40 border border-white/15 px-3 py-2.5 outline-none focus:border-brand"
         />
       </label>
 
@@ -118,7 +118,7 @@ export default function UploadForm() {
           onChange={(e) => setDetails(e.target.value)}
           rows={2}
           placeholder="Ex.: recarregável por USB, pica alho em 5 segundos, de R$ 89 por R$ 39"
-          className="rounded-lg bg-black/40 border border-white/15 px-3 py-2.5 outline-none focus:border-[#FE2C55]"
+          className="rounded-lg bg-black/40 border border-white/15 px-3 py-2.5 outline-none focus:border-brand"
         />
       </label>
 
@@ -127,7 +127,7 @@ export default function UploadForm() {
           Seus clipes <span className="text-white/40">(até {MAX_PER_BLOCK} de cada bloco)</span>
         </span>
         {BLOCKS.map((b) => (
-          <div key={b.key} className="rounded-xl border p-3 grid gap-2" style={{ borderColor: b.color + "55" }}>
+          <div key={b.key} className="rounded-xl border p-3 grid gap-2" style={{ borderColor: `color-mix(in srgb, ${b.color} 35%, transparent)` }}>
             <div className="flex items-baseline justify-between gap-2">
               <span className="font-bold" style={{ color: b.color }}>
                 {b.title} <span className="text-white/50 font-normal">({clips[b.key].length})</span>
@@ -139,7 +139,7 @@ export default function UploadForm() {
                 <span className="truncate">
                   {b.one} {i + 1}: {f.name}
                 </span>
-                <button type="button" onClick={() => remove(b.key, i)} className="text-white/50 hover:text-[#FE2C55]">
+                <button type="button" onClick={() => remove(b.key, i)} className="text-white/50 hover:text-brand">
                   remover
                 </button>
               </div>
@@ -159,7 +159,7 @@ export default function UploadForm() {
             )}
           </div>
         ))}
-        <div className="rounded-xl bg-[#FE2C55]/10 border border-[#FE2C55]/30 px-4 py-3 text-center">
+        <div className="rounded-xl bg-brand/10 border border-brand/30 px-4 py-3 text-center">
           <span className="text-white/60 text-sm">
             {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} ={" "}
           </span>
@@ -185,7 +185,7 @@ export default function UploadForm() {
               key={value}
               type="button"
               onClick={() => setDuration(value)}
-              className={`rounded-lg border py-2 text-sm font-semibold ${duration === value ? "border-[#FE2C55] bg-[#FE2C55]/15" : "border-white/15 hover:bg-white/5"}`}
+              className={`rounded-lg border py-2 text-sm font-semibold ${duration === value ? "border-brand bg-brand/15" : "border-white/15 hover:bg-white/5"}`}
             >
               {label}
             </button>
@@ -214,7 +214,7 @@ export default function UploadForm() {
         <button
           type="button"
           onClick={() => setPlan("free")}
-          className={`rounded-xl border p-3 text-left ${plan === "free" ? "border-[#25F4EE] bg-[#25F4EE]/10" : "border-white/15 hover:bg-white/5"}`}
+          className={`rounded-xl border p-3 text-left ${plan === "free" ? "border-accent bg-accent/10" : "border-white/15 hover:bg-white/5"}`}
         >
           <span className="block font-bold">Teste grátis</span>
           <span className="block text-sm text-white/60">{FREE_VIDEOS} vídeos, com marca d&apos;água</span>
@@ -222,7 +222,7 @@ export default function UploadForm() {
         <button
           type="button"
           onClick={() => setPlan("full")}
-          className={`rounded-xl border p-3 text-left ${plan === "full" ? "border-[#FE2C55] bg-[#FE2C55]/10" : "border-white/15 hover:bg-white/5"}`}
+          className={`rounded-xl border p-3 text-left ${plan === "full" ? "border-brand bg-brand/10" : "border-white/15 hover:bg-white/5"}`}
         >
           <span className="block font-bold">Lote completo</span>
           <span className="block text-sm text-white/60">
@@ -231,11 +231,11 @@ export default function UploadForm() {
         </button>
       </div>
 
-      {error && <p className="text-sm text-[#FE2C55]">{error}</p>}
+      {error && <p className="text-sm text-brand">{error}</p>}
 
       <button
         disabled={sending}
-        className={`rounded-xl disabled:opacity-60 font-bold py-3 text-lg ${plan === "free" ? "bg-[#25F4EE] text-black hover:bg-[#1fd8d3]" : "bg-[#FE2C55] hover:bg-[#e0244a]"}`}
+        className={`rounded-xl disabled:opacity-60 font-bold py-3 text-lg ${plan === "free" ? "bg-accent text-on-accent hover:bg-accent-dark" : "bg-brand text-on-brand hover:bg-brand-dark"}`}
       >
         {sending
           ? `Enviando… ${progress}%`
@@ -248,7 +248,7 @@ export default function UploadForm() {
       {payOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5" onClick={() => setPayOpen(false)}>
           <div
-            className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#15151b] p-6 grid gap-4"
+            className="w-full max-w-sm rounded-2xl border border-white/10 bg-surface p-6 grid gap-4"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-bold">Compre créditos</h3>
@@ -261,7 +261,7 @@ export default function UploadForm() {
                 key={p.credits}
                 type="button"
                 disabled
-                className={`rounded-xl border p-4 text-left opacity-80 ${p.best ? "border-[#FE2C55] bg-[#FE2C55]/10" : "border-white/15"}`}
+                className={`rounded-xl border p-4 text-left opacity-80 ${p.best ? "border-brand bg-brand/10" : "border-white/15"}`}
               >
                 <span className="flex items-baseline justify-between">
                   <span className="font-bold">{p.credits} lotes</span>
