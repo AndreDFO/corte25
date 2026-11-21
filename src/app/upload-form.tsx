@@ -94,75 +94,78 @@ export default function UploadForm() {
   const sending = progress !== null;
 
   return (
-    <form id="criar" onSubmit={submit} className="scroll-mt-20 rounded-3xl bg-surface p-6 grid gap-5 shadow-[0_20px_60px_-20px_rgba(60,40,160,0.35)] ring-1 ring-foreground/10 border-t-8 border-brand">
-      <h2 className="text-xl font-bold">Criar vídeos</h2>
-      <div className="grid grid-cols-2 gap-3">
+    <form
+      id="criar"
+      onSubmit={submit}
+      className="scroll-mt-20 rounded-3xl bg-surface p-5 grid gap-3.5 shadow-[0_20px_60px_-20px_rgba(60,40,160,0.35)] ring-1 ring-foreground/10 border-t-8 border-brand"
+    >
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => setPlan("free")}
-          className={`rounded-xl border p-3 text-left ${plan === "free" ? "border-accent bg-accent/10" : "border-foreground/15 hover:bg-foreground/5"}`}
+          className={`rounded-xl border px-3 py-2 text-left ${plan === "free" ? "border-accent bg-accent/10 ring-2 ring-accent/30" : "border-foreground/15 hover:bg-foreground/5"}`}
         >
-          <span className="flex items-center gap-2 font-bold">
+          <span className="flex items-center gap-1.5 text-sm font-bold">
             Teste grátis
-            <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-black uppercase text-white">Sem pagar</span>
+            <span className="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-black uppercase text-white">Sem pagar</span>
           </span>
-          <span className="block text-sm text-foreground/60">{FREE_VIDEOS} vídeos, com marca d&apos;água</span>
+          <span className="block text-xs text-foreground/60">{FREE_VIDEOS} vídeos com marca d&apos;água</span>
         </button>
         <button
           type="button"
           onClick={() => setPlan("full")}
-          className={`rounded-xl border p-3 text-left ${plan === "full" ? "border-brand bg-brand/10" : "border-foreground/15 hover:bg-foreground/5"}`}
+          className={`rounded-xl border px-3 py-2 text-left ${plan === "full" ? "border-brand bg-brand/10 ring-2 ring-brand/30" : "border-foreground/15 hover:bg-foreground/5"}`}
         >
-          <span className="block font-bold">Lote completo</span>
-          <span className="block text-sm text-foreground/60">
+          <span className="block text-sm font-bold">Lote completo</span>
+          <span className="block text-xs text-foreground/60">
             {BATCH_VIDEOS} vídeos · {FULL_PRICE}
           </span>
         </button>
       </div>
 
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium">Nome do produto</span>
+      <div className="grid sm:grid-cols-2 gap-2">
         <input
           value={product}
           onChange={(e) => setProduct(e.target.value)}
-          placeholder="Ex.: Mini processador elétrico"
-          className="rounded-lg bg-field border border-foreground/15 px-3 py-2.5 outline-none focus:border-brand"
+          placeholder="Nome do produto"
+          aria-label="Nome do produto"
+          className="rounded-lg bg-field border border-foreground/15 px-3 py-2 text-sm outline-none focus:border-brand"
         />
-      </label>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium">
-          Detalhes e oferta <span className="text-foreground/40">(opcional, melhora os textos)</span>
-        </span>
-        <textarea
+        <input
           value={details}
           onChange={(e) => setDetails(e.target.value)}
-          rows={2}
-          placeholder="Ex.: recarregável por USB, pica alho em 5 segundos, de R$ 89 por R$ 39"
-          className="rounded-lg bg-field border border-foreground/15 px-3 py-2.5 outline-none focus:border-brand"
+          placeholder="Oferta (opcional): de R$ 89 por R$ 39"
+          aria-label="Detalhes e oferta"
+          className="rounded-lg bg-field border border-foreground/15 px-3 py-2 text-sm outline-none focus:border-brand"
         />
-      </label>
+      </div>
 
-      <div className="grid gap-3">
-        <span className="text-sm font-medium">
-          Seus clipes <span className="text-foreground/40">(até {MAX_PER_BLOCK} de cada bloco)</span>
-        </span>
+      <div className="grid grid-cols-3 gap-2">
         {BLOCKS.map((b) => (
-          <div key={b.key} className="rounded-xl border p-3 grid gap-2" style={{ borderColor: `color-mix(in srgb, ${b.color} 45%, transparent)`, background: `color-mix(in srgb, ${b.color} 8%, transparent)` }}>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="font-bold" style={{ color: b.color }}>
-                {b.title} <span className="text-foreground/50 font-normal">({clips[b.key].length})</span>
-              </span>
-              <span className="text-xs text-foreground/40 text-right">{b.hint}</span>
-            </div>
+          <div
+            key={b.key}
+            className="rounded-xl border p-2 grid gap-1.5 content-start"
+            style={{
+              borderColor: `color-mix(in srgb, ${b.color} 45%, transparent)`,
+              background: `color-mix(in srgb, ${b.color} 8%, transparent)`,
+            }}
+            title={b.hint}
+          >
+            <span className="text-sm font-bold" style={{ color: b.color }}>
+              {b.title} <span className="text-foreground/50 font-normal">{clips[b.key].length}/{MAX_PER_BLOCK}</span>
+            </span>
             {clips[b.key].map((f, i) => (
-              <div key={i} className="flex justify-between gap-3 rounded-md bg-foreground/5 px-3 py-1.5 text-sm">
-                <span className="truncate">
-                  {b.one} {i + 1}: {f.name}
+              <div key={i} className="flex items-center gap-1 rounded-md bg-foreground/5 px-2 py-1 text-xs">
+                <span className="truncate flex-1" title={f.name}>
+                  {i + 1}. {f.name}
                 </span>
-                <button type="button" onClick={() => remove(b.key, i)} className="text-foreground/50 hover:text-brand-ink">
-                  remover
+                <button
+                  type="button"
+                  aria-label="remover"
+                  onClick={() => remove(b.key, i)}
+                  className="text-foreground/40 hover:text-foreground"
+                >
+                  ✕
                 </button>
               </div>
             ))}
@@ -173,74 +176,61 @@ export default function UploadForm() {
                   e.preventDefault();
                   add(b.key, e.dataTransfer.files);
                 }}
-                className="cursor-pointer rounded-lg border border-dashed border-foreground/20 hover:border-foreground/50 py-2.5 text-center text-sm text-foreground/60"
+                className="cursor-pointer rounded-lg border border-dashed border-foreground/25 hover:border-foreground/50 py-2 text-center text-xs font-semibold text-foreground/60"
               >
                 <input type="file" accept="video/*" multiple hidden onChange={(e) => add(b.key, e.target.files)} />+
-                Adicionar {b.key === "ctas" ? b.title : b.title.toLowerCase()}
+                Adicionar
               </label>
             )}
           </div>
         ))}
-        <div className="rounded-xl bg-brand/15 border border-brand/40 px-4 py-3 text-center">
-          <span className="text-foreground/60 text-sm">
-            {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} = {total} combinaç{total === 1 ? "ão" : "ões"} →{" "}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl bg-brand/15 border border-brand/40 px-3 py-2 text-sm">
+        <span className="text-foreground/60">
+          {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} ={" "}
+          <b className="text-foreground">{total}</b> combinaç{total === 1 ? "ão" : "ões"}:
+        </span>
+        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">{FREE_VIDEOS} grátis</span>
+        <span className="text-foreground/40">+</span>
+        <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">{BATCH_VIDEOS} no lote</span>
+        {total > 0 && total < FREE_VIDEOS + BATCH_VIDEOS && (
+          <span className="w-full text-center text-[11px] text-foreground/50">
+            Com menos de 3 clipes por bloco, algumas combinações se repetem com textos diferentes.
           </span>
-          <span className="text-2xl font-black">{BATCH_VIDEOS}</span>
-          <span className="text-foreground/60 text-sm"> vídeos</span>
-          {total > 0 && (
-            <p className="text-xs text-foreground/50 mt-1">
-              {total >= BATCH_VIDEOS
-                ? `Escolhemos as ${BATCH_VIDEOS} combinações mais diferentes entre si.`
-                : `As ${total} combinações se repetem com hooks e legendas diferentes até fechar ${BATCH_VIDEOS}. Ideal: 5 ganchos e 5 corpos.`}
-            </p>
-          )}
-        </div>
+        )}
       </div>
 
-      <div className="grid gap-2">
-        <span className="text-sm font-medium">Duração máxima de cada vídeo</span>
-        <div className="grid grid-cols-5 gap-2">
-          {[
-            ["auto", "Livre"],
-            ["15", "15 s"],
-            ["20", "20 s"],
-            ["25", "25 s"],
-            ["30", "30 s"],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setDuration(value)}
-              className={`rounded-lg border py-2 text-sm font-semibold ${duration === value ? "border-brand bg-brand/15" : "border-foreground/15 hover:bg-foreground/5"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <span className="text-xs text-foreground/40">
-          {duration === "auto"
-            ? "Usa os clipes inteiros."
-            : `Se passar de ${duration} s, o corpo é encurtado. Gancho e CTA ficam inteiros.`}
-        </span>
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <label className="grid gap-1">
+          <span className="text-xs font-medium text-foreground/60">Duração máxima</span>
+          <select
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            className="rounded-lg bg-field border border-foreground/15 px-2 py-2 outline-none focus:border-brand"
+          >
+            <option value="auto">Livre (clipes inteiros)</option>
+            <option value="15">15 segundos</option>
+            <option value="20">20 segundos</option>
+            <option value="25">25 segundos</option>
+            <option value="30">30 segundos</option>
+          </select>
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs font-medium text-foreground/60">Música de fundo (opcional)</span>
+          <span className="flex items-center gap-2 rounded-lg bg-field border border-foreground/15 px-2 py-2 cursor-pointer">
+            <input type="file" accept="audio/*" hidden onChange={(e) => setMusic(e.target.files?.[0] || null)} />
+            <span className="rounded-md bg-foreground/10 px-2 py-0.5 text-xs font-semibold">Escolher</span>
+            <span className="truncate text-xs text-foreground/60">{music ? music.name : "nenhuma"}</span>
+          </span>
+        </label>
       </div>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-medium">
-          Música de fundo <span className="text-foreground/40">(opcional, use uma que você tem direito de usar)</span>
-        </span>
-        <input
-          type="file"
-          accept="audio/*"
-          onChange={(e) => setMusic(e.target.files?.[0] || null)}
-          className="text-sm text-foreground/70 file:mr-3 file:rounded-md file:border-0 file:bg-foreground/10 file:px-3 file:py-1.5 file:text-foreground"
-        />
-      </label>
 
       {error && <p className="text-sm text-brand-ink">{error}</p>}
 
       <button
         disabled={sending}
-        className={`rounded-xl disabled:opacity-60 font-bold py-3 text-lg ${plan === "free" ? "bg-accent text-on-accent hover:bg-accent-dark" : "bg-brand text-on-brand hover:bg-brand-dark"}`}
+        className={`rounded-xl disabled:opacity-60 font-black py-3 text-lg ${plan === "free" ? "bg-accent text-white hover:bg-accent-dark" : "bg-brand text-on-brand hover:bg-brand-dark"}`}
       >
         {sending
           ? `Enviando… ${progress}%`
@@ -248,7 +238,9 @@ export default function UploadForm() {
             ? `Gerar ${FREE_VIDEOS} vídeos grátis`
             : `🔒 Gerar ${BATCH_VIDEOS} vídeos · ${FULL_PRICE}`}
       </button>
-      {plan === "free" && <p className="-mt-2 text-center text-xs text-foreground/40">1 teste grátis por pessoa.</p>}
+      {plan === "free" && (
+        <p className="-mt-2 text-center text-[11px] text-foreground/40">1 teste grátis por pessoa · sem cartão</p>
+      )}
 
       {payOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5" onClick={() => setPayOpen(false)}>

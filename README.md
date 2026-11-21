@@ -8,7 +8,7 @@ O vendedor grava os vídeos em três blocos e o site monta todas as combinaçõe
 - **Corpos** (até 5): o produto em uso, benefícios, demonstração.
 - **CTAs** (até 5): o fechamento, com chamada para o carrinho.
 
-Cada lote entrega sempre **25 vídeos** (5 ganchos × 5 corpos × 1 CTA = 25). Com mais combinações, escolhemos as 25 mais diferentes; com menos, as combinações se repetem com hooks e legendas diferentes até fechar 25. Em cada vídeo:
+O formato ideal é **3 ganchos × 3 corpos × 3 CTAs = 27 combinações**: as 2 primeiras saem no teste grátis e as outras 25 no lote pago (1 crédito). A ordem das combinações é fixa, então teste e lote se completam sem repetir. Com menos clipes, as combinações se repetem com hooks e legendas diferentes até fechar 25; com mais, ficam as 25 mais diferentes entre si. Em cada vídeo:
 
 - Texto de **hook** na tela durante o gancho (criado pelo Claude, ou de modelos prontos sem chave).
 - Texto de **chamada para o carrinho** durante o CTA.

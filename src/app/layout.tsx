@@ -16,7 +16,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="font-extrabold text-xl tracking-tight">
               Corte<span className="ml-0.5 rounded-md bg-brand px-1.5 text-on-brand">25</span>
             </Link>
-            <span className="hidden sm:inline text-sm text-foreground/60">5 ganchos × 5 corpos = 25 vídeos</span>
+            <span className="hidden sm:inline text-sm text-foreground/60">3 × 3 × 3 = 27 vídeos · 2 grátis</span>
           </div>
         </header>
         <main className="flex-1">{children}</main>
