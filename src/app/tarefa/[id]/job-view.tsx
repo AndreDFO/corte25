@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
-import { FULL_PRICE } from "@/lib/pricing";
+import { FULL_PRICE, ZIP_PART } from "@/lib/pricing";
 
 export default function JobView({ id }: { id: string }) {
   const [job, setJob] = useState<Job | null>(null);
@@ -47,7 +47,7 @@ export default function JobView({ id }: { id: string }) {
           <p className="mt-1 text-foreground/60">
             {job.message}
             {job.copySource === "template" && (
-              <span className="ml-2 text-xs text-yellow-300/80">
+              <span className="ml-2 text-xs text-foreground/50">
                 (hooks de modelos prontos; configure a chave da IA para hooks personalizados)
               </span>
             )}
@@ -67,6 +67,25 @@ export default function JobView({ id }: { id: string }) {
           </div>
         )}
       </div>
+      {finished && done > ZIP_PART && (
+        <div className="mt-3 rounded-xl bg-accent/10 border border-accent/30 px-4 py-3 text-sm">
+          <b>No celular?</b> O ZIP completo é grande. Baixe em partes menores
+          <span className="inline-flex flex-wrap gap-2 ml-2 align-middle">
+            {Array.from({ length: Math.ceil(done / ZIP_PART) }, (_, i) => (
+              <a
+                key={i}
+                href={`/api/jobs/${id}/zip?parte=${i + 1}`}
+                className="rounded-md bg-accent px-2.5 py-1 text-xs font-bold text-white hover:bg-accent-dark"
+              >
+                Parte {i + 1} ({i * ZIP_PART + 1}–{Math.min(done, (i + 1) * ZIP_PART)})
+              </a>
+            ))}
+          </span>
+          <span className="block mt-1 text-foreground/60">
+            Ou toque em <b>Baixar</b> em cada vídeo para salvar direto, sem ZIP.
+          </span>
+        </div>
+      )}
 
       <div className="mt-6 h-2 rounded-full bg-foreground/10 overflow-hidden">
         <div

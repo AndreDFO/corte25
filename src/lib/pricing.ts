@@ -12,3 +12,6 @@ export const FREE_TRIALS_PER_PERSON = 1;
 export function comboCount(h: number, b: number, c: number) {
   return h * b * c;
 }
+
+// Vídeos por parte do ZIP (download no celular): ZIP de 300 MB costuma falhar no download ou ao abrir.
+export const ZIP_PART = 9;

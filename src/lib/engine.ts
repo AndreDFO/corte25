@@ -260,9 +260,11 @@ async function renderVariation(
     "-filter_complex", f.join(";"),
     "-map", "[vout]", "-map", "[aout]",
     "-t", esc(T),
-    "-c:v", "libx264", "-preset", process.env.X264_PRESET || "veryfast", "-crf", "21",
+    "-c:v", "libx264", "-preset", process.env.X264_PRESET || "veryfast", "-crf", "23",
+    // Limite de bitrate: arquivos menores (bom para baixar no celular), qualidade boa para o TikTok.
+    "-maxrate", "6M", "-bufsize", "12M", "-profile:v", "high", "-level", "4.1",
     "-pix_fmt", "yuv420p", "-r", String(FPS),
-    "-c:a", "aac", "-b:a", "160k", "-ar", "44100",
+    "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
     "-movflags", "+faststart",
     "-metadata", `title=${job.product} ${v.index + 1}`,
     path.join("outputs", v.file),
