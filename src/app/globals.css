@@ -3,7 +3,7 @@
 /*
   Identidade visual do Corte25.
   Para trocar as cores do site, mude os valores abaixo (e BRAND em src/lib/theme.ts para os vídeos).
-  Os temas "b" e "c" existem só para comparar opções.
+  Os temas alternativos abaixo existem só para comparar opções de fundo.
 */
 :root {
   --background: #0f1011;
@@ -16,28 +16,36 @@
   --accent-dark: #7666f0;
   --on-accent: #0d0b1f;
   --muted: #a1a1aa;
+  --field: rgba(0, 0, 0, 0.4);
+  --brand-ink: var(--brand);
+  --accent-ink: var(--accent);
 }
 
-[data-theme="b"] {
-  --background: #0d1117;
-  --surface: #151b24;
-  --brand: #ff7a1a; /* laranja */
-  --brand-dark: #e86a0e;
-  --on-brand: #1a0d02;
-  --accent: #3ec7ff; /* azul-céu */
-  --accent-dark: #22b4ef;
-  --on-accent: #02141c;
+/* Fundo claro */
+[data-theme="claro"] {
+  --background: #f6f6f1;
+  --surface: #ffffff;
+  --foreground: #16170f;
+  --field: #ffffff;
+  --muted: #6b6b63;
+  --brand-ink: #4f6b00;
+  --accent-ink: #5a46e0;
 }
 
-[data-theme="c"] {
-  --background: #120f17;
-  --surface: #1b1722;
-  --brand: #ffcc33; /* amarelo-ouro */
-  --brand-dark: #f0bb1c;
-  --on-brand: #1a1402;
-  --accent: #b06bff; /* roxo */
-  --accent-dark: #9c55f2;
-  --on-accent: #12051f;
+/* Fundo roxo escuro */
+[data-theme="roxo"] {
+  --background: #17122b;
+  --surface: #211a3b;
+  --foreground: #f3f1fa;
+  --field: rgba(0, 0, 0, 0.3);
+}
+
+/* Fundo verde-petróleo */
+[data-theme="petroleo"] {
+  --background: #0c2326;
+  --surface: #123034;
+  --foreground: #eef6f4;
+  --field: rgba(0, 0, 0, 0.3);
 }
 
 @theme inline {
@@ -51,6 +59,9 @@
   --color-accent-dark: var(--accent-dark);
   --color-on-accent: var(--on-accent);
   --color-muted: var(--muted);
+  --color-field: var(--field);
+  --color-brand-ink: var(--brand-ink);
+  --color-accent-ink: var(--accent-ink);
 }
 
 body {

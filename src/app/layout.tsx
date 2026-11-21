@@ -11,16 +11,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <header className="border-b border-white/10">
+        <header className="border-b border-foreground/10">
           <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
             <Link href="/" className="font-extrabold text-xl tracking-tight">
-              Corte<span className="text-brand">25</span>
+              Corte<span className="text-brand-ink">25</span>
             </Link>
-            <span className="text-sm text-white/60">3 × 3 × 3 = 27 vídeos</span>
+            <span className="text-sm text-foreground/60">3 × 3 × 3 = 27 vídeos</span>
           </div>
         </header>
         <main className="flex-1">{children}</main>
-        <footer className="border-t border-white/10 py-6 text-center text-xs text-white/40">
+        <footer className="border-t border-foreground/10 py-6 text-center text-xs text-foreground/40">
           Corte25 · versão de teste
         </footer>
       </body>

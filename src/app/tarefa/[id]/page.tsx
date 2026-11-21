@@ -8,7 +8,7 @@ async function Loader({ params }: { params: Promise<{ id: string }> }) {
 
 export default function TarefaPage({ params }: PageProps<"/tarefa/[id]">) {
   return (
-    <Suspense fallback={<p className="p-10 text-center text-white/60">Carregando…</p>}>
+    <Suspense fallback={<p className="p-10 text-center text-foreground/60">Carregando…</p>}>
       <Loader params={params} />
     </Suspense>
   );

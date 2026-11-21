@@ -30,8 +30,8 @@ export default function JobView({ id }: { id: string }) {
     };
   }, [id]);
 
-  if (notFound) return <p className="p-10 text-center text-white/60">Tarefa não encontrada.</p>;
-  if (!job) return <p className="p-10 text-center text-white/60">Carregando…</p>;
+  if (notFound) return <p className="p-10 text-center text-foreground/60">Tarefa não encontrada.</p>;
+  if (!job) return <p className="p-10 text-center text-foreground/60">Carregando…</p>;
 
   const done = job.variations.filter((v) => v.status === "done").length;
   const total = job.variations.length || job.count || 1;
@@ -42,9 +42,9 @@ export default function JobView({ id }: { id: string }) {
     <div className="mx-auto max-w-6xl px-5 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-white/50">Produto</p>
+          <p className="text-sm text-foreground/50">Produto</p>
           <h1 className="text-3xl font-extrabold">{job.product}</h1>
-          <p className="mt-1 text-white/60">
+          <p className="mt-1 text-foreground/60">
             {job.message}
             {job.copySource === "template" && (
               <span className="ml-2 text-xs text-yellow-300/80">
@@ -55,12 +55,12 @@ export default function JobView({ id }: { id: string }) {
         </div>
         {done > 0 && (
           <div className="flex gap-3">
-            <a href={`/api/jobs/${id}/legendas`} className="rounded-lg border border-white/20 px-4 py-2.5 font-semibold hover:bg-white/5">
+            <a href={`/api/jobs/${id}/legendas`} className="rounded-lg border border-foreground/20 px-4 py-2.5 font-semibold hover:bg-foreground/5">
               Baixar legendas
             </a>
             <a
               href={`/api/jobs/${id}/zip`}
-              className={`rounded-lg px-4 py-2.5 font-bold ${finished ? "bg-brand text-on-brand hover:bg-brand-dark" : "bg-white/10 pointer-events-none text-white/50"}`}
+              className={`rounded-lg px-4 py-2.5 font-bold ${finished ? "bg-brand text-on-brand hover:bg-brand-dark" : "bg-foreground/10 pointer-events-none text-foreground/50"}`}
             >
               {finished ? `Baixar tudo (ZIP, ${done} vídeos)` : "ZIP disponível ao terminar"}
             </a>
@@ -68,13 +68,13 @@ export default function JobView({ id }: { id: string }) {
         )}
       </div>
 
-      <div className="mt-6 h-2 rounded-full bg-white/10 overflow-hidden">
+      <div className="mt-6 h-2 rounded-full bg-foreground/10 overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-accent to-brand transition-all"
           style={{ width: `${job.status === "writing" || job.status === "queued" ? 3 : pct}%` }}
         />
       </div>
-      <p className="mt-2 text-sm text-white/50">
+      <p className="mt-2 text-sm text-foreground/50">
         {done} de {total} vídeos prontos
       </p>
 
@@ -82,7 +82,7 @@ export default function JobView({ id }: { id: string }) {
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand/40 bg-brand/10 p-5">
           <div>
             <p className="font-bold text-lg">Gostou? Gere todas as combinações sem marca d&apos;água.</p>
-            <p className="text-sm text-white/70">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
+            <p className="text-sm text-foreground/70">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
           </div>
           <Link href="/" className="rounded-lg bg-brand text-on-brand hover:bg-brand-dark px-5 py-3 font-bold">
             🔒 Lote completo · {FULL_PRICE}
@@ -108,22 +108,22 @@ function Card({ id, v }: { id: string; v: Variation }) {
   const src = `/api/jobs/${id}/files/${v.file}`;
   const fullCaption = `${v.caption} ${v.hashtags.map((h) => "#" + h).join(" ")}`;
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col">
+    <div className="rounded-xl border border-foreground/10 bg-foreground/[0.03] overflow-hidden flex flex-col">
       <div className="aspect-[9/16] bg-black grid place-items-center">
         {v.status === "done" ? (
           <video src={src} controls playsInline preload="metadata" className="h-full w-full object-cover" />
         ) : v.status === "error" ? (
-          <span className="text-xs text-brand p-3 text-center">Falhou</span>
+          <span className="text-xs text-brand-ink p-3 text-center">Falhou</span>
         ) : (
-          <span className="text-xs text-white/40 animate-pulse">{v.status === "rendering" ? "Montando…" : "Na fila"}</span>
+          <span className="text-xs text-foreground/40 animate-pulse">{v.status === "rendering" ? "Montando…" : "Na fila"}</span>
         )}
       </div>
       <div className="p-3 grid gap-2 text-xs">
         <p className="font-bold text-sm leading-snug">
-          #{v.index + 1} · <span className="text-accent">{v.durationSec}s</span> · {v.hook}
+          #{v.index + 1} · <span className="text-accent-ink">{v.durationSec}s</span> · {v.hook}
         </p>
-        <p className="text-white/40">{v.recipe}</p>
-        <p className="text-white/60 line-clamp-3">{fullCaption}</p>
+        <p className="text-foreground/40">{v.recipe}</p>
+        <p className="text-foreground/60 line-clamp-3">{fullCaption}</p>
         <div className="flex gap-2 mt-auto">
           <button
             onClick={() => {
@@ -131,7 +131,7 @@ function Card({ id, v }: { id: string; v: Variation }) {
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
-            className="flex-1 rounded-md bg-white/10 hover:bg-white/15 py-1.5"
+            className="flex-1 rounded-md bg-foreground/10 hover:bg-foreground/15 py-1.5"
           >
             {copied ? "Copiado!" : "Copiar legenda"}
           </button>
