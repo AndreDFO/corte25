@@ -26,6 +26,8 @@ export interface Job {
   details: string;
   inputs: string[];
   music?: string;
+  plan: "free" | "full";
+  count: number;
   durationMode?: "mix" | "15" | "20" | "25" | "30";
   status: "queued" | "writing" | "rendering" | "done" | "error";
   copySource?: "claude" | "template";

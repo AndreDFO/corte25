@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
+import { FULL_PRICE, FULL_VIDEOS } from "@/lib/pricing";
 
 export default function JobView({ id }: { id: string }) {
   const [job, setJob] = useState<Job | null>(null);
@@ -32,7 +34,7 @@ export default function JobView({ id }: { id: string }) {
   if (!job) return <p className="p-10 text-center text-white/60">Carregando…</p>;
 
   const done = job.variations.filter((v) => v.status === "done").length;
-  const total = job.variations.length || 25;
+  const total = job.variations.length || job.count || FULL_VIDEOS;
   const pct = Math.round((done / total) * 100);
   const finished = job.status === "done" || job.status === "error";
 
@@ -75,6 +77,18 @@ export default function JobView({ id }: { id: string }) {
       <p className="mt-2 text-sm text-white/50">
         {done} de {total} vídeos prontos
       </p>
+
+      {job.plan === "free" && finished && done > 0 && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#FE2C55]/40 bg-[#FE2C55]/10 p-5">
+          <div>
+            <p className="font-bold text-lg">Gostou? Gere os {FULL_VIDEOS} vídeos sem marca d&apos;água.</p>
+            <p className="text-sm text-white/70">Cada um com hook, cenas e ritmo diferentes, prontos para postar.</p>
+          </div>
+          <Link href="/" className="rounded-lg bg-[#FE2C55] hover:bg-[#e0244a] px-5 py-3 font-bold">
+            🔒 Gerar {FULL_VIDEOS} vídeos · {FULL_PRICE}
+          </Link>
+        </div>
+      )}
 
       {job.status === "error" && done === 0 && (
         <p className="mt-6 rounded-lg bg-[#FE2C55]/10 border border-[#FE2C55]/40 p-4 text-sm">{job.message}</p>

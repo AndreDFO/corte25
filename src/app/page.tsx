@@ -22,6 +22,7 @@ export default function Home() {
             "Vídeos de 15, 20, 25 ou 30 segundos, com cenas, cortes, zoom e ritmo diferentes",
             "Chamada para o carrinho no final e legenda com hashtags",
             "Música de fundo opcional e download de tudo em ZIP",
+            "Teste grátis: gere 2 vídeos antes de pagar",
           ].map((t) => (
             <li key={t} className="flex gap-3">
               <span className="text-[#FE2C55] font-bold">✓</span>

@@ -12,6 +12,12 @@ Cada um dos 25 vídeos sai diferente:
 
 Download de cada vídeo, de todos em ZIP e das legendas em .txt.
 
+## Planos
+
+- **Teste grátis:** gera 2 vídeos com marca d'água "Corte25 · teste grátis". Limite de 1 teste por pessoa (contado pelo endereço de internet e pelo navegador; fica em `data/trials.json`).
+- **25 vídeos:** o botão mostra o preço e fica travado até o pagamento ser configurado. Para testar sem pagar, coloque `UNLOCK_FULL=true` no `.env.local`.
+- Preço e quantidades ficam em `src/lib/pricing.ts`.
+
 ## Como rodar
 
 Precisa de **Node.js 20+** e **FFmpeg 6.1+** instalados.

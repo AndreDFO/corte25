@@ -9,7 +9,6 @@ const FFPROBE = process.env.FFPROBE_PATH || "ffprobe";
 const W = 1080;
 const H = 1920;
 const FPS = 30;
-export const VARIATIONS = Number(process.env.VARIATIONS || 25);
 const CONCURRENCY = Math.max(1, Number(process.env.RENDER_CONCURRENCY || 2));
 const FONT_SRC = path.join(process.cwd(), "assets", "fonts", "Inter-ExtraBold.otf");
 
@@ -192,6 +191,7 @@ async function renderVariation(
   const ctaFile = `cta_${v.index}.txt`;
   await fs.writeFile(path.join(dir, hookFile), wrap(v.hook, 18));
   await fs.writeFile(path.join(dir, ctaFile), wrap(v.cta, 24));
+  if (job.plan === "free") await fs.writeFile(path.join(dir, "marca.txt"), "Corte25 · teste grátis");
 
   const args: string[] = ["-y", "-hide_banner", "-loglevel", "error"];
   for (const s of rc.segments) {
@@ -242,7 +242,12 @@ async function renderVariation(
       `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,3.2)',` +
       `drawtext=fontfile=font.otf:textfile=${ctaFile}:fontsize=64:line_spacing=10:text_align=C` +
       `:fontcolor=white:box=1:boxcolor=0xFE2C55@0.95:boxborderw=26` +
-      `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - 2.8))})'[vout]`,
+      `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - 2.8))})'` +
+      (job.plan === "free"
+        ? `,drawtext=fontfile=font.otf:textfile=marca.txt:fontsize=46:fontcolor=white@0.55` +
+          `:borderw=3:bordercolor=black@0.4:x=(w-text_w)/2:y=h*0.58`
+        : "") +
+      `[vout]`,
   );
   if (musicInput >= 0) {
     f.push(`[${musicInput}:a]volume=0.28,atrim=duration=${esc(T)},afade=t=out:st=${esc(Math.max(0, T - 1))}:d=1[am]`);
@@ -298,7 +303,7 @@ async function processJob(id: string) {
   job.status = "writing";
   job.message = "Criando hooks e legendas…";
   await saveJob(job);
-  const { items, source } = await generateCopy(job.product, job.details, VARIATIONS);
+  const { items, source } = await generateCopy(job.product, job.details, job.count);
 
   const mode = (job.durationMode || "mix") as DurationMode;
   const recipes = items.map((_, i) => buildRecipe(usable, id, i, targetDuration(mode, i)));

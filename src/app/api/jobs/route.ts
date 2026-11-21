@@ -2,6 +2,8 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
+import { FREE_VIDEOS, FULL_VIDEOS } from "@/lib/pricing";
+import { claimTrial, trialKeys } from "@/lib/trials";
 
 const MAX_VIDEOS = 10;
 const MAX_FILE_MB = Number(process.env.MAX_FILE_MB || 300);
@@ -22,6 +24,22 @@ export async function POST(req: Request) {
   for (const v of [...videos, ...(music instanceof File && music.size > 0 ? [music] : [])]) {
     if (v.size > MAX_FILE_MB * 1024 * 1024)
       return Response.json({ error: `${v.name} passa de ${MAX_FILE_MB} MB.` }, { status: 400 });
+  }
+
+  const plan = form.get("plan") === "full" ? "full" : "free";
+  if (plan === "full" && process.env.UNLOCK_FULL !== "true") {
+    return Response.json(
+      { error: "O pagamento ainda não está disponível. Use o teste grátis por enquanto." },
+      { status: 402 },
+    );
+  }
+  if (plan === "free") {
+    const ok = await claimTrial(trialKeys(req, String(form.get("clientId") || "") || null));
+    if (!ok)
+      return Response.json(
+        { error: "Você já usou seu teste grátis. Para gerar mais vídeos, escolha os 25 vídeos.", code: "trial_used" },
+        { status: 403 },
+      );
   }
 
   const id = newJobId();
@@ -47,6 +65,8 @@ export async function POST(req: Request) {
     details,
     inputs,
     music: musicName,
+    plan,
+    count: plan === "full" ? FULL_VIDEOS : FREE_VIDEOS,
     durationMode,
     status: "queued",
     message: "Na fila…",

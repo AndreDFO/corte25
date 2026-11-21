@@ -2,6 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FREE_VIDEOS, FULL_PRICE, FULL_VIDEOS } from "@/lib/pricing";
+
+function clientId() {
+  try {
+    let id = localStorage.getItem("corte25_cid");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("corte25_cid", id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
 
 export default function UploadForm() {
   const router = useRouter();
@@ -12,6 +26,8 @@ export default function UploadForm() {
   const [duration, setDuration] = useState("mix");
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [plan, setPlan] = useState<"free" | "full">("free");
+  const [payOpen, setPayOpen] = useState(false);
 
   function addVideos(list: FileList | null) {
     if (!list) return;
@@ -28,6 +44,8 @@ export default function UploadForm() {
     fd.append("product", product);
     fd.append("details", details);
     fd.append("duration", duration);
+    fd.append("plan", plan);
+    fd.append("clientId", clientId());
     videos.forEach((v) => fd.append("videos", v));
     if (music) fd.append("music", music);
 
@@ -38,6 +56,11 @@ export default function UploadForm() {
     xhr.onload = () => {
       try {
         const res = JSON.parse(xhr.responseText);
+        if (xhr.status === 402) {
+          setProgress(null);
+          setPayOpen(true);
+          return;
+        }
         if (xhr.status >= 400) throw new Error(res.error || "Erro no envio");
         router.push(`/tarefa/${res.id}`);
       } catch (err) {
@@ -58,7 +81,26 @@ export default function UploadForm() {
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 grid gap-5">
-      <h2 className="text-xl font-bold">Criar 25 vídeos</h2>
+      <h2 className="text-xl font-bold">Criar vídeos</h2>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => setPlan("free")}
+          className={`rounded-xl border p-3 text-left ${plan === "free" ? "border-[#25F4EE] bg-[#25F4EE]/10" : "border-white/15 hover:bg-white/5"}`}
+        >
+          <span className="block font-bold">Teste grátis</span>
+          <span className="block text-sm text-white/60">{FREE_VIDEOS} vídeos, com marca d&apos;água</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setPlan("full")}
+          className={`rounded-xl border p-3 text-left ${plan === "full" ? "border-[#FE2C55] bg-[#FE2C55]/10" : "border-white/15 hover:bg-white/5"}`}
+        >
+          <span className="block font-bold">{FULL_VIDEOS} vídeos</span>
+          <span className="block text-sm text-white/60">{FULL_PRICE}, sem marca d&apos;água</span>
+        </button>
+      </div>
 
       <label className="grid gap-2">
         <span className="text-sm font-medium">Nome do produto</span>
@@ -158,10 +200,39 @@ export default function UploadForm() {
 
       <button
         disabled={sending}
-        className="rounded-xl bg-[#FE2C55] hover:bg-[#e0244a] disabled:opacity-60 font-bold py-3 text-lg"
+        className={`rounded-xl disabled:opacity-60 font-bold py-3 text-lg ${plan === "free" ? "bg-[#25F4EE] text-black hover:bg-[#1fd8d3]" : "bg-[#FE2C55] hover:bg-[#e0244a]"}`}
       >
-        {sending ? `Enviando… ${progress}%` : "Gerar 25 vídeos"}
+        {sending
+          ? `Enviando… ${progress}%`
+          : plan === "free"
+            ? `Gerar ${FREE_VIDEOS} vídeos grátis`
+            : `🔒 Gerar ${FULL_VIDEOS} vídeos · ${FULL_PRICE}`}
       </button>
+      {plan === "free" && (
+        <p className="-mt-2 text-center text-xs text-white/40">1 teste grátis por pessoa.</p>
+      )}
+
+      {payOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5" onClick={() => setPayOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#15151b] p-6 grid gap-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold">
+              {FULL_VIDEOS} vídeos por {FULL_PRICE}
+            </h3>
+            <p className="text-white/70 text-sm">
+              Todos os vídeos sem marca d&apos;água, com hooks, legendas e download em ZIP.
+            </p>
+            <button disabled className="rounded-xl bg-[#FE2C55] font-bold py-3 opacity-60">
+              Pagar com Pix ou cartão (em breve)
+            </button>
+            <p className="text-xs text-white/40">
+              O pagamento ainda está sendo configurado. Enquanto isso, você pode usar o teste grátis.
+            </p>
+            <button type="button" onClick={() => setPayOpen(false)} className="text-sm text-white/60 hover:text-white">
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
