@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Corte25
 
-## Getting Started
+Site onde o vendedor envia cerca de 5 vídeos de um produto e recebe 25 vídeos 9:16 prontos para o TikTok Shop.
 
-First, run the development server:
+Cada um dos 25 vídeos sai diferente:
+
+- **Hook** diferente na tela nos 3 primeiros segundos (criado pelo Claude, ou de modelos prontos sem chave).
+- **Ordem das cenas**, trechos usados, duração (15 a 29 s), zoom, velocidade e cor diferentes.
+- **Chamada para o carrinho** no final ("Toca no carrinho laranja").
+- **Legenda e hashtags** para colar no post.
+- **Música de fundo** opcional (enviada pelo usuário) misturada ao áudio original.
+
+Download de cada vídeo, de todos em ZIP e das legendas em .txt.
+
+## Como rodar
+
+Precisa de **Node.js 20+** e **FFmpeg 6.1+** instalados.
+
+- Windows: `winget install Gyan.FFmpeg`
+- Mac: `brew install ffmpeg`
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # e coloque sua ANTHROPIC_API_KEY (opcional)
+npm run build
+npm start                    # abre em http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Para desenvolver: `npm run dev`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Como funciona
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Parte | Arquivo |
+| --- | --- |
+| Tela de envio | `src/app/page.tsx`, `src/app/upload-form.tsx` |
+| Progresso e galeria | `src/app/tarefa/[id]/job-view.tsx` |
+| API (envio, status, arquivos, ZIP) | `src/app/api/jobs/**` |
+| Motor de vídeo (FFmpeg) | `src/lib/engine.ts` |
+| Hooks e legendas (Claude) | `src/lib/copy.ts` |
+| Tarefas salvas em disco | `src/lib/jobs.ts` (pasta `data/`) |
 
-## Learn More
+O processamento roda no próprio servidor Node, 2 vídeos por vez. Com 5 vídeos de entrada, as 25 variações levam alguns minutos.
 
-To learn more about Next.js, take a look at the following resources:
+## Próximas etapas
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Login de usuários e limite de vídeos por plano.
+- Assinatura e pagamento.
+- Armazenamento na nuvem e fila de processamento separada para escalar.
+- Legendas faladas automáticas (transcrição) e mais estilos de texto.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Fonte Inter (licença SIL OFL) em `assets/fonts`.
