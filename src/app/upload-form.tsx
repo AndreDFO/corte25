@@ -9,6 +9,7 @@ export default function UploadForm() {
   const [music, setMusic] = useState<File | null>(null);
   const [product, setProduct] = useState("");
   const [details, setDetails] = useState("");
+  const [duration, setDuration] = useState("mix");
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
 
@@ -26,6 +27,7 @@ export default function UploadForm() {
     const fd = new FormData();
     fd.append("product", product);
     fd.append("details", details);
+    fd.append("duration", duration);
     videos.forEach((v) => fd.append("videos", v));
     if (music) fd.append("music", music);
 
@@ -113,6 +115,30 @@ export default function UploadForm() {
             </li>
           </ul>
         )}
+      </div>
+
+      <div className="grid gap-2">
+        <span className="text-sm font-medium">Duração dos vídeos</span>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            ["mix", "Misturar"],
+            ["15", "15 s"],
+            ["30", "30 s"],
+            ["60", "60 s"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setDuration(value)}
+              className={`rounded-lg border py-2 text-sm font-semibold ${duration === value ? "border-[#FE2C55] bg-[#FE2C55]/15" : "border-white/15 hover:bg-white/5"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-white/40">
+          {duration === "mix" ? "10 vídeos de 15 s, 10 de 30 s e 5 de 60 s." : `Os 25 vídeos com ${duration} segundos.`}
+        </span>
       </div>
 
       <label className="grid gap-2">

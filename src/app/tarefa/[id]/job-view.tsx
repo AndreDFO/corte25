@@ -106,7 +106,7 @@ function Card({ id, v }: { id: string; v: Variation }) {
       </div>
       <div className="p-3 grid gap-2 text-xs">
         <p className="font-bold text-sm leading-snug">
-          #{v.index + 1} · {v.hook}
+          #{v.index + 1} · <span className="text-[#25F4EE]">{v.durationSec}s</span> · {v.hook}
         </p>
         <p className="text-white/60 line-clamp-3">{fullCaption}</p>
         <div className="flex gap-2 mt-auto">

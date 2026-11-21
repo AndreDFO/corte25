@@ -12,6 +12,8 @@ export async function POST(req: Request) {
   const details = String(form.get("details") || "").trim().slice(0, 1500);
   const videos = form.getAll("videos").filter((v): v is File => v instanceof File && v.size > 0);
   const music = form.get("music");
+  const dm = String(form.get("duration") || "mix");
+  const durationMode = (["mix", "15", "30", "60"].includes(dm) ? dm : "mix") as Job["durationMode"];
 
   if (!product) return Response.json({ error: "Informe o nome do produto." }, { status: 400 });
   if (videos.length === 0) return Response.json({ error: "Envie pelo menos 1 vídeo." }, { status: 400 });
@@ -45,6 +47,7 @@ export async function POST(req: Request) {
     details,
     inputs,
     music: musicName,
+    durationMode,
     status: "queued",
     message: "Na fila…",
     variations: [],

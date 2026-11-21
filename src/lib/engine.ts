@@ -112,36 +112,58 @@ export interface Recipe {
   musicOffset: number;
 }
 
-export function buildRecipe(clips: ClipInfo[], seed: string, index: number): Recipe {
+export const DURATION_OPTIONS = [15, 30, 60] as const;
+export type DurationMode = "mix" | "15" | "30" | "60";
+
+// "mix": a cada 5 vídeos, 2 de 15 s, 2 de 30 s e 1 de 60 s (10 + 10 + 5 em 25).
+export function targetDuration(mode: DurationMode, index: number): number {
+  if (mode === "15" || mode === "30" || mode === "60") return Number(mode);
+  return [15, 30, 15, 30, 60][index % 5];
+}
+
+export function buildRecipe(clips: ClipInfo[], seed: string, index: number, target: number): Recipe {
   const r = rng(`${seed}:${index}`);
-  const targets = [15, 18, 21, 24, 27];
-  const totalAvailable = clips.reduce((s, c) => s + c.duration, 0);
-  const total = Math.min(targets[index % targets.length] + Math.floor(r() * 3), Math.max(3, totalAvailable * 0.9));
+  // Cenas mais longas em vídeos mais longos.
+  const [minSeg, maxSeg] = target <= 15 ? [1.5, 3.5] : target <= 30 ? [2, 4.5] : [2.5, 5.5];
 
-  // Ordem das cenas: começa por um clipe diferente a cada variação e embaralha o resto.
+  // Ordem das cenas: começa por um clipe diferente a cada variação e percorre os outros embaralhados.
+  // Quando os vídeos enviados não bastam para preencher o tempo, volta a eles usando outros trechos.
   const first = clips[index % clips.length];
-  let order = [first, ...shuffle(clips.filter((c) => c !== first), r)];
-  // Com poucos clipes, repete trechos de partes diferentes dos mesmos clipes.
-  while (order.length < 4 && clips.length < 4) order = [...order, ...shuffle(clips, r)];
-  const nSeg = Math.min(order.length, 3 + Math.floor(r() * 4)); // 3 a 6 cenas
-  order = order.slice(0, nSeg);
+  let queue: ClipInfo[] = [first, ...shuffle(clips.filter((c) => c !== first), r)];
+  const nextClip = (prev?: ClipInfo) => {
+    if (queue.length === 0) queue = shuffle(clips, r);
+    if (clips.length > 1 && queue[0] === prev) queue.push(queue.shift()!);
+    return queue.shift()!;
+  };
 
-  // Divide o tempo total entre as cenas com pesos aleatórios. A primeira cena é curta (ritmo de hook).
-  const weights = order.map((_, k) => (k === 0 ? 0.6 : 0.8 + r() * 0.8));
-  const wsum = weights.reduce((a, b) => a + b, 0);
-  const segments: Segment[] = order.map((clip, k) => {
-    const speed = r() < 0.3 ? 1.1 : 1.0;
-    let dur = Math.max(1.2, (weights[k] / wsum) * total);
-    const maxDur = clip.duration / speed - 0.1;
-    dur = Math.min(dur, Math.max(0.5, maxDur));
-    const srcLen = dur * speed;
-    const start = Math.max(0, (clip.duration - srcLen) * r());
-    return { clip, input: k, start, dur, speed, zoom: r() < 0.5 ? 1 : 1.06 + r() * 0.12 };
-  });
+  const segments: Segment[] = [];
+  let remaining = target;
+  let prev: ClipInfo | undefined;
+  while (remaining > 0.05) {
+    const clip = nextClip(prev);
+    prev = clip;
+    const speed = clip.duration > 3 && r() < 0.3 ? 1.1 : 1.0;
+    // A primeira cena é curta, no ritmo do hook.
+    let dur = segments.length === 0 ? 1.5 + r() : minSeg + r() * (maxSeg - minSeg);
+    dur = Math.min(dur, clip.duration / speed - 0.1);
+    // Evita sobrar um pedacinho muito curto no fim.
+    if (remaining - dur < 1) dur = Math.min(remaining, clip.duration / speed - 0.1);
+    dur = Math.max(0.3, Math.min(dur, remaining));
+    const start = Math.max(0, (clip.duration - dur * speed - 0.05) * r());
+    segments.push({
+      clip,
+      input: segments.length,
+      start,
+      dur,
+      speed,
+      zoom: r() < 0.5 ? 1 : 1.06 + r() * 0.12,
+    });
+    remaining -= dur;
+  }
 
   return {
     segments,
-    total: segments.reduce((s, x) => s + x.dur, 0),
+    total: target,
     saturation: 1 + r() * 0.25,
     contrast: 1 + r() * 0.08,
     brightness: (r() - 0.5) * 0.06,
@@ -154,7 +176,7 @@ export function describeRecipe(rc: Recipe): string {
   const scenes = rc.segments
     .map((s) => `${path.basename(s.clip.file)}${s.speed !== 1 ? " (rápido)" : ""}${s.zoom !== 1 ? " (zoom)" : ""}`)
     .join(" → ");
-  return `${rc.segments.length} cenas, ${rc.total.toFixed(0)}s: ${scenes}`;
+  return `${rc.total}s, ${rc.segments.length} cenas: ${scenes}`;
 }
 
 const esc = (n: number) => n.toFixed(3);
@@ -195,7 +217,7 @@ async function renderVariation(
     const zh = Math.round((H * s.zoom) / 2) * 2;
     f.push(
       `[${k}:v]setpts=(PTS-STARTPTS)/${s.speed},fps=${FPS},` +
-        `scale=${zw}:${zh}:force_original_aspect_ratio=increase,crop=${W}:${H},` +
+        `scale=${zw}:${zh}:force_original_aspect_ratio=increase,crop=${W}:${H},tpad=stop_mode=clone:stop_duration=0.5,` +
         `trim=duration=${esc(s.dur)},setpts=PTS-STARTPTS,setsar=1,format=yuv420p[v${k}]`,
     );
     const aSrc = s.clip.hasAudio ? `[${k}:a]` : `[${silentInputs[k]}:a]`;
@@ -278,14 +300,15 @@ async function processJob(id: string) {
   await saveJob(job);
   const { items, source } = await generateCopy(job.product, job.details, VARIATIONS);
 
-  const recipes = items.map((_, i) => buildRecipe(usable, id, i));
+  const mode = (job.durationMode || "mix") as DurationMode;
+  const recipes = items.map((_, i) => buildRecipe(usable, id, i, targetDuration(mode, i)));
   job.copySource = source;
   job.variations = items.map((c, i) => ({
     index: i,
     file: `video_${String(i + 1).padStart(2, "0")}.mp4`,
     ...c,
     recipe: describeRecipe(recipes[i]),
-    durationSec: Math.round(recipes[i].total),
+    durationSec: recipes[i].total,
     status: "pending",
   }));
   job.status = "rendering";
