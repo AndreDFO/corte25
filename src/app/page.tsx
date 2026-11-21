@@ -8,19 +8,26 @@ export default function Home() {
           Para vendedores do TikTok Shop
         </p>
         <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight">
-          Suba 5 vídeos do seu produto.
+          Grave 3 ganchos, 3 corpos e 3 CTAs.
           <br />
-          Receba <span className="text-[#FE2C55]">25 vídeos</span> prontos para vender.
+          Receba <span className="text-[#FE2C55]">27 vídeos</span> prontos para vender.
         </h1>
         <p className="mt-5 text-white/70 text-lg max-w-xl">
-          Nosso agente corta, reordena as cenas, cria hooks diferentes para os 3 primeiros segundos,
-          escreve legendas e chamadas para o carrinho. Tudo em 9:16, pronto para postar.
+          Todo vídeo de TikTok Shop tem três blocos. Trocando um bloco por vez, cada gravação vira dezenas de
+          criativos diferentes para testar. Nós montamos todas as combinações em 9:16, com texto de gancho, chamada
+          para o carrinho e legenda.
         </p>
+        <div className="mt-8 grid grid-cols-3 gap-3 max-w-md text-center text-sm font-semibold">
+          <div className="rounded-lg border border-[#FE2C55]/50 bg-[#FE2C55]/10 py-3 text-[#FE2C55]">Gancho</div>
+          <div className="rounded-lg border border-white/20 bg-white/5 py-3 text-white/70">Corpo</div>
+          <div className="rounded-lg border border-[#25F4EE]/50 bg-[#25F4EE]/10 py-3 text-[#25F4EE]">CTA</div>
+        </div>
+        <p className="mt-3 text-white/50 text-sm">3 × 3 × 3 = 27 variações · 5 × 5 × 5 = 125</p>
         <ul className="mt-8 grid gap-3 text-white/80">
           {[
-            "25 hooks com ângulos diferentes (dor, curiosidade, prova social, oferta…)",
-            "Vídeos de 15, 20, 25 ou 30 segundos, com cenas, cortes, zoom e ritmo diferentes",
-            "Chamada para o carrinho no final e legenda com hashtags",
+            "Sempre na ordem certa: gancho, corpo e CTA",
+            "Texto de gancho na tela e chamada para o carrinho no final",
+            "Legenda e hashtags para cada vídeo",
             "Música de fundo opcional e download de tudo em ZIP",
             "Teste grátis: gere 2 vídeos antes de pagar",
           ].map((t) => (

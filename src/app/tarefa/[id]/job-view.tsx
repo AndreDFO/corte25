@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
-import { FULL_PRICE, FULL_VIDEOS } from "@/lib/pricing";
+import { FULL_PRICE } from "@/lib/pricing";
 
 export default function JobView({ id }: { id: string }) {
   const [job, setJob] = useState<Job | null>(null);
@@ -34,7 +34,7 @@ export default function JobView({ id }: { id: string }) {
   if (!job) return <p className="p-10 text-center text-white/60">Carregando…</p>;
 
   const done = job.variations.filter((v) => v.status === "done").length;
-  const total = job.variations.length || job.count || FULL_VIDEOS;
+  const total = job.variations.length || job.count || 1;
   const pct = Math.round((done / total) * 100);
   const finished = job.status === "done" || job.status === "error";
 
@@ -81,11 +81,11 @@ export default function JobView({ id }: { id: string }) {
       {job.plan === "free" && finished && done > 0 && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#FE2C55]/40 bg-[#FE2C55]/10 p-5">
           <div>
-            <p className="font-bold text-lg">Gostou? Gere os {FULL_VIDEOS} vídeos sem marca d&apos;água.</p>
-            <p className="text-sm text-white/70">Cada um com hook, cenas e ritmo diferentes, prontos para postar.</p>
+            <p className="font-bold text-lg">Gostou? Gere todas as combinações sem marca d&apos;água.</p>
+            <p className="text-sm text-white/70">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
           </div>
           <Link href="/" className="rounded-lg bg-[#FE2C55] hover:bg-[#e0244a] px-5 py-3 font-bold">
-            🔒 Gerar {FULL_VIDEOS} vídeos · {FULL_PRICE}
+            🔒 Lote completo · {FULL_PRICE}
           </Link>
         </div>
       )}
@@ -122,6 +122,7 @@ function Card({ id, v }: { id: string; v: Variation }) {
         <p className="font-bold text-sm leading-snug">
           #{v.index + 1} · <span className="text-[#25F4EE]">{v.durationSec}s</span> · {v.hook}
         </p>
+        <p className="text-white/40">{v.recipe}</p>
         <p className="text-white/60 line-clamp-3">{fullCaption}</p>
         <div className="flex gap-2 mt-auto">
           <button

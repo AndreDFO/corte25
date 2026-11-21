@@ -112,70 +112,69 @@ export interface Recipe {
 }
 
 export const DURATION_OPTIONS = [15, 20, 25, 30] as const;
-export type DurationMode = "mix" | "15" | "20" | "25" | "30";
+export type DurationMode = "auto" | "15" | "20" | "25" | "30";
 
-// "mix": alterna 15, 20, 25 e 30 s (em 25 vídeos: 7 de 15 s e 6 de cada uma das outras).
-export function targetDuration(mode: DurationMode, index: number): number {
-  if (mode !== "mix" && (DURATION_OPTIONS as readonly number[]).includes(Number(mode))) return Number(mode);
-  return DURATION_OPTIONS[index % DURATION_OPTIONS.length];
+export interface Combo {
+  hook: number;
+  body: number;
+  cta: number;
 }
 
-export function buildRecipe(clips: ClipInfo[], seed: string, index: number, target: number): Recipe {
-  const r = rng(`${seed}:${index}`);
-  // Cenas mais longas em vídeos mais longos.
-  const [minSeg, maxSeg] = target <= 15 ? [1.5, 3.5] : target <= 20 ? [1.8, 4] : [2, 4.5];
-
-  // Ordem das cenas: começa por um clipe diferente a cada variação e percorre os outros embaralhados.
-  // Quando os vídeos enviados não bastam para preencher o tempo, volta a eles usando outros trechos.
-  const first = clips[index % clips.length];
-  let queue: ClipInfo[] = [first, ...shuffle(clips.filter((c) => c !== first), r)];
-  const nextClip = (prev?: ClipInfo) => {
-    if (queue.length === 0) queue = shuffle(clips, r);
-    if (clips.length > 1 && queue[0] === prev) queue.push(queue.shift()!);
-    return queue.shift()!;
-  };
-
-  const segments: Segment[] = [];
-  let remaining = target;
-  let prev: ClipInfo | undefined;
-  while (remaining > 0.05) {
-    const clip = nextClip(prev);
-    prev = clip;
-    const speed = clip.duration > 3 && r() < 0.3 ? 1.1 : 1.0;
-    // A primeira cena é curta, no ritmo do hook.
-    let dur = segments.length === 0 ? 1.5 + r() : minSeg + r() * (maxSeg - minSeg);
-    dur = Math.min(dur, clip.duration / speed - 0.1);
-    // Evita sobrar um pedacinho muito curto no fim.
-    if (remaining - dur < 1) dur = Math.min(remaining, clip.duration / speed - 0.1);
-    dur = Math.max(0.3, Math.min(dur, remaining));
-    const start = Math.max(0, (clip.duration - dur * speed - 0.05) * r());
-    segments.push({
-      clip,
-      input: segments.length,
-      start,
-      dur,
-      speed,
-      zoom: r() < 0.5 ? 1 : 1.06 + r() * 0.12,
-    });
-    remaining -= dur;
+// Todas as combinações gancho × corpo × CTA, numa ordem em que vídeos seguidos mudam o máximo possível.
+export function allCombos(nh: number, nb: number, nc: number, seed: string): Combo[] {
+  const r = rng(seed + ":combos");
+  const list: Combo[] = [];
+  for (let h = 0; h < nh; h++) for (let b = 0; b < nb; b++) for (let c = 0; c < nc; c++) list.push({ hook: h, body: b, cta: c });
+  // Começa pela "diagonal" (gancho 1 + corpo 1 + CTA 1, gancho 2 + corpo 2 + CTA 2, …) e depois o resto embaralhado.
+  const diag = Array.from({ length: Math.max(nh, nb, nc) }, (_, i) => ({ hook: i % nh, body: i % nb, cta: i % nc }));
+  const key = (c: Combo) => `${c.hook}-${c.body}-${c.cta}`;
+  const seen = new Set<string>();
+  const ordered: Combo[] = [];
+  for (const c of [...diag, ...shuffle(list, r)]) {
+    if (!seen.has(key(c))) {
+      seen.add(key(c));
+      ordered.push(c);
+    }
   }
+  return ordered;
+}
 
+export function buildRecipe(
+  blocks: { hooks: ClipInfo[]; bodies: ClipInfo[]; ctas: ClipInfo[] },
+  combo: Combo,
+  seed: string,
+  index: number,
+  maxDur: number | null,
+): Recipe {
+  const r = rng(`${seed}:${index}`);
+  const hook = blocks.hooks[combo.hook];
+  const body = blocks.bodies[combo.body];
+  const cta = blocks.ctas[combo.cta];
+  // Gancho e CTA entram inteiros (até 8 s cada). O corpo é cortado para caber na duração máxima.
+  const hDur = Math.min(hook.duration, 8);
+  const cDur = Math.min(cta.duration, 8);
+  let bDur = body.duration;
+  if (maxDur) bDur = Math.max(Math.min(2, body.duration), Math.min(body.duration, maxDur - hDur - cDur));
+  // Pequenas diferenças visuais em cada vídeo para não ficarem idênticos.
+  const zoom = r() < 0.5 ? 1 : 1.04 + r() * 0.06;
+  const segments: Segment[] = [
+    { clip: hook, input: 0, start: 0, dur: hDur, speed: 1, zoom },
+    { clip: body, input: 1, start: 0, dur: bDur, speed: 1, zoom },
+    { clip: cta, input: 2, start: 0, dur: cDur, speed: 1, zoom },
+  ];
   return {
     segments,
-    total: target,
-    saturation: 1 + r() * 0.25,
-    contrast: 1 + r() * 0.08,
-    brightness: (r() - 0.5) * 0.06,
+    total: Math.round((hDur + bDur + cDur) * 10) / 10,
+    saturation: 1 + r() * 0.15,
+    contrast: 1 + r() * 0.05,
+    brightness: (r() - 0.5) * 0.04,
     hookStyle: Math.floor(r() * 3),
     musicOffset: r() * 30,
   };
 }
 
-export function describeRecipe(rc: Recipe): string {
-  const scenes = rc.segments
-    .map((s) => `${path.basename(s.clip.file)}${s.speed !== 1 ? " (rápido)" : ""}${s.zoom !== 1 ? " (zoom)" : ""}`)
-    .join(" → ");
-  return `${rc.total}s, ${rc.segments.length} cenas: ${scenes}`;
+export function describeCombo(c: Combo): string {
+  return `Gancho ${c.hook + 1} + Corpo ${c.body + 1} + CTA ${c.cta + 1}`;
 }
 
 const esc = (n: number) => n.toFixed(3);
@@ -239,10 +238,10 @@ async function renderVariation(
   f.push(
     `[vc]eq=saturation=${esc(rc.saturation)}:contrast=${esc(rc.contrast)}:brightness=${esc(rc.brightness)},` +
       `drawtext=fontfile=font.otf:textfile=${hookFile}:fontsize=78:line_spacing=14:text_align=C` +
-      `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,3.2)',` +
+      `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,${esc(Math.min(3.2, rc.segments[0].dur))})',` +
       `drawtext=fontfile=font.otf:textfile=${ctaFile}:fontsize=64:line_spacing=10:text_align=C` +
       `:fontcolor=white:box=1:boxcolor=0xFE2C55@0.95:boxborderw=26` +
-      `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - 2.8))})'` +
+      `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - Math.min(2.8, rc.segments[2].dur)))})'` +
       (job.plan === "free"
         ? `,drawtext=fontfile=font.otf:textfile=marca.txt:fontsize=46:fontcolor=white@0.55` +
           `:borderw=3:bordercolor=black@0.4:x=(w-text_w)/2:y=h*0.58`
@@ -295,24 +294,35 @@ async function processJob(id: string) {
   await fs.mkdir(path.join(dir, "outputs"), { recursive: true });
   await fs.copyFile(FONT_SRC, path.join(dir, "font.otf"));
 
-  const clips: ClipInfo[] = [];
-  for (const f of job.inputs) clips.push(await probe(path.join(dir, "inputs", f)));
-  const usable = clips.filter((c) => c.duration >= 1);
-  if (usable.length === 0) throw new Error("Os vídeos enviados são curtos demais (mínimo 1 segundo).");
+  const probeAll = async (files: string[]) => {
+    const out: ClipInfo[] = [];
+    for (const f of files) {
+      const c = await probe(path.join(dir, "inputs", f));
+      if (c.duration < 0.5) throw new Error(`O clipe ${f} é curto demais.`);
+      out.push(c);
+    }
+    return out;
+  };
+  const blocks = {
+    hooks: await probeAll(job.blocks.hooks),
+    bodies: await probeAll(job.blocks.bodies),
+    ctas: await probeAll(job.blocks.ctas),
+  };
+  const combos = allCombos(blocks.hooks.length, blocks.bodies.length, blocks.ctas.length, id).slice(0, job.count);
 
   job.status = "writing";
   job.message = "Criando hooks e legendas…";
   await saveJob(job);
-  const { items, source } = await generateCopy(job.product, job.details, job.count);
+  const { items, source } = await generateCopy(job.product, job.details, combos.length);
 
-  const mode = (job.durationMode || "mix") as DurationMode;
-  const recipes = items.map((_, i) => buildRecipe(usable, id, i, targetDuration(mode, i)));
+  const maxDur = job.durationMode && job.durationMode !== "auto" ? Number(job.durationMode) : null;
+  const recipes = combos.map((c, i) => buildRecipe(blocks, c, id, i, maxDur));
   job.copySource = source;
-  job.variations = items.map((c, i) => ({
+  job.variations = combos.map((c, i) => ({
     index: i,
     file: `video_${String(i + 1).padStart(2, "0")}.mp4`,
-    ...c,
-    recipe: describeRecipe(recipes[i]),
+    ...items[i],
+    recipe: describeCombo(c),
     durationSec: recipes[i].total,
     status: "pending",
   }));

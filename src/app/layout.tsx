@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Corte25 · 25 vídeos para o TikTok Shop",
-  description: "Envie 5 vídeos do seu produto e receba 25 variações prontas para vender no TikTok Shop.",
+  description: "Envie ganchos, corpos e CTAs e receba todas as combinações prontas para o TikTok Shop.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -16,7 +16,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="font-extrabold text-xl tracking-tight">
               Corte<span className="text-[#FE2C55]">25</span>
             </Link>
-            <span className="text-sm text-white/60">5 vídeos entram, 25 saem</span>
+            <span className="text-sm text-white/60">3 × 3 × 3 = 27 vídeos</span>
           </div>
         </header>
         <main className="flex-1">{children}</main>

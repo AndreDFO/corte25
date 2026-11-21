@@ -2,21 +2,27 @@
 
 Site onde o vendedor envia cerca de 5 vídeos de um produto e recebe 25 vídeos 9:16 prontos para o TikTok Shop.
 
-Cada um dos 25 vídeos sai diferente:
+O vendedor grava os vídeos em três blocos e o site monta todas as combinações, sempre na ordem **gancho → corpo → CTA**:
 
-- **Hook** diferente na tela nos 3 primeiros segundos (criado pelo Claude, ou de modelos prontos sem chave).
-- **Ordem das cenas**, trechos usados, duração (15, 20, 25 ou 30 s; no modo "Misturar" saem 7 de 15 s e 6 de cada uma das outras), zoom, velocidade e cor diferentes.
-- **Chamada para o carrinho** no final ("Toca no carrinho laranja").
+- **Ganchos** (até 5): os primeiros segundos, que fazem a pessoa parar de rolar.
+- **Corpos** (até 5): o produto em uso, benefícios, demonstração.
+- **CTAs** (até 5): o fechamento, com chamada para o carrinho.
+
+3 × 3 × 3 = 27 vídeos; 5 × 5 × 5 = 125 (até 30 por lote). Em cada vídeo:
+
+- Texto de **hook** na tela durante o gancho (criado pelo Claude, ou de modelos prontos sem chave).
+- Texto de **chamada para o carrinho** durante o CTA.
 - **Legenda e hashtags** para colar no post.
-- **Música de fundo** opcional (enviada pelo usuário) misturada ao áudio original.
+- **Duração máxima** opcional (15, 20, 25 ou 30 s): o corpo é encurtado, gancho e CTA ficam inteiros.
+- **Música de fundo** opcional, misturada ao áudio original.
 
 Download de cada vídeo, de todos em ZIP e das legendas em .txt.
 
 ## Planos
 
-- **Teste grátis:** gera 2 vídeos com marca d'água "Corte25 · teste grátis". Limite de 1 teste por pessoa (contado pelo endereço de internet e pelo navegador; fica em `data/trials.json`).
-- **25 vídeos:** o botão mostra o preço e fica travado até o pagamento ser configurado. Para testar sem pagar, coloque `UNLOCK_FULL=true` no `.env.local`.
-- Preço e quantidades ficam em `src/lib/pricing.ts`.
+- **Teste grátis:** gera 2 combinações com marca d'água "Corte25 · teste grátis". Limite de 1 teste por pessoa (contado pelo endereço de internet e pelo navegador; fica em `data/trials.json`).
+- **Lote completo (1 crédito):** todas as combinações, até 30 vídeos. Créditos em pacotes: 10 lotes por R$ 29,90 e 40 lotes por R$ 89,99. O botão fica travado até o pagamento ser configurado. Para testar sem pagar, coloque `UNLOCK_FULL=true` no `.env.local`.
+- Preços e limites ficam em `src/lib/pricing.ts`.
 
 ## Como rodar
 

@@ -25,10 +25,11 @@ export interface Job {
   product: string;
   details: string;
   inputs: string[];
+  blocks: { hooks: string[]; bodies: string[]; ctas: string[] };
   music?: string;
   plan: "free" | "full";
   count: number;
-  durationMode?: "mix" | "15" | "20" | "25" | "30";
+  durationMode?: "auto" | "15" | "20" | "25" | "30";
   status: "queued" | "writing" | "rendering" | "done" | "error";
   copySource?: "claude" | "template";
   message?: string;
