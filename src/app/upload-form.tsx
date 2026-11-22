@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import PlanPicker from "./plan-picker";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
 import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
 
@@ -47,10 +47,16 @@ export default function UploadForm() {
   const bonus = bonusFor(videos);
   // Saldo da conta (null = ainda carregando ou sem login ativo no site).
   const [saldo, setSaldo] = useState<{ logged: boolean; videos: number } | null>(null);
+  const touched = useRef(false);
   useEffect(() => {
     fetch("/api/conta/saldo", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => j && setSaldo(j))
+      .then((j) => {
+        if (!j) return;
+        setSaldo(j);
+        // Pedido do Andre: logado começa em "Usar meus créditos"; sem login, fica no grátis.
+        if (j.logged) setPlan((p) => (touched.current ? p : "full"));
+      })
       .catch(() => {});
   }, []);
   const [doneId, setDoneId] = useState("");
@@ -60,6 +66,7 @@ export default function UploadForm() {
   // Teste grátis: 1 gancho, 1 corpo e 1 CTA (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
   const maxPer = plan === "free" ? 1 : MAX_PER_BLOCK;
   function choosePlan(next: "free" | "full") {
+    touched.current = true;
     setPlan(next);
     if (next === "free") setClips((c) => ({ hooks: c.hooks.slice(0, 1), bodies: c.bodies.slice(0, 1), ctas: c.ctas.slice(0, 1) }));
   }
