@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import crypto from "crypto";
+import type { JobExtras } from "./extras";
 
 export const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 
@@ -35,6 +36,8 @@ export interface Job {
   message?: string;
   variations: Variation[];
   ownerId?: string | null; // conta que gerou (null = sem login); só ela vê o lote
+  extras?: JobExtras; // melhorias em teste, só para o administrador
+  speechFound?: number; // quantos clipes tinham fala (-1 = servidor sem transcrição)
 }
 
 export function newJobId() {

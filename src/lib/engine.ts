@@ -4,6 +4,8 @@ import path from "path";
 import { Job, Variation, jobDir, loadJob, saveJob } from "./jobs";
 import { generateCopy } from "./copy";
 import { VIDEO_CTA_BG, VIDEO_CTA_TEXT } from "./theme";
+import { Word, transcribeClip, whisperAvailable } from "./transcribe";
+import { buildAss } from "./captions-ass";
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH || "ffprobe";
@@ -186,7 +188,27 @@ async function renderVariation(
   v: Variation,
   rc: Recipe,
   musicFile: string | undefined,
+  speech: Map<string, Word[]> | null = null,
 ): Promise<void> {
+  // Melhoria em teste (só admin): legendas animadas. Sem ela, o vídeo sai exatamente como antes.
+  const animated = Boolean(job.extras?.animatedCaptions);
+  let assFile = "";
+  if (animated) {
+    const words: Word[] = [];
+    let offset = 0;
+    for (const s of rc.segments) {
+      for (const w of speech?.get(s.clip.file) || []) {
+        if (w.s >= s.dur - 0.05) continue;
+        words.push({ w: w.w, s: offset + w.s, e: offset + Math.min(w.e, s.dur) });
+      }
+      offset += s.dur;
+    }
+    assFile = `legenda_${v.index}.ass`;
+    await fs.writeFile(
+      path.join(dir, assFile),
+      buildAss(words, { text: wrap(v.hook, 18), style: rc.hookStyle, until: Math.min(3.2, rc.segments[0].dur) }),
+    );
+  }
   const hookFile = `hook_${v.index}.txt`;
   const ctaFile = `cta_${v.index}.txt`;
   await fs.writeFile(path.join(dir, hookFile), wrap(v.hook, 18));
@@ -238,8 +260,10 @@ async function renderVariation(
       : ":fontcolor=white:borderw=9:bordercolor=black";
   f.push(
     `[vc]eq=saturation=${esc(rc.saturation)}:contrast=${esc(rc.contrast)}:brightness=${esc(rc.brightness)},` +
-      `drawtext=fontfile=font.otf:textfile=${hookFile}:fontsize=78:line_spacing=14:text_align=C` +
-      `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,${esc(Math.min(3.2, rc.segments[0].dur))})',` +
+      (animated
+        ? ""
+        : `drawtext=fontfile=font.otf:textfile=${hookFile}:fontsize=78:line_spacing=14:text_align=C` +
+          `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,${esc(Math.min(3.2, rc.segments[0].dur))})',`) +
       `drawtext=fontfile=font.otf:textfile=${ctaFile}:fontsize=64:line_spacing=10:text_align=C` +
       `:fontcolor=${VIDEO_CTA_TEXT}:box=1:boxcolor=${VIDEO_CTA_BG}@0.95:boxborderw=26` +
       `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - Math.min(2.8, rc.segments[2].dur)))})'` +
@@ -247,6 +271,7 @@ async function renderVariation(
         ? `,drawtext=fontfile=font.otf:textfile=marca.txt:fontsize=46:fontcolor=white@0.55` +
           `:borderw=3:bordercolor=black@0.4:x=(w-text_w)/2:y=h*0.58`
         : "") +
+      (animated ? `,subtitles=${assFile}:fontsdir=.` : "") +
       `[vout]`,
   );
   if (musicInput >= 0) {
@@ -318,10 +343,43 @@ async function processJob(id: string) {
   const unique = allCombos(blocks.hooks.length, blocks.bodies.length, blocks.ctas.length, "corte25");
   const combos = Array.from({ length: job.count }, (_, i) => unique[i % unique.length]);
 
+  // Melhoria em teste (só admin): ouve a fala de cada clipe uma vez (para as legendas animadas
+  // e para a IA escrever textos que combinam com o que é falado).
+  let speech: Map<string, Word[]> | null = null;
+  let spoken = "";
+  if (job.extras?.animatedCaptions || job.extras?.richCopy) {
+    if (await whisperAvailable()) {
+      job.status = "writing";
+      job.message = "Ouvindo a fala dos vídeos…";
+      await saveJob(job);
+      speech = new Map();
+      const parts: string[] = [];
+      for (const [label, list] of [["Gancho", blocks.hooks], ["Corpo", blocks.bodies], ["CTA", blocks.ctas]] as const) {
+        for (const [i, c] of list.entries()) {
+          const words = await transcribeClip(c.file, c.hasAudio).catch((e) => {
+            console.error(`[fala] ${path.basename(c.file)}:`, e);
+            return [] as Word[];
+          });
+          speech.set(c.file, words);
+          if (words.length) parts.push(`${label} ${i + 1}: "${words.map((w) => w.w).join(" ")}"`);
+        }
+      }
+      spoken = parts.join("\n").slice(0, 3000);
+      job.speechFound = parts.length;
+    } else {
+      job.speechFound = -1; // servidor sem o programa de transcrição
+    }
+  }
+
   job.status = "writing";
   job.message = "Criando hooks e legendas…";
   await saveJob(job);
-  const { items, source } = await generateCopy(job.product, job.details, combos.length);
+  const { items, source } = await generateCopy(
+    job.product,
+    job.details,
+    combos.length,
+    job.extras ? { niche: job.extras.niche, rich: job.extras.richCopy, spoken } : undefined,
+  );
 
   const maxDur = job.durationMode && job.durationMode !== "auto" ? Number(job.durationMode) : null;
   const recipes = combos.map((c, i) => buildRecipe(blocks, c, id, i, maxDur));
@@ -356,7 +414,7 @@ async function processJob(id: string) {
       const v = job.variations[i];
       await queueUpdate(i, { status: "rendering" });
       try {
-        await renderVariation(job, dir, v, recipes[i], music);
+        await renderVariation(job, dir, v, recipes[i], music, speech);
         await queueUpdate(i, { status: "done" });
       } catch (err) {
         console.error(`[job ${id}] vídeo ${i + 1}:`, err);

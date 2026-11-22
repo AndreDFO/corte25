@@ -2,6 +2,19 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { isSafe, riskyReason, safeHashtags } from "./compliance";
+import { NICHES, Niche } from "./extras";
+
+// Melhorias em teste (só admin). Sem opções, os textos saem exatamente como antes.
+export interface CopyOptions {
+  niche?: Niche;
+  rich?: boolean; // descrição mais completa e 5 a 7 hashtags
+  spoken?: string; // o que é falado nos clipes (transcrição)
+}
+
+const RICH_RULES = `
+FORMATO TURBINADO (substitui as regras de caption e hashtags acima):
+- caption: descrição do post com 2 ou 3 frases curtas, até 300 caracteres. 1ª frase prende a atenção com o ângulo do vídeo; depois 1 ou 2 benefícios concretos tirados dos detalhes do produto (nada inventado); termina convidando a tocar no carrinho laranja. Até 2 emojis. Inclua naturalmente 1 ou 2 palavras que a pessoa digitaria na busca do TikTok para achar esse produto.
+- hashtags: 5 a 7, sem #, minúsculas, sem espaços: 2 amplas de compra (ex.: tiktokshop, achadinhos, comprinhas), 2 ou 3 do nicho/categoria e 1 ou 2 do próprio produto. Varie entre os vídeos, não repita sempre o mesmo conjunto.`;
 
 export interface CopyItem {
   hook: string;
@@ -42,25 +55,31 @@ export async function generateCopy(
   product: string,
   details: string,
   count: number,
+  opts?: CopyOptions,
 ): Promise<{ items: CopyItem[]; source: "claude" | "template" }> {
+  const rich = Boolean(opts?.rich);
+  const niche = opts?.niche ? NICHES[opts.niche] : null;
+  let extra = "";
+  if (niche) extra += `\nNicho: ${niche.label}. Use ganchos e ângulos que funcionam nesse nicho no TikTok Shop, por exemplo: ${niche.angles}.`;
+  if (opts?.spoken) extra += `\n\nO que a pessoa fala nos clipes (transcrição automática, pode ter erros). Os textos devem combinar com isso, sem repetir palavra por palavra:\n${opts.spoken}`;
   if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
     try {
       const client = new Anthropic();
       const response = await client.messages.parse({
         model: process.env.CLAUDE_MODEL || "claude-opus-5-5",
         max_tokens: 16000,
-        system: SYSTEM,
+        system: rich ? SYSTEM + RICH_RULES : SYSTEM,
         output_config: { effort: "low", format: zodOutputFormat(CopySchema) },
         messages: [
           {
             role: "user",
-            content: `Produto: ${product}\nDetalhes do produto e da oferta: ${details || "(não informado)"}\n\nCrie exatamente ${count} itens, todos com ângulos e hooks diferentes entre si.`,
+            content: `Produto: ${product}\nDetalhes do produto e da oferta: ${details || "(não informado)"}${extra}\n\nCrie exatamente ${count} itens, todos com ângulos e hooks diferentes entre si.`,
           },
         ],
       });
       if (response.stop_reason !== "refusal" && response.parsed_output) {
         // Itens com termo de risco são descartados e trocados por modelos prontos seguros.
-        const all = response.parsed_output.items.map(clean).filter((i) => i.hook);
+        const all = response.parsed_output.items.map((i) => clean(i, rich)).filter((i) => i.hook);
         const items = all.filter((i) => isSafe(i.hook, i.cta, i.caption));
         if (items.length < all.length) {
           for (const i of all.filter((x) => !items.includes(x)))
@@ -68,8 +87,8 @@ export async function generateCopy(
         }
         if (items.length >= count) return { items: items.slice(0, count), source: "claude" };
         if (items.length > 0) {
-          const extra = templateCopy(product, count - items.length, items.length);
-          return { items: [...items, ...extra], source: "claude" };
+          const more = templateCopy(product, count - items.length, items.length, opts?.niche);
+          return { items: [...items, ...more], source: "claude" };
         }
       }
       console.warn("[copy] resposta sem itens válidos, usando modelos prontos");
@@ -77,15 +96,15 @@ export async function generateCopy(
       console.error("[copy] falha ao chamar Claude, usando modelos prontos:", err);
     }
   }
-  return { items: templateCopy(product, count), source: "template" };
+  return { items: templateCopy(product, count, 0, opts?.niche), source: "template" };
 }
 
-function clean(i: CopyItem): CopyItem {
+function clean(i: CopyItem, rich = false): CopyItem {
   return {
     hook: i.hook.trim().slice(0, 60),
     cta: i.cta.trim().slice(0, 40),
-    caption: i.caption.trim().slice(0, 220),
-    hashtags: safeHashtags(i.hashtags.map((h) => h.replace(/[^\p{L}\p{N}_]/gu, "").toLowerCase()).filter(Boolean)).slice(0, 5),
+    caption: i.caption.trim().slice(0, rich ? 340 : 220),
+    hashtags: safeHashtags(i.hashtags.map((h) => h.replace(/[^\p{L}\p{N}_]/gu, "").toLowerCase()).filter(Boolean)).slice(0, rich ? 7 : 5),
   };
 }
 
@@ -126,7 +145,8 @@ const CTAS = [
   "Clica no carrinho",
 ];
 
-export function templateCopy(product: string, count: number, offset = 0): CopyItem[] {
+export function templateCopy(product: string, count: number, offset = 0, niche?: Niche): CopyItem[] {
+  const nicheTags: string[] = niche ? [...NICHES[niche].tags] : [];
   const p = product.trim() || "produto";
   // Se o nome do produto tiver termo de risco, os textos não citam o nome.
   const nameOk = isSafe(p);
@@ -139,7 +159,12 @@ export function templateCopy(product: string, count: number, offset = 0): CopyIt
       hook,
       cta: CTAS[i % CTAS.length],
       caption: nameOk ? `${hook} 😍 ${p} disponível no TikTok Shop.` : `${hook} 😍 Disponível no TikTok Shop.`,
-      hashtags: safeHashtags(["tiktokshop", "achadinhos", nameOk && tag ? tag : "comprinhas", "dicadecompra"]),
+      hashtags: safeHashtags([
+        "tiktokshop",
+        "achadinhos",
+        nameOk && tag ? tag : "comprinhas",
+        ...(nicheTags.length ? nicheTags.slice(0, 2) : ["dicadecompra"]),
+      ]),
     };
   });
 }

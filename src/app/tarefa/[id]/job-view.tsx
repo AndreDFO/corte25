@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
 import { ZIP_PART } from "@/lib/pricing";
 import { rememberJob, timeLeft } from "@/lib/my-jobs";
+import { describeExtras } from "@/lib/extras";
 
 export default function JobView({ id }: { id: string }) {
   const [job, setJob] = useState<(Job & { expiresAt?: string }) | null>(null);
@@ -79,6 +80,13 @@ export default function JobView({ id }: { id: string }) {
           <p className="mt-1 text-foreground/60">
             {job.message}
           </p>
+          {job.extras && (
+            <p className="mt-2 rounded-lg border border-dashed border-accent/60 bg-accent/5 px-3 py-1.5 text-xs">
+              🧪 <b>Lote de teste:</b> {describeExtras(job.extras).join(" · ")}
+              {job.extras.animatedCaptions && job.speechFound === -1 && " (este servidor não tem a transcrição da fala; só o gancho fica animado)"}
+              {job.extras.animatedCaptions && job.speechFound === 0 && " (não encontrei fala nos clipes; só o gancho fica animado)"}
+            </p>
+          )}
           {job.expiresAt && now > 0 && (
             <p className="mt-2 inline-block rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent-ink">
               ⏱ Disponível por mais {timeLeft(job.expiresAt, now)}: baixe quantas vezes quiser

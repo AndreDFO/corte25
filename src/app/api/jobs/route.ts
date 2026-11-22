@@ -9,6 +9,8 @@ import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 import { currentUser } from "@/lib/auth";
 import { consumeVideos } from "@/lib/credits";
 import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase-admin";
+import { isAdmin } from "@/lib/admin";
+import { parseExtras, testSiteEnabled } from "@/lib/extras";
 
 const MAX_FILE_MB = Number(process.env.MAX_FILE_MB || 300);
 
@@ -82,6 +84,9 @@ export async function POST(req: Request) {
         { status: 402 },
       );
   }
+  // Melhorias em teste: só valem para o administrador. De qualquer outra conta, são ignoradas.
+  const wanted = parseExtras(form.get("testes"));
+  const extras = wanted && (testSiteEnabled() || (await isAdmin().catch(() => false))) ? wanted : undefined;
   const dir = jobDir(id);
   await fs.mkdir(path.join(dir, "inputs"), { recursive: true });
 
@@ -120,6 +125,7 @@ export async function POST(req: Request) {
     message: "Na fila…",
     variations: [],
     ownerId: user?.id ?? null,
+    ...(extras ? { extras } : {}),
   };
   await saveJob(job);
   // Liga o lote à conta (o lote pago já é ligado ao descontar o saldo): aparece em "Meus vídeos" em qualquer aparelho.

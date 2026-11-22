@@ -1,5 +1,6 @@
 "use client";
 
+import { NICHES } from "@/lib/extras";
 import { useRouter } from "next/navigation";
 import PlanPicker from "./plan-picker";
 import { useEffect, useState } from "react";
@@ -54,6 +55,19 @@ export default function UploadForm() {
       .catch(() => {});
   }, []);
   const [doneId, setDoneId] = useState("");
+  // Melhorias em teste: o quadro só aparece para o administrador (o servidor confere de novo).
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [testes, setTestes] = useState<{ animatedCaptions: boolean; richCopy: boolean; niche: string }>({
+    animatedCaptions: false,
+    richCopy: false,
+    niche: "",
+  });
+  useEffect(() => {
+    fetch("/api/testes", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => j?.admin && setIsAdmin(true))
+      .catch(() => {});
+  }, []);
 
   // Teste grátis: 1 gancho, 1 corpo e 1 CTA (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
   const maxPer = plan === "free" ? 1 : MAX_PER_BLOCK;
@@ -91,6 +105,7 @@ export default function UploadForm() {
     fd.append("clientId", clientId());
     (Object.keys(clips) as BlockKey[]).forEach((k) => clips[k].forEach((f) => fd.append(k, f)));
     if (music) fd.append("music", music);
+    if (isAdmin && (testes.animatedCaptions || testes.richCopy || testes.niche)) fd.append("testes", JSON.stringify(testes));
 
     // Os vídeos abrem numa aba nova (pedido do Andre). A aba é aberta já no clique,
     // senão o navegador bloqueia como pop-up; ela recebe o endereço quando o envio termina.
@@ -332,6 +347,43 @@ export default function UploadForm() {
           </span>
         </label>
       </div>
+
+      {isAdmin && (
+        <div className="grid gap-1.5 rounded-lg border border-dashed border-accent/60 bg-accent/5 px-3 py-2 text-xs">
+          <span className="font-bold text-accent-ink">🧪 Melhorias em teste (só no site de teste ou para o administrador)</span>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={testes.animatedCaptions}
+              onChange={(e) => setTestes((t) => ({ ...t, animatedCaptions: e.target.checked }))}
+            />
+            Legendas animadas da fala, palavra por palavra
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={testes.richCopy}
+              onChange={(e) => setTestes((t) => ({ ...t, richCopy: e.target.checked }))}
+            />
+            Descrição e hashtags turbinadas
+          </label>
+          <label className="flex items-center gap-2">
+            Nicho:
+            <select
+              value={testes.niche}
+              onChange={(e) => setTestes((t) => ({ ...t, niche: e.target.value }))}
+              className="min-w-0 flex-1 rounded-md bg-field border border-foreground/15 px-1.5 py-1 outline-none"
+            >
+              <option value="">Nenhum (como hoje)</option>
+              {Object.entries(NICHES).map(([k, n]) => (
+                <option key={k} value={k}>
+                  {n.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       {plan === "free" && (
         <label className="grid gap-1">
