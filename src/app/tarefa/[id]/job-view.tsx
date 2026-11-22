@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
 import { rememberJob, timeLeft } from "@/lib/my-jobs";
@@ -332,6 +332,14 @@ function SelectionBar({
   );
 }
 
+// Tela cheia: no iPhone só o player do próprio vídeo abre em tela cheia (webkitEnterFullscreen).
+function bigScreen(video: HTMLVideoElement | null) {
+  if (!video) return;
+  const el = video as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+  if (el.requestFullscreen) el.requestFullscreen().then(() => el.play().catch(() => {})).catch(() => el.webkitEnterFullscreen?.());
+  else el.webkitEnterFullscreen?.();
+}
+
 function Card({
   id,
   v,
@@ -350,6 +358,7 @@ function Card({
   onOriginal: (original: boolean) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const isNarr = shown !== v.file;
   // ?n= muda a cada nova narração, para o navegador não mostrar a gravação anterior.
   const src = `/api/jobs/${id}/files/${shown}${isNarr ? `?n=${encodeURIComponent(v.narrated || "")}` : ""}`;
@@ -372,19 +381,21 @@ function Card({
             ✓
           </button>
         )}
-        {onNarrate && (
+        {v.status === "done" && (
           <button
             type="button"
-            onClick={onNarrate}
-            aria-label={`Gravar narração no vídeo ${v.index + 1}`}
-            title="Gravar narração"
-            className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-lg border-2 border-white bg-black/40 text-sm shadow"
+            onClick={() => bigScreen(videoRef.current)}
+            aria-label={`Ver o vídeo ${v.index + 1} em tela cheia`}
+            title="Tela cheia"
+            className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-lg border-2 border-white bg-black/40 text-white shadow"
           >
-            🎙
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+            </svg>
           </button>
         )}
         {v.status === "done" ? (
-          <video key={src} src={src} controls playsInline preload="metadata" className="h-full w-full object-cover" />
+          <video ref={videoRef} key={src} src={src} controls playsInline preload="metadata" className="h-full w-full object-cover" />
         ) : v.status === "error" ? (
           <span className="text-xs text-brand-ink p-3 text-center">Falhou</span>
         ) : (
@@ -395,6 +406,15 @@ function Card({
         <p className="font-bold leading-snug line-clamp-2">
           #{v.index + 1} · <span className="text-accent-ink">{v.durationSec}s</span> · {v.hook}
         </p>
+        {onNarrate && (
+          <button
+            type="button"
+            onClick={onNarrate}
+            className="rounded-md bg-accent py-1 font-bold text-white hover:bg-accent-dark"
+          >
+            🎙 {v.narrated ? "Narrar de novo" : "Narrar"}
+          </button>
+        )}
         {v.narrated && (
           <div className="flex overflow-hidden rounded-md bg-foreground/10 text-[10px] font-bold">
             <button type="button" onClick={() => onOriginal(true)} className={`flex-1 py-0.5 ${!isNarr ? "bg-foreground text-surface" : ""}`}>
