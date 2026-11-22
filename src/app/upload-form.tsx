@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import PlanPicker from "./plan-picker";
+import { TRACKS, isTrack, trackUrl } from "@/lib/music";
 import { useEffect, useRef, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
 import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
@@ -34,6 +35,32 @@ export default function UploadForm() {
   const router = useRouter();
   const [clips, setClips] = useState<Record<BlockKey, File[]>>({ hooks: [], bodies: [], ctas: [] });
   const [music, setMusic] = useState<File | null>(null);
+  // Música: "" = sem música, slug da playlist, ou "arquivo" = a pessoa envia a dela.
+  const [track, setTrack] = useState("");
+  const [playing, setPlaying] = useState(false);
+  const player = useRef<HTMLAudioElement | null>(null);
+  function preview() {
+    if (!isTrack(track)) return;
+    if (!player.current) {
+      player.current = new Audio();
+      player.current.onended = () => setPlaying(false);
+    }
+    const a = player.current;
+    if (playing) {
+      a.pause();
+      setPlaying(false);
+      return;
+    }
+    if (!a.src.endsWith(trackUrl(track))) a.src = trackUrl(track);
+    a.currentTime = 0;
+    a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  }
+  function chooseTrack(v: string) {
+    player.current?.pause();
+    setPlaying(false);
+    setTrack(v);
+    if (v !== "arquivo") setMusic(null);
+  }
   const [product, setProduct] = useState("");
   const [details, setDetails] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -103,7 +130,8 @@ export default function UploadForm() {
     if (plan === "free") fd.append("whatsapp", whatsapp);
     fd.append("clientId", clientId());
     (Object.keys(clips) as BlockKey[]).forEach((k) => clips[k].forEach((f) => fd.append(k, f)));
-    if (music) fd.append("music", music);
+    if (isTrack(track)) fd.append("track", track);
+    else if (track === "arquivo" && music) fd.append("music", music);
 
     // Os vídeos abrem numa aba nova (pedido do Andre). A aba é aberta já no clique,
     // senão o navegador bloqueia como pop-up; ela recebe o endereço quando o envio termina.
@@ -336,15 +364,44 @@ export default function UploadForm() {
             <option value="30">30 segundos</option>
           </select>
         </label>
-        <label className="grid min-w-0 gap-1">
-          <span className="truncate text-xs font-medium text-foreground/60">Música (opcional)</span>
-          <span className="flex min-w-0 items-center gap-2 rounded-lg bg-field border border-foreground/15 px-2 py-2 cursor-pointer">
-            <input type="file" accept="audio/*" hidden onChange={(e) => setMusic(e.target.files?.[0] || null)} />
-            <span className="shrink-0 rounded-md bg-foreground/10 px-2 py-0.5 text-xs font-semibold">Escolher</span>
-            <span className="truncate text-xs text-foreground/60">{music ? music.name : "nenhuma"}</span>
+        <div className="grid min-w-0 gap-1">
+          <span className="truncate text-xs font-medium text-foreground/60">Música</span>
+          <span className="flex min-w-0 gap-1">
+            <select
+              value={track}
+              onChange={(e) => chooseTrack(e.target.value)}
+              aria-label="Música de fundo"
+              className="w-full min-w-0 rounded-lg bg-field border border-foreground/15 px-2 py-2 outline-none focus:border-brand"
+            >
+              <option value="">Sem música</option>
+              {TRACKS.map((t) => (
+                <option key={t.slug} value={t.slug}>
+                  {t.title}
+                </option>
+              ))}
+              <option value="arquivo">Enviar minha música…</option>
+            </select>
+            {isTrack(track) && (
+              <button
+                type="button"
+                onClick={preview}
+                aria-label={playing ? "Parar prévia" : "Ouvir prévia"}
+                title={playing ? "Parar" : "Ouvir"}
+                className="grid w-9 shrink-0 place-items-center rounded-lg bg-accent text-sm font-black text-white hover:bg-accent-dark"
+              >
+                {playing ? "■" : "▶"}
+              </button>
+            )}
           </span>
-        </label>
+        </div>
       </div>
+      {track === "arquivo" && (
+        <label className="-mt-1 flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-foreground/15 bg-field px-2 py-2">
+          <input type="file" accept="audio/*" hidden onChange={(e) => setMusic(e.target.files?.[0] || null)} />
+          <span className="shrink-0 rounded-md bg-foreground/10 px-2 py-0.5 text-xs font-semibold">Escolher arquivo</span>
+          <span className="truncate text-xs text-foreground/60">{music ? music.name : "MP3 ou outro áudio do seu celular"}</span>
+        </label>
+      )}
 
       <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-foreground/70">
         <input type="checkbox" checked={captions} onChange={(e) => setCaptions(e.target.checked)} className="peer sr-only" />
