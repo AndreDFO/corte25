@@ -387,6 +387,7 @@ export default function UploadForm() {
               Cada lote vale {VIDEOS_PER_LOT} vídeos de saldo. Você escolhe quantos gerar por vez e, gerando {BATCH_VIDEOS} de uma vez, ganha mais {FREE_VIDEOS} grátis. Tudo combinando seus ganchos, corpos e CTAs, sem marca
               d&apos;água, com legendas e download em ZIP.
             </p>
+            <p className="-mb-2 text-xs font-black text-foreground/70">Assinaturas mensais</p>
             {SUBSCRIPTION_OPTIONS.map((x, i) => (
               <a
                 key={x.id}
@@ -395,7 +396,7 @@ export default function UploadForm() {
               >
                 <span className="flex items-baseline justify-between">
                   <span className="font-bold">
-                    Assinatura · {x.credits * 25} vídeos/mês{" "}
+                    {x.credits * 25} vídeos/mês{" "}
                     {i === 0 && <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-black uppercase text-white">recomendado</span>}
                   </span>
                   <span className="whitespace-nowrap text-lg font-extrabold">
@@ -406,7 +407,7 @@ export default function UploadForm() {
                 <span className="block text-xs text-foreground/60">{x.perBatch}</span>
               </a>
             ))}
-            <p className="-mb-2 text-xs font-semibold text-foreground/50">Ou pacotes avulsos, sem mensalidade:</p>
+            <p className="-mb-2 text-xs font-black text-foreground/70">Pacotes avulsos <span className="font-semibold text-foreground/50">· sem mensalidade</span></p>
             {PACKAGES.map((p) => (
               <a
                 key={p.credits}

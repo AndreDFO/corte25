@@ -122,7 +122,7 @@ export default function AccountPanel(p: {
       const id = x.id as ProductId;
       return {
         id,
-        title: `Assinatura · ${x.credits * 25} vídeos/mês`,
+        title: `${x.credits * 25} vídeos/mês`,
         full: priceOf(id).full,
         price: `${priceOf(id).now}/mês`,
         sub: `${x.perBatch}${p.discount ? " · desconto no 1º mês" : ""}`,
@@ -184,25 +184,37 @@ export default function AccountPanel(p: {
             </p>
           </div>
         )}
-        <div className="grid gap-2 sm:grid-cols-2">
-          {options.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => choose(o.id)}
-              className={`rounded-xl border p-3 text-left ${chosen === o.id ? "border-brand bg-brand/15 ring-2 ring-brand/40" : o.accent ? "border-accent bg-accent/10" : "border-foreground/15"}`}
-            >
-              <span className="flex items-baseline justify-between gap-2">
-                <span className="font-bold">{o.title}</span>
-                <span className="whitespace-nowrap font-extrabold">
-                  {o.full && <s className="mr-1 text-xs font-semibold text-foreground/40">{o.full}</s>}
-                  {o.price}
-                </span>
-              </span>
-              <span className="block text-xs text-foreground/60">{o.sub}</span>
-            </button>
-          ))}
-        </div>
+        {/* Duas partes: assinaturas mensais e pacotes avulsos (pedido do Andre). */}
+        {(
+          [
+            ["Assinaturas mensais", "Vídeos novos todo mês, pelo menor preço por vídeo.", options.filter((o) => o.id.startsWith("assinatura"))],
+            ["Pacotes avulsos", "Pague uma vez, sem mensalidade.", options.filter((o) => !o.id.startsWith("assinatura"))],
+          ] as const
+        ).map(([title, hint, list]) => (
+          <div key={title} className="grid gap-2">
+            <div>
+              <h3 className="text-sm font-black">{title}</h3>
+              <p className="text-xs text-foreground/50">{hint}</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {list.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => choose(o.id)}
+                  className={`rounded-xl border p-3 text-left ${chosen === o.id ? "border-brand bg-brand/15 ring-2 ring-brand/40" : o.accent ? "border-accent bg-accent/10" : "border-foreground/15"}`}
+                >
+                  <span className="block font-bold">{o.title}</span>
+                  <span className="block whitespace-nowrap text-lg font-extrabold">
+                    {o.full && <s className="mr-1 text-xs font-semibold text-foreground/40">{o.full}</s>}
+                    {o.price}
+                  </span>
+                  <span className="block text-xs text-foreground/60">{o.sub}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
         {chosen && !p.hasCustomer && (
           <div className="grid gap-2 sm:grid-cols-2">
             <input
