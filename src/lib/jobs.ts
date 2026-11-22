@@ -17,6 +17,7 @@ export interface Variation {
   durationSec: number;
   status: VariationStatus;
   error?: string;
+  narrated?: string; // data da narração gravada pelo microfone (arquivo video_XX_narrado.mp4)
 }
 
 export interface Job {

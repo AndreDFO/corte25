@@ -4,6 +4,7 @@ import { canAccessJob, forbidden, jobOwner } from "@/lib/job-access";
 import { jobDir, loadJob } from "@/lib/jobs";
 import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase-admin";
 import { expiresAt } from "@/lib/retention";
+import { canNarrate } from "@/lib/narration";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -11,7 +12,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const job = await loadJob(id);
   if (!job) return Response.json({ error: "não encontrado" }, { status: 404 });
   if (!(await canAccessJob(job))) return forbidden();
-  return Response.json({ ...job, expiresAt: expiresAt(job) }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ ...job, expiresAt: expiresAt(job), canNarrate: await canNarrate() }, { headers: { "Cache-Control": "no-store" } });
 }
 
 // Excluir um lote para sempre (pedido do Andre). Só a conta dona pode; lotes sem dono

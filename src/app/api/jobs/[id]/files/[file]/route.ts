@@ -6,7 +6,7 @@ import { jobDir, loadJob } from "@/lib/jobs";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string; file: string }> }) {
   const { id, file } = await ctx.params;
-  if (!/^[a-f0-9]{16}$/.test(id) || !/^video_\d{2}\.mp4$/.test(file))
+  if (!/^[a-f0-9]{16}$/.test(id) || !/^video_\d{2}(_narrado)?\.mp4$/.test(file))
     return new Response("não encontrado", { status: 404 });
   const job = await loadJob(id);
   if (!job) return new Response("não encontrado", { status: 404 });
