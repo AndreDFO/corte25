@@ -9,6 +9,7 @@ import { Word, transcribeClip, whisperAvailable } from "./transcribe";
 import { buildAss } from "./captions-ass";
 import { refundJobVideos } from "./credits";
 import { refundVipQuota } from "./vip";
+import { supabaseAdmin, supabaseConfigured } from "./supabase-admin";
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH || "ffprobe";
@@ -375,7 +376,9 @@ async function soundBounds(c: ClipInfo): Promise<{ start: number; end: number } 
   return { start: Math.round(start * 100) / 100, end: Math.round(end * 100) / 100 };
 }
 
-const running = new Set<string>();
+// Compartilhado entre as cópias do módulo (o Next carrega a instrumentation separada das rotas).
+const gRun = globalThis as unknown as { __corte25Running?: Set<string> };
+const running = (gRun.__corte25Running ??= new Set<string>());
 
 // Devolve ao saldo os vídeos pagos que não saíram. Lotes antigos (sem "charged") não devolvem nada.
 async function refundFailed(job: Job, failed: number): Promise<number> {
@@ -426,10 +429,30 @@ function checkCancelled(id: string) {
   if (cancelled.has(id)) throw new Cancelled("cancelado");
 }
 
+// Falha de geração vira um relato automático em "Relatos" no /admin (tabela bug_reports), com o erro
+// do FFmpeg/whisper e as opções do lote, para dar para achar a causa sem os registros do servidor.
+async function reportJobError(job: Job, stage: string, err: unknown) {
+  if (!supabaseConfigured()) return;
+  const msg = String((err as Error)?.message || err).slice(-3500);
+  const opts = { plano: job.plan, videos: job.count, legenda: Boolean(job.autoCaptions), corte: Boolean(job.trimSilence), transicao: Boolean(job.transition), textos: job.captions !== false, musica: job.music || null, duracao: job.durationMode || "auto", clipes: job.blocks };
+  await supabaseAdmin()
+    .from("bug_reports")
+    .insert({
+      summary: `[automático] Falha na geração: ${stage}`.slice(0, 200),
+      details: `${msg}\n\nOpções: ${JSON.stringify(opts)}`.slice(0, 4000),
+      page: `/tarefa/${job.id}`,
+      user_id: job.ownerId ?? null,
+      transcript: [],
+      browser: { automatico: true, job: job.id },
+    })
+    .then(({ error }) => error && console.error("[relato automático]", error.message));
+}
+
 // Marca o lote como erro e devolve tudo: saldo descontado, cota VIP do mês e teste grátis.
 async function failJob(id: string, message: string) {
   const job = await loadJob(id);
   if (!job) return;
+  await reportJobError(job, "lote inteiro", message).catch(() => {});
   job.status = "error";
   job.message = message;
   const back = await refundFailed(job, job.count);
@@ -523,6 +546,7 @@ async function processJob(id: string) {
         const t0 = Date.now();
         const words = await transcribeClip(c.file, c.hasAudio).catch((e) => {
           console.error(`[legenda] ${path.basename(c.file)}:`, e);
+          void reportJobError(job, `legenda ${path.basename(c.file)}`, e).catch(() => {});
           missedClips.add(c.file);
           return [] as Word[];
         });
@@ -531,6 +555,7 @@ async function processJob(id: string) {
       }
     } else {
       console.warn("[legenda] servidor sem whisper; vídeos saem sem a legenda automática");
+      void reportJobError(job, "legenda", "servidor sem whisper (modelo não encontrado)").catch(() => {});
       for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) missedClips.add(c.file);
     }
   }
@@ -604,6 +629,7 @@ async function processJob(id: string) {
         // Falhou com a legenda automática: refaz na hora sem ela (o vídeo sai e o crédito dele volta).
         if (keep("legenda", i) && job.autoCaptions && speech && !cancelled.has(id)) {
           console.error(`[job ${id}] vídeo ${i + 1} falhou com legenda, refazendo sem:`, err);
+          await reportJobError(job, `vídeo ${i + 1} com legenda (refeito sem)`, err).catch(() => {});
           try {
             await renderVariation(
               { ...job, captions: keep("textos", i) && job.captions, autoCaptions: false },
@@ -620,6 +646,7 @@ async function processJob(id: string) {
           }
         }
         console.error(`[job ${id}] vídeo ${i + 1}:`, err);
+        await reportJobError(job, `vídeo ${i + 1}`, err).catch(() => {});
         await queueUpdate(i, { status: "error", error: String((err as Error).message).slice(0, 500) });
       }
     }
