@@ -76,6 +76,10 @@ export default function UploadForm() {
   const [duration, setDuration] = useState("auto");
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
+  // Toda falha aparece na tela, perto do botão de gerar (pedido do Andre: nunca falhar calado).
+  useEffect(() => {
+    if (error) document.getElementById("erro-envio")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
   const [plan, setPlan] = useState<"free" | "full">("free");
   const [payOpen, setPayOpen] = useState(false);
   // Quantos vídeos gerar no lote completo (desconta só isso do saldo; com 25 ganha +2 grátis).
@@ -504,7 +508,11 @@ export default function UploadForm() {
         </label>
       )}
 
-      {error && <p className="text-sm text-brand-ink">{error}</p>}
+      {error && (
+        <p id="erro-envio" role="alert" className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          ⚠️ {error}
+        </p>
+      )}
       {doneId && (
         <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm">
           Enviado! Seus vídeos estão sendo gerados numa aba nova.{" "}
@@ -515,7 +523,7 @@ export default function UploadForm() {
       )}
 
       <button
-        disabled={sending || !mixed}
+        disabled={sending}
         className={`rounded-xl disabled:opacity-60 font-black py-3 text-lg ${plan === "free" ? "bg-accent text-white hover:bg-accent-dark" : "bg-brand text-on-brand hover:bg-brand-dark"}`}
       >
         {sending
