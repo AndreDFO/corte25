@@ -264,7 +264,7 @@ export default function UploadForm() {
           {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} →
         </span>
         {plan === "full" && (
-          <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">{videos} vídeos</span>
+          <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">{videos} vídeo{videos === 1 ? "" : "s"}</span>
         )}
         {(plan === "free" || bonus > 0) && (
           <>
@@ -305,7 +305,7 @@ export default function UploadForm() {
               </a>
             ) : null}
           </div>
-          <div className="grid grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-6 gap-1">
             {VIDEO_CHOICES.map((n) => (
               <button
                 key={n}
@@ -401,7 +401,7 @@ export default function UploadForm() {
             ? `Gerar ${FREE_VIDEOS} vídeos grátis`
             : bonus
               ? `Gerar ${videos} + ${bonus} vídeos grátis`
-              : `Gerar ${videos} vídeos`}
+              : `Gerar ${videos} vídeo${videos === 1 ? "" : "s"}`}
       </button>
       {plan === "free" && (
         <p className="-mt-2 text-center text-[11px] text-foreground/40">1 teste grátis por pessoa · sem cartão</p>

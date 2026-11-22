@@ -6,7 +6,7 @@ export const FULL_PRICE = "1 crédito"; // (antigo) o que aparecia no botão do 
 // Saldo em vídeos (22/11): cada lote comprado vira 25 vídeos de saldo. A pessoa escolhe quantos
 // gerar por vez; gerando 25 de uma vez, ganha mais 2 grátis.
 export const VIDEOS_PER_LOT = BATCH_VIDEOS;
-export const VIDEO_CHOICES = [5, 10, 15, 20, 25] as const;
+export const VIDEO_CHOICES = [1, 5, 10, 15, 20, 25] as const;
 export const bonusFor = (n: number) => (n >= BATCH_VIDEOS ? 2 : 0);
 // Pacotes avulsos (aprovado pelo Andre em 22/11). Para mudar preço, troque só "value" aqui.
 const PACKAGE_LIST = [
