@@ -395,6 +395,11 @@ export default function UploadForm() {
           </span>
         </div>
       </div>
+      {track === "" && (
+        <p className="-mt-1 text-[11px] text-foreground/55">
+          🎵 Dica: sem música, você coloca um <b>som em alta do TikTok</b> na hora de postar.
+        </p>
+      )}
       {track === "arquivo" && (
         <label className="-mt-1 flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-foreground/15 bg-field px-2 py-2">
           <input type="file" accept="audio/*" hidden onChange={(e) => setMusic(e.target.files?.[0] || null)} />
