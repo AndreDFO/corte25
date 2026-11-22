@@ -11,7 +11,8 @@ export async function POST(req: Request) {
   if (!ev || !p) return Response.json({ ok: true });
 
   try {
-    if (ev.event === "PAYMENT_CONFIRMED" || ev.event === "PAYMENT_RECEIVED") {
+    // RECEIVED_IN_CASH: quando o pagamento é confirmado à mão no painel do Asaas (usado também nos testes do sandbox).
+    if (ev.event === "PAYMENT_CONFIRMED" || ev.event === "PAYMENT_RECEIVED" || ev.event === "PAYMENT_RECEIVED_IN_CASH") {
       const ref = parseReference(p.externalReference);
       if (ref) await grantForPayment({ paymentId: p.id, userId: ref.userId, product: ref.product, value: p.value, subscription: p.subscription });
       else console.warn("[asaas] pagamento sem referência do Corte25:", p.id);
