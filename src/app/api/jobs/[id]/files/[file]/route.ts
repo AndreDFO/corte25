@@ -1,12 +1,13 @@
 import { createReadStream, promises as fs } from "fs";
 import path from "path";
 import { Readable } from "stream";
-import { jobDir } from "@/lib/jobs";
+import { jobDir, loadJob } from "@/lib/jobs";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string; file: string }> }) {
   const { id, file } = await ctx.params;
   if (!/^[a-f0-9]{16}$/.test(id) || !/^video_\d{2}\.mp4$/.test(file))
     return new Response("não encontrado", { status: 404 });
+  if (!(await loadJob(id))) return new Response("não encontrado", { status: 404 });
   const full = path.join(jobDir(id), "outputs", file);
   let size: number;
   try {

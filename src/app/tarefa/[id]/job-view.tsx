@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
 import { FULL_PRICE, ZIP_PART } from "@/lib/pricing";
+import { rememberJob, timeLeft } from "@/lib/my-jobs";
 
 export default function JobView({ id }: { id: string }) {
-  const [job, setJob] = useState<Job | null>(null);
+  const [job, setJob] = useState<(Job & { expiresAt?: string }) | null>(null);
+  const [now, setNow] = useState(0);
   const [notFound, setNotFound] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
 
@@ -17,21 +19,35 @@ export default function JobView({ id }: { id: string }) {
       try {
         const res = await fetch(`/api/jobs/${id}`, { cache: "no-store" });
         if (res.status === 404) return setNotFound(true);
-        const j: Job = await res.json();
+        const j: Job & { expiresAt?: string } = await res.json();
         if (stop) return;
         setJob(j);
+        rememberJob({ id: j.id, product: j.product, createdAt: j.createdAt });
         if (j.status === "done" || j.status === "error") return;
       } catch {}
       timer = setTimeout(tick, 2000);
     }
     tick();
+    const first = setTimeout(() => setNow(Date.now()), 0);
+    const clock = setInterval(() => setNow(Date.now()), 30_000);
     return () => {
       stop = true;
       clearTimeout(timer);
+      clearInterval(clock);
+      clearTimeout(first);
     };
   }, [id]);
 
-  if (notFound) return <p className="p-10 text-center text-foreground/60">Tarefa não encontrada.</p>;
+  if (notFound)
+    return (
+      <div className="p-10 text-center">
+        <p className="font-bold">Esses vídeos não estão mais disponíveis.</p>
+        <p className="mt-1 text-sm text-foreground/60">Os vídeos ficam guardados por 24 horas e depois são excluídos.</p>
+        <Link href="/#criar" className="mt-4 inline-block rounded-xl bg-accent px-5 py-2.5 font-bold text-white">
+          Gerar novos vídeos
+        </Link>
+      </div>
+    );
   if (!job) return <p className="p-10 text-center text-foreground/60">Carregando…</p>;
 
   const done = job.variations.filter((v) => v.status === "done").length;
@@ -53,6 +69,11 @@ export default function JobView({ id }: { id: string }) {
               </span>
             )}
           </p>
+          {job.expiresAt && now > 0 && (
+            <p className="mt-2 inline-block rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent-ink">
+              ⏱ Disponível por mais {timeLeft(job.expiresAt, now)}: baixe quantas vezes quiser
+            </p>
+          )}
         </div>
         {done > 0 && (
           <div className="flex gap-3">

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { rememberJob } from "@/lib/my-jobs";
 import { BATCH_VIDEOS, FREE_VIDEOS, FULL_PRICE, MAX_PER_BLOCK, PACKAGES, comboCount } from "@/lib/pricing";
 
 function clientId() {
@@ -90,6 +91,7 @@ export default function UploadForm() {
           return;
         }
         if (xhr.status >= 400) throw new Error(res.error || "Erro no envio");
+        rememberJob({ id: res.id, product, createdAt: new Date().toISOString() });
         if (tab && !tab.closed) {
           tab.location.href = `/tarefa/${res.id}`;
           setProgress(null);

@@ -56,7 +56,11 @@ export async function saveJob(job: Job) {
 export async function loadJob(id: string): Promise<Job | null> {
   try {
     const raw = await fs.readFile(path.join(jobDir(id), "job.json"), "utf8");
-    return JSON.parse(raw) as Job;
+    const job = JSON.parse(raw) as Job;
+    // Guardado por RETENTION_HOURS (24 h); depois disso a tarefa some, mesmo antes da limpeza apagar a pasta.
+    const hours = Number(process.env.RETENTION_HOURS) || 24;
+    if (Date.now() > new Date(job.createdAt).getTime() + hours * 3600_000) return null;
+    return job;
   } catch {
     return null;
   }

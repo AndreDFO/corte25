@@ -16,7 +16,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="font-extrabold text-xl tracking-tight">
               Corte<span className="ml-0.5 rounded-md bg-brand px-1.5 text-on-brand">25</span>
             </Link>
-            <span className="hidden sm:inline text-sm text-foreground/60">25 vídeos + 2 grátis</span>
+            <nav className="flex items-center gap-4 text-sm">
+              <span className="hidden sm:inline text-foreground/60">25 vídeos + 2 grátis</span>
+              <Link href="/meus-videos" className="rounded-lg bg-foreground/5 px-3 py-1.5 font-semibold hover:bg-foreground/10">
+                Meus vídeos
+              </Link>
+            </nav>
           </div>
         </header>
         <main className="flex-1">{children}</main>
