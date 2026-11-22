@@ -7,7 +7,9 @@ export const FULL_PRICE = "1 crédito"; // (antigo) o que aparecia no botão do 
 // gerar por vez; gerando 25 de uma vez, ganha mais 2 grátis.
 export const VIDEOS_PER_LOT = BATCH_VIDEOS;
 export const VIDEO_CHOICES = [1, 5, 10, 15, 20, 25] as const;
-export const bonusFor = (n: number) => (n >= BATCH_VIDEOS ? 2 : 0);
+// Bônus de +2 ao gerar 25. Com "combos" (combinações diferentes que a pessoa subiu), o bônus só vem até onde
+// não repete vídeo: 26 combinações dão +1, 27 ou mais dão +2, 25 não dão bônus (pedido do Andre, 22/11: nunca repetir).
+export const bonusFor = (n: number, combos = Infinity) => (n >= BATCH_VIDEOS ? Math.max(0, Math.min(2, combos - n)) : 0);
 // Pacotes avulsos (aprovado pelo Andre em 22/11). Para mudar preço, troque só "value" aqui.
 const PACKAGE_LIST = [
   { credits: 1, value: 7.99, tag: "para testar" }, // Iniciante: 25 vídeos (+2 grátis)
@@ -83,6 +85,24 @@ export const MIX_RULE = "Coloque pelo menos 1 vídeo em cada bloco e 2 vídeos o
 
 export function comboCount(h: number, b: number, c: number) {
   return h * b * c;
+}
+
+// Nunca gerar vídeo repetido (pedido do Andre, 22/11): só dá para pedir até o número de combinações diferentes.
+export const videosAllowed = (n: number, combos: number) => n <= combos;
+
+// Quantos vídeos a mais subir (e em quais blocos) para chegar a "target" combinações sem passar de "max" por bloco.
+// Sempre põe o próximo vídeo no bloco que tem menos, que é o que mais aumenta as combinações.
+export function clipsToReach(counts: [number, number, number], target: number, max = MAX_PER_BLOCK) {
+  const c = [...counts] as [number, number, number];
+  const add: [number, number, number] = [0, 0, 0];
+  while (c[0] * c[1] * c[2] < target) {
+    let i = -1;
+    for (let k = 0; k < 3; k++) if (c[k] < max && (i < 0 || c[k] < c[i])) i = k;
+    if (i < 0) return null; // nem com o máximo em cada bloco chega lá
+    c[i]++;
+    add[i]++;
+  }
+  return add;
 }
 
 // Vídeos por parte do ZIP (download no celular): ZIP de 300 MB costuma falhar no download ou ao abrir.
