@@ -58,6 +58,21 @@ export const VIP_PRICE = 14.99;
 export const VIP_DAYS = 31; // cada mensalidade paga vale 31 dias
 // Quem tem qualquer assinatura mensal (sem VIP) ganha 3 vídeos por mês com os recursos VIP (pedido do Andre, 22/11).
 export const SUBSCRIBER_VIP_VIDEOS = 3;
+
+// Recursos VIP que um cupom pode liberar um a um. "todos" = VIP completo (inclui recursos futuros).
+export const VIP_FEATURE_LIST = [
+  { id: "textos", label: "Textos no vídeo" },
+  { id: "silencio", label: "Cortar partes sem som" },
+  { id: "musica", label: "Música" },
+  { id: "narracao", label: "Narração" },
+  { id: "legenda", label: "Legenda automática" },
+] as const;
+export type VipFeature = (typeof VIP_FEATURE_LIST)[number]["id"];
+export const ALL_VIP_FEATURES = VIP_FEATURE_LIST.map((f) => f.id) as VipFeature[];
+export function describeVipFeatures(list: readonly string[] | null | undefined) {
+  if (!list?.length || list.includes("todos")) return "VIP completo";
+  return VIP_FEATURE_LIST.filter((f) => list.includes(f.id)).map((f) => f.label.toLowerCase()).join(", ");
+}
 export const FREE_TRIALS_PER_PERSON = 1;
 
 export function comboCount(h: number, b: number, c: number) {

@@ -5,7 +5,7 @@ import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
 import { trackPath } from "@/lib/music-library";
 import { spendVipQuota, vipAllowance } from "@/lib/vip";
-import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
+import { type VipFeature, BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 import { currentUser } from "@/lib/auth";
@@ -60,11 +60,18 @@ export async function POST(req: Request) {
   // Recursos VIP (textos, cortar silêncio, música, narração, legenda automática): só para VIP.
   // A trava é aqui no servidor; a tela só mostra o cadeado.
   // Assinante mensal sem VIP: os primeiros vídeos da cota do mês (3) saem com os recursos VIP.
+  // Cupom de recursos VIP libera recursos escolhidos em todos os vídeos (allowance.features).
   const allowance = await vipAllowance(user);
-  const wantsVip =
-    form.get("captions") === "1" || form.get("trimSilence") === "1" || form.get("autoCaptions") === "1" || Boolean(form.get("track")) || (music instanceof File && music.size > 0);
-  const quotaVideos = !allowance.vip && plan === "full" && wantsVip ? allowance.quota : 0;
-  const vip = allowance.vip || quotaVideos > 0;
+  const has = (f: VipFeature) => allowance.vip || allowance.features.includes(f);
+  const wantCaptions = form.get("captions") === "1";
+  const wantTrim = form.get("trimSilence") === "1";
+  const wantAuto = form.get("autoCaptions") === "1";
+  const wantMusic = Boolean(form.get("track")) || (music instanceof File && music.size > 0);
+  const needsQuota = (wantCaptions && !has("textos")) || (wantTrim && !has("silencio")) || (wantMusic && !has("musica")) || (wantAuto && !has("legenda"));
+  const quotaVideos = !allowance.vip && plan === "full" && needsQuota ? allowance.quota : 0;
+  const allow = (f: VipFeature) => has(f) || quotaVideos > 0;
+  // Recursos que valem em todos os vídeos mesmo fora da cota (vieram de cupom).
+  const vipKeep = (["textos", "silencio", "musica", "legenda"] as const).filter((f) => has(f));
   const whatsapp = plan === "free" ? normalizeWhatsapp(String(form.get("whatsapp") || "")) : null;
   if (plan === "free" && !whatsapp)
     return Response.json({ error: "Informe um WhatsApp válido com DDD para fazer o teste grátis." }, { status: 400 });
@@ -114,12 +121,12 @@ export async function POST(req: Request) {
   };
   let musicName: string | undefined;
   const track = String(form.get("track") || "");
-  const trackFile = vip && track && track !== "arquivo" ? await trackPath(track) : null;
+  const trackFile = allow("musica") && track && track !== "arquivo" ? await trackPath(track) : null;
   if (trackFile) {
     // Música da biblioteca (Openverse CC0/domínio público ou as faixas próprias).
     musicName = `musica_${track}${path.extname(trackFile)}`;
     await fs.copyFile(trackFile, path.join(dir, "inputs", musicName));
-  } else if (vip && music instanceof File && music.size > 0) {
+  } else if (allow("musica") && music instanceof File && music.size > 0) {
     musicName = `musica_${safeName(music.name)}`;
     await fs.writeFile(path.join(dir, "inputs", musicName), Buffer.from(await music.arrayBuffer()));
   }
@@ -129,16 +136,16 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
     product,
     productGiven: Boolean(typed),
-    captions: vip && form.get("captions") === "1",
-    ...(vip && form.get("trimSilence") === "1" ? { trimSilence: true } : {}),
-    ...(vip && form.get("autoCaptions") === "1" ? { autoCaptions: true } : {}),
+    captions: allow("textos") && wantCaptions,
+    ...(allow("silencio") && wantTrim ? { trimSilence: true } : {}),
+    ...(allow("legenda") && wantAuto ? { autoCaptions: true } : {}),
     details,
     inputs: [...blocks.hooks, ...blocks.bodies, ...blocks.ctas],
     blocks,
     music: musicName,
     plan,
     count: plan === "full" ? videos + bonusFor(videos) : FREE_VIDEOS,
-    ...(quotaVideos > 0 ? { vipLimit: Math.min(quotaVideos, videos + bonusFor(videos)) } : {}),
+    ...(quotaVideos > 0 ? { vipLimit: Math.min(quotaVideos, videos + bonusFor(videos)), ...(vipKeep.length ? { vipKeep } : {}) } : {}),
     durationMode,
     status: "queued",
     message: "Na fila…",

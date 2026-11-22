@@ -1,5 +1,6 @@
 import { supabaseAdmin, supabaseConfigured } from "./supabase-admin";
-import { SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTIONS, VIP_DAYS } from "./pricing";
+import { ALL_VIP_FEATURES, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTIONS, VIP_DAYS, type VipFeature } from "./pricing";
+import { normalizeCode, type Coupon } from "./coupons";
 
 // Plano VIP (22/11/2026): assinatura extra de R$ 14,99/mês. Só VIP (e o admin) usa:
 // textos no vídeo, cortar partes sem som, música (biblioteca e envio), narração e legenda automática.
@@ -19,6 +20,24 @@ export interface VipStatus {
   canceled: boolean; // pediu para cancelar (vale até "until")
   subscriptionId: string | null;
   admin: boolean;
+  coupon?: boolean; // VIP completo vindo de cupom (sem assinatura)
+}
+
+export interface VipGrant {
+  features: string[];
+  until: string;
+}
+
+// Recursos liberados por cupom que ainda estão valendo.
+export async function activeGrants(userId: string): Promise<VipGrant[]> {
+  if (!supabaseConfigured()) return [];
+  const { data } = await supabaseAdmin()
+    .from("vip_grants")
+    .select("features, until")
+    .eq("user_id", userId)
+    .gt("until", new Date().toISOString())
+    .order("until", { ascending: false });
+  return (data ?? []) as VipGrant[];
 }
 
 export async function vipStatus(user: U): Promise<VipStatus> {
@@ -36,10 +55,17 @@ export async function vipStatus(user: U): Promise<VipStatus> {
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!pay) return none;
+  if (!pay) {
+    const full = (await activeGrants(user.id)).find((g) => g.features.includes("todos"));
+    return full ? { ...none, active: true, until: full.until, coupon: true } : none;
+  }
   const paidAt = new Date(pay.updated_at || pay.created_at).getTime();
   const until = new Date(paidAt + VIP_DAYS * 24 * 3600_000);
   const { data: prof } = await db.from("profiles").select("vip_canceled_at").eq("id", user.id).maybeSingle();
+  if (until.getTime() <= Date.now()) {
+    const full = (await activeGrants(user.id)).find((g) => g.features.includes("todos"));
+    if (full) return { ...none, active: true, until: full.until, coupon: true };
+  }
   return {
     active: until.getTime() > Date.now(),
     until: until.toISOString(),
@@ -62,11 +88,20 @@ function monthStart() {
 }
 
 // O que a pessoa pode usar de recurso VIP agora.
-// vip = tudo liberado; quota = quantos vídeos VIP ainda restam no mês (assinante mensal sem VIP).
-export async function vipAllowance(user: U): Promise<{ vip: boolean; quota: number; subscriber: boolean }> {
-  if (await isVip(user)) return { vip: true, quota: Infinity, subscriber: false };
-  if (!user || !supabaseConfigured()) return { vip: false, quota: 0, subscriber: false };
+// vip = tudo liberado; features = recursos liberados um a um por cupom (valem em todos os vídeos);
+// quota = quantos vídeos VIP ainda restam no mês (assinante mensal sem VIP).
+export interface VipAllowance {
+  vip: boolean;
+  features: VipFeature[];
+  quota: number;
+  subscriber: boolean;
+}
+export async function vipAllowance(user: U): Promise<VipAllowance> {
+  if (await isVip(user)) return { vip: true, features: [...ALL_VIP_FEATURES], quota: Infinity, subscriber: false };
+  if (!user || !supabaseConfigured()) return { vip: false, features: [], quota: 0, subscriber: false };
   const db = supabaseAdmin();
+  const grants = await activeGrants(user.id);
+  const features = ALL_VIP_FEATURES.filter((f) => grants.some((g) => g.features.includes(f)));
   const since = new Date(Date.now() - VIP_DAYS * 24 * 3600_000).toISOString();
   const { count } = await db
     .from("payments")
@@ -75,10 +110,35 @@ export async function vipAllowance(user: U): Promise<{ vip: boolean; quota: numb
     .in("product", SUBSCRIPTIONS.map((s) => s.id))
     .in("status", ["CONFIRMED", "RECEIVED"])
     .gte("updated_at", since);
-  if (!count) return { vip: false, quota: 0, subscriber: false };
+  if (!count) return { vip: false, features, quota: 0, subscriber: false };
   const { data } = await db.from("vip_usage").select("videos").eq("user_id", user.id).gte("created_at", monthStart());
   const used = (data ?? []).reduce((a, r) => a + Number(r.videos), 0);
-  return { vip: false, quota: Math.max(0, SUBSCRIBER_VIP_VIDEOS - used), subscriber: true };
+  return { vip: false, features, quota: Math.max(0, SUBSCRIBER_VIP_VIDEOS - used), subscriber: true };
+}
+
+// true = pode usar este recurso VIP em todos os vídeos (VIP, admin ou cupom do recurso).
+export async function hasVipFeature(user: U, f: VipFeature): Promise<boolean> {
+  const a = await vipAllowance(user);
+  return a.vip || a.features.includes(f);
+}
+
+// Resgata um cupom de recursos VIP (tipo "vip": amount = dias, features = recursos ou ["todos"]).
+export async function redeemVipCoupon(userId: string, rawCode: string): Promise<{ ok: true; until: string; features: string[] } | { ok: false; error: string }> {
+  const code = normalizeCode(rawCode);
+  if (!code) return { ok: false, error: "Digite o código do cupom." };
+  const db = supabaseAdmin();
+  const { data: c } = await db.from("coupons").select("*").eq("code", code).maybeSingle<Coupon & { deleted_at?: string | null }>();
+  if (!c || !c.active || c.deleted_at) return { ok: false, error: "Cupom não encontrado." };
+  if (c.kind !== "vip") return { ok: false, error: "Esse cupom é de desconto: use na hora de comprar." };
+  if (c.expires_at && new Date(c.expires_at).getTime() < Date.now()) return { ok: false, error: "Esse cupom já venceu." };
+  if (c.max_uses !== null && c.uses >= c.max_uses) return { ok: false, error: "Esse cupom já atingiu o limite de usos." };
+  const { error: dup } = await db.from("coupon_redemptions").insert({ coupon_id: c.id, user_id: userId, payment_id: "cupom-vip" });
+  if (dup) return { ok: false, error: dup.code === "23505" ? "Você já usou esse cupom." : "Não deu para resgatar agora." };
+  await db.from("coupons").update({ uses: c.uses + 1 }).eq("id", c.id);
+  const features = c.features?.length ? c.features : ["todos"];
+  const until = new Date(Date.now() + Math.round(Number(c.amount)) * 24 * 3600_000).toISOString();
+  await db.from("vip_grants").insert({ user_id: userId, coupon_id: c.id, features, until });
+  return { ok: true, until, features };
 }
 
 // Registra os vídeos VIP gastos da cota do mês.

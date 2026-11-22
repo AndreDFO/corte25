@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   if (product === "vip") {
     const st = await vipStatus(user);
     if (st.admin) return Response.json({ error: "Sua conta de administrador já é VIP." }, { status: 400 });
-    if (st.active && !st.canceled) return Response.json({ error: "Você já é VIP." }, { status: 400 });
+    if (st.active && !st.canceled && !st.coupon) return Response.json({ error: "Você já é VIP." }, { status: 400 });
   }
   const profile = await getProfile(user.id);
   if (!profile) return Response.json({ error: "Conta não encontrada." }, { status: 404 });

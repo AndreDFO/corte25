@@ -24,6 +24,7 @@ export interface Variation {
 export interface Job {
   // Recursos VIP só nos primeiros N vídeos (cota de 3/mês do assinante). Sem isso: todos os vídeos.
   vipLimit?: number;
+  vipKeep?: ("textos" | "silencio" | "musica" | "legenda")[]; // recursos de cupom: valem em todos os vídeos, mesmo fora do vipLimit
   id: string;
   createdAt: string;
   product: string;

@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Coupon, CouponKind } from "@/lib/coupons";
+import { VIP_FEATURE_LIST, describeVipFeatures } from "@/lib/pricing";
 
 const KINDS: { id: CouponKind; label: string; hint: string }[] = [
   { id: "percent", label: "% de desconto", hint: "Ex.: 20 = 20% off" },
   { id: "fixed", label: "R$ de desconto", hint: "Ex.: 5 = R$ 5,00 off" },
   { id: "videos", label: "Vídeos de bônus", hint: "Ex.: 25 = +25 vídeos" },
+  { id: "vip", label: "⭐ Recursos VIP", hint: "Ex.: 30 = 30 dias" },
 ];
 
 function describe(c: Coupon) {
   const n = Number(c.amount);
+  if (c.kind === "vip") return `⭐ ${describeVipFeatures(c.features)} por ${n} dia${n === 1 ? "" : "s"}`;
   if (c.kind === "percent") return `${n}% de desconto`;
   if (c.kind === "fixed") return `R$ ${n.toFixed(2).replace(".", ",")} de desconto`;
   return `+${n} vídeos de bônus`;
@@ -27,6 +30,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
   const [maxUses, setMaxUses] = useState("");
   const [expires, setExpires] = useState("");
   const [note, setNote] = useState("");
+  const [features, setFeatures] = useState<string[]>(["todos"]);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Coupon | null>(null);
 
@@ -38,6 +42,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
     setMaxUses(c.max_uses ? String(c.max_uses) : "");
     setExpires(c.expires_at ? new Date(c.expires_at).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }) : "");
     setNote(c.note || "");
+    setFeatures(c.features?.length ? c.features : ["todos"]);
     setMsg(null);
     document.getElementById("form-cupom")?.scrollIntoView({ behavior: "smooth" });
   }
@@ -49,6 +54,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
     setMaxUses("");
     setExpires("");
     setNote("");
+    setFeatures(["todos"]);
   }
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -59,7 +65,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
     const res = await fetch("/api/admin/cupons", {
       method: editing ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: editing?.id, code, kind, amount, max_uses: maxUses, expires, note }),
+      body: JSON.stringify({ id: editing?.id, code, kind, amount, max_uses: maxUses, expires, note, features }),
     });
     const j = await res.json().catch(() => ({}));
     setBusy(false);
@@ -139,7 +145,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
             vendas antigas e o relatório continuam com o valor da época. O código não muda.
           </p>
         )}
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {KINDS.map((k) => (
             <button
               key={k.id}
@@ -157,7 +163,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
             <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Ex.: BLACK20" required readOnly={!!editing} className={`${field} ${editing ? "opacity-60" : ""}`} />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-foreground/60">
-            {KINDS.find((k) => k.id === kind)!.label}
+            {kind === "vip" ? "Dias liberados (conta a partir do resgate)" : KINDS.find((k) => k.id === kind)!.label}
             <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={hint} required className={field} />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-foreground/60">
@@ -169,6 +175,39 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
             <input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} className={field} />
           </label>
         </div>
+        {kind === "vip" && (
+          <div className="grid gap-1.5 rounded-xl bg-accent/5 p-3 ring-1 ring-accent/20">
+            <p className="text-xs font-semibold text-foreground/60">Quais recursos esse cupom libera?</p>
+            <div className="flex flex-wrap gap-2">
+              {[{ id: "todos", label: "Todos (VIP completo)" }, ...VIP_FEATURE_LIST].map((f) => {
+                const on = f.id === "todos" ? features.includes("todos") : !features.includes("todos") && features.includes(f.id);
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() =>
+                      setFeatures(
+                        f.id === "todos"
+                          ? ["todos"]
+                          : on
+                            ? features.filter((x) => x !== f.id)
+                            : [...features.filter((x) => x !== "todos"), f.id],
+                      )
+                    }
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold ${on ? "border-accent bg-accent text-white" : "border-foreground/15"}`}
+                  >
+                    {on ? "✓ " : ""}
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-foreground/50">
+              O cliente resgata em Minha conta, no quadro VIP. Os recursos valem em todos os vídeos durante os dias escolhidos. &quot;Todos&quot;
+              também inclui recursos VIP que forem lançados depois.
+            </p>
+          </div>
+        )}
         <label className="grid gap-1 text-xs font-semibold text-foreground/60">
           Anotação (só você vê)
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: parceria com fulano" className={field} />

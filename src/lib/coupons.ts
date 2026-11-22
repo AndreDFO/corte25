@@ -1,12 +1,12 @@
 // Cupons do administrador: % de desconto, R$ de desconto ou vídeos de bônus.
 // Regras: ativo, dentro da validade, abaixo do limite de usos e 1 uso por pessoa.
 // Não soma com o desconto de indicação: vale o que deixar o preço menor. Cupom de vídeos soma com tudo.
-import { CATALOG, brl, discounted, type ProductId } from "./pricing";
+import { CATALOG, brl, describeVipFeatures, discounted, type ProductId } from "./pricing";
 import { supabaseAdmin } from "./supabase-admin";
 
 export const MIN_CHARGE = 5; // o Asaas não cobra menos de R$ 5,00
 
-export type CouponKind = "percent" | "fixed" | "videos";
+export type CouponKind = "percent" | "fixed" | "videos" | "vip";
 export interface Coupon {
   id: string;
   code: string;
@@ -17,12 +17,14 @@ export interface Coupon {
   expires_at: string | null;
   active: boolean;
   note: string | null;
+  features?: string[] | null; // cupom "vip": recursos liberados (ou ["todos"])
   created_at: string;
 }
 
 export const normalizeCode = (c: string) => c.trim().toUpperCase().replace(/\s+/g, "");
 
-export function describe(c: Pick<Coupon, "kind" | "amount">) {
+export function describe(c: Pick<Coupon, "kind" | "amount" | "features">) {
+  if (c.kind === "vip") return `${describeVipFeatures(c.features)} por ${Number(c.amount)} dia${Number(c.amount) === 1 ? "" : "s"}`;
   if (c.kind === "percent") return `${Number(c.amount)}% de desconto`;
   if (c.kind === "fixed") return `${brl(Number(c.amount))} de desconto`;
   return `+${Number(c.amount)} vídeos de bônus`;
@@ -47,6 +49,7 @@ export async function checkCoupon(rawCode: string, userId: string, product: Prod
     .eq("coupon_id", c.id)
     .eq("user_id", userId);
   if ((count ?? 0) > 0) return { ok: false, error: "Você já usou esse cupom." };
+  if (c.kind === "vip") return { ok: false, error: "Esse cupom libera recursos VIP: resgate em Minha conta, no quadro VIP." };
 
   const base: number = CATALOG[product].value;
   let value: number = base;

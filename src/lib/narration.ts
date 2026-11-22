@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { currentUser } from "./auth";
 import { jobDir, loadJob, saveJob, type Variation } from "./jobs";
-import { isVip } from "./vip";
+import { hasVipFeature } from "./vip";
 
 // Narração pelo microfone: a pessoa grava a voz enquanto o vídeo roda sem som e o servidor
 // troca o áudio original pela narração (novo arquivo video_XX_narrado.mp4, apagado junto
@@ -19,7 +19,7 @@ export async function canNarrate(v?: Pick<Variation, "vip">) {
   if ((process.env.NARRACAO || "").toLowerCase() === "todos") return true;
   if (v?.vip) return true;
   const user = await currentUser().catch(() => null);
-  return isVip(user).catch(() => false);
+  return hasVipFeature(user, "narracao").catch(() => false); // VIP, admin ou cupom com narração
 }
 
 export const narratedName = (file: string) => file.replace(/\.mp4$/, "_narrado.mp4");

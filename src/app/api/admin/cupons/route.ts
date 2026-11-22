@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { isOwnerAdmin } from "@/lib/admin";
 import { normalizeCode } from "@/lib/coupons";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { ALL_VIP_FEATURES } from "@/lib/pricing";
 
 // Cupons: só a conta do dono (ADMIN_EMAILS) com a senha ADMIN_KEY confirmada neste navegador.
 async function guard() {
@@ -10,21 +11,28 @@ async function guard() {
 }
 
 // Campos que podem ser criados e editados (o código não muda depois de criado).
-type Fields = { kind: string; amount: number; max_uses: number | null; expires_at: string | null; note: string | null };
+type Fields = { kind: string; amount: number; max_uses: number | null; expires_at: string | null; note: string | null; features: string[] | null };
 function parseFields(b: Record<string, unknown>): { fields: Fields } | { error: string } {
   const kind = String(b.kind);
-  if (!["percent", "fixed", "videos"].includes(kind)) return { error: "Tipo inválido." };
+  if (!["percent", "fixed", "videos", "vip"].includes(kind)) return { error: "Tipo inválido." };
   const amount = Number(String(b.amount ?? "").replace(",", "."));
   if (!(amount > 0)) return { error: "Informe um valor maior que zero." };
   if (kind === "percent" && amount > 90) return { error: "Percentual máximo: 90%." };
   if (kind === "videos" && (!Number.isInteger(amount) || amount > 1000))
     return { error: "Vídeos de bônus: número inteiro até 1.000." };
+  if (kind === "vip" && (!Number.isInteger(amount) || amount > 365)) return { error: "Recursos VIP: número de dias inteiro, até 365." };
+  let features: string[] | null = null;
+  if (kind === "vip") {
+    const asked = Array.isArray(b.features) ? b.features.map(String) : [];
+    features = asked.includes("todos") ? ["todos"] : ALL_VIP_FEATURES.filter((f) => asked.includes(f));
+    if (!features.length) return { error: "Escolha pelo menos um recurso VIP." };
+  }
   const maxUses = b.max_uses ? Math.floor(Number(b.max_uses)) : null;
   if (maxUses !== null && !(maxUses > 0)) return { error: "Limite de usos inválido." };
   // Data no formato AAAA-MM-DD: vale até o fim do dia (horário de Brasília).
   const expires = /^\d{4}-\d{2}-\d{2}$/.test(String(b.expires || "")) ? `${b.expires}T23:59:59-03:00` : null;
   const note = String(b.note || "").trim().slice(0, 200) || null;
-  return { fields: { kind, amount, max_uses: maxUses, expires_at: expires, note } };
+  return { fields: { kind, amount, max_uses: maxUses, expires_at: expires, note, features } };
 }
 
 export async function GET() {

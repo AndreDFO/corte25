@@ -3,7 +3,7 @@
 import Link from "next/link";
 import PlanPicker from "../plan-picker";
 import { useState } from "react";
-import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTION_OPTIONS, VIP_PRICE, brl, discounted, type ProductId } from "@/lib/pricing";
+import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTION_OPTIONS, VIP_PRICE, brl, describeVipFeatures, discounted, type ProductId } from "@/lib/pricing";
 
 type Payment = { id: string; product: string; value: number; status: string; created_at: string };
 
@@ -31,7 +31,7 @@ export default function AccountPanel(p: {
   payments: Payment[];
   siteUrl: string;
   admin?: boolean; // só a conta do dono (ADMIN_EMAILS), conferido no servidor
-  vip: { active: boolean; until: string | null; canceled: boolean; admin: boolean; quota: number | null; subscriber: boolean };
+  vip: { active: boolean; until: string | null; canceled: boolean; admin: boolean; coupon?: boolean; quota: number | null; subscriber: boolean; grants: { features: string[]; until: string }[] };
 }) {
   const [chosen, setChosen] = useState<ProductId | null>((p.buy as ProductId) || null);
   const [name, setName] = useState(p.name);
@@ -116,6 +116,19 @@ export default function AccountPanel(p: {
 
   const [vipCanceled, setVipCanceled] = useState(p.vip.canceled);
   const [vipMsg, setVipMsg] = useState("");
+  const [vipCode, setVipCode] = useState("");
+  const [vipBusy, setVipBusy] = useState(false);
+  async function redeemVip(e: React.FormEvent) {
+    e.preventDefault();
+    setVipBusy(true);
+    const res = await fetch("/api/conta/vip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: vipCode }) });
+    const j = await res.json().catch(() => ({}));
+    setVipBusy(false);
+    if (!res.ok) return setVipMsg(j.error || "Não deu para resgatar.");
+    setVipMsg(`Cupom resgatado: ${describeVipFeatures(j.features)} até ${new Date(j.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}.`);
+    setVipCode("");
+    window.location.reload();
+  }
   async function cancelVip() {
     if (!window.confirm("Cancelar o VIP? Você continua VIP até o fim do mês já pago e não será cobrado de novo.")) return;
     const res = await fetch("/api/conta/vip", { method: "DELETE" });
@@ -180,7 +193,7 @@ export default function AccountPanel(p: {
       <div id="vip" className={`${card} grid gap-2 scroll-mt-24 border-2 border-accent/40`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-black">⭐ VIP · {brl(VIP_PRICE)}/mês</h2>
-          {p.vip.active && <span className="rounded-full bg-accent px-3 py-1 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : "VIP ativo"}</span>}
+          {p.vip.active && <span className="rounded-full bg-accent px-3 py-1 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : p.vip.coupon ? "VIP por cupom" : "VIP ativo"}</span>}
         </div>
         <p className="text-sm text-foreground/70">
           Libera em todos os vídeos: <b>música</b>, <b>textos no vídeo</b>, <b>cortar partes sem som</b>, <b>narração</b> e <b>legenda automática</b>. É um
@@ -188,7 +201,7 @@ export default function AccountPanel(p: {
         </p>
         {p.vip.active && !p.vip.admin && p.vip.until && (
           <p className="text-sm">
-            {vipCanceled ? "Cancelado: continua VIP até " : "Próxima renovação por volta de "}
+            {p.vip.coupon ? "Liberado pelo cupom até " : vipCanceled ? "Cancelado: continua VIP até " : "Próxima renovação por volta de "}
             <b>{new Date(p.vip.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</b>.
           </p>
         )}
@@ -197,8 +210,15 @@ export default function AccountPanel(p: {
             Como assinante mensal, você tem <b>{p.vip.quota} de {SUBSCRIBER_VIP_VIDEOS} vídeos VIP</b> este mês (renova todo dia 1º).
           </p>
         )}
+        {!p.vip.active &&
+          p.vip.grants.map((g, i) => (
+            <p key={i} className="text-sm">
+              🎟 Cupom: <b>{describeVipFeatures(g.features)}</b> liberado até{" "}
+              <b>{new Date(g.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</b>.
+            </p>
+          ))}
         {vipMsg && <p className="text-sm text-brand-ink">{vipMsg}</p>}
-        {!p.vip.admin && (!p.vip.active || vipCanceled) && (
+        {!p.vip.admin && (!p.vip.active || vipCanceled || p.vip.coupon) && (
           <button
             type="button"
             onClick={() => {
@@ -207,10 +227,24 @@ export default function AccountPanel(p: {
             }}
             className="justify-self-start rounded-xl bg-accent px-5 py-2.5 font-black text-white hover:bg-accent-dark"
           >
-            {p.vip.active ? "Assinar VIP de novo" : `Quero ser VIP · ${brl(VIP_PRICE)}/mês`}
+            {p.vip.active && !p.vip.coupon ? "Assinar VIP de novo" : `Quero ser VIP · ${brl(VIP_PRICE)}/mês`}
           </button>
         )}
-        {p.vip.active && !p.vip.admin && !vipCanceled && (
+        {!p.vip.admin && (
+          <form onSubmit={redeemVip} className="flex max-w-sm gap-2">
+            <input
+              value={vipCode}
+              onChange={(e) => setVipCode(e.target.value.toUpperCase())}
+              placeholder="Tem um cupom VIP?"
+              aria-label="Cupom VIP"
+              className="min-w-0 flex-1 rounded-lg border border-foreground/15 bg-field px-3 py-1.5 text-sm"
+            />
+            <button disabled={vipBusy || !vipCode.trim()} className="rounded-lg border border-accent px-3 py-1.5 text-sm font-bold text-accent disabled:opacity-50">
+              {vipBusy ? "…" : "Resgatar"}
+            </button>
+          </form>
+        )}
+        {p.vip.active && !p.vip.admin && !p.vip.coupon && !vipCanceled && (
           <button type="button" onClick={cancelVip} className="justify-self-start text-xs text-foreground/60 underline">
             Cancelar VIP
           </button>

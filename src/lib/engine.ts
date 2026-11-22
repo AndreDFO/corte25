@@ -377,6 +377,8 @@ async function processJob(id: string) {
   };
   // Recursos VIP só nos primeiros job.vipLimit vídeos (cota do assinante); sem limite, em todos.
   const vipFor = (i: number) => job.vipLimit === undefined || i < job.vipLimit;
+  // Recursos liberados por cupom (job.vipKeep) valem em todos, mesmo fora da cota.
+  const keep = (f: "textos" | "silencio" | "musica" | "legenda", i: number) => vipFor(i) || Boolean(job.vipKeep?.includes(f));
   // Cópia sem o corte de silêncio, para os vídeos fora da cota VIP.
   const plain = { hooks: blocks.hooks.map((c) => ({ ...c })), bodies: blocks.bodies.map((c) => ({ ...c })), ctas: blocks.ctas.map((c) => ({ ...c })) };
   // Legenda automática (VIP): ouve a fala de cada clipe uma vez, antes do corte do silêncio.
@@ -420,7 +422,7 @@ async function processJob(id: string) {
   const { items, source } = await generateCopy(job.productGiven === false ? "" : job.product, job.details, combos.length);
 
   const maxDur = job.durationMode && job.durationMode !== "auto" ? Number(job.durationMode) : null;
-  const recipes = combos.map((c, i) => buildRecipe(vipFor(i) ? blocks : plain, c, id, i, maxDur));
+  const recipes = combos.map((c, i) => buildRecipe(keep("silencio", i) ? blocks : plain, c, id, i, maxDur));
   job.copySource = source;
   job.variations = combos.map((c, i) => ({
     index: i,
@@ -454,12 +456,12 @@ async function processJob(id: string) {
       await queueUpdate(i, { status: "rendering" });
       try {
         await renderVariation(
-          vipFor(i) ? job : { ...job, captions: false, autoCaptions: false },
+          { ...job, captions: keep("textos", i) && job.captions, autoCaptions: keep("legenda", i) && job.autoCaptions },
           dir,
           v,
           recipes[i],
-          vipFor(i) ? music : undefined,
-          vipFor(i) ? speech : null,
+          keep("musica", i) ? music : undefined,
+          keep("legenda", i) ? speech : null,
         );
         await queueUpdate(i, { status: "done" });
       } catch (err) {

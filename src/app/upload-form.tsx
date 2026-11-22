@@ -82,11 +82,17 @@ export default function UploadForm() {
   const [videos, setVideos] = useState<number>(BATCH_VIDEOS);
   const bonus = bonusFor(videos);
   // Saldo da conta (null = ainda carregando ou sem login ativo no site).
-  const [saldo, setSaldo] = useState<{ logged: boolean; videos: number; vip?: boolean; vipQuota?: number | null } | null>(null);
+  const [saldo, setSaldo] = useState<{ logged: boolean; videos: number; vip?: boolean; vipFeatures?: string[]; vipQuota?: number | null } | null>(null);
   // Recursos VIP (música, textos no vídeo, cortar silêncio): bloqueados para quem não é VIP.
   // Assinante mensal sem VIP: libera no lote pago, valendo para os primeiros vídeos da cota do mês.
   const quota = saldo?.vip ? 0 : (saldo?.vipQuota ?? 0);
   const vip = Boolean(saldo?.vip) || (plan === "full" && quota > 0);
+  // Cupom de recursos VIP libera cada recurso escolhido pelo admin.
+  const can = (f: string) => vip || Boolean(saldo?.vipFeatures?.includes(f));
+  const canMusic = can("musica");
+  const canText = can("textos");
+  const canTrim = can("silencio");
+  const canAuto = can("legenda");
   const vipHref = saldo?.logged ? "/conta#vip" : "/entrar?volta=/conta%23vip";
   const touched = useRef(false);
   useEffect(() => {
@@ -381,13 +387,13 @@ export default function UploadForm() {
           </select>
         </label>
         <div className="grid min-w-0 gap-1">
-          <span className="truncate text-xs font-medium text-foreground/60">Música{!vip && " 🔒 VIP"}</span>
+          <span className="truncate text-xs font-medium text-foreground/60">Música{!canMusic && " 🔒 VIP"}</span>
           <span className="flex min-w-0 gap-1">
             <select
               value={track}
               onChange={(e) => chooseTrack(e.target.value)}
               aria-label="Música de fundo"
-              disabled={!vip}
+              disabled={!canMusic}
               className="w-full min-w-0 rounded-lg bg-field border border-foreground/15 px-2 py-2 outline-none focus:border-brand disabled:opacity-50"
             >
               <option value="">Sem música</option>
@@ -431,28 +437,28 @@ export default function UploadForm() {
         </label>
       )}
 
-      <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${vip ? "cursor-pointer" : "opacity-50"}`}>
-        <input type="checkbox" disabled={!vip} checked={vip && captions} onChange={(e) => setCaptions(e.target.checked)} className="peer sr-only" />
+      <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${canText ? "cursor-pointer" : "opacity-50"}`}>
+        <input type="checkbox" disabled={!canText} checked={canText && captions} onChange={(e) => setCaptions(e.target.checked)} className="peer sr-only" />
         <span className="relative h-4 w-7 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-3" />
         <span>
-          {!vip && "🔒 "}Textos no vídeo <span className="text-foreground/45">({captions ? "gancho e chamada escritos" : "desligado, vídeo limpo"})</span>
+          {!canText && "🔒 "}Textos no vídeo <span className="text-foreground/45">({captions ? "gancho e chamada escritos" : "desligado, vídeo limpo"})</span>
         </span>
       </label>
 
-      <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${vip ? "cursor-pointer" : "opacity-50"}`}>
-        <input type="checkbox" disabled={!vip} checked={vip && trimSilence} onChange={(e) => setTrimSilence(e.target.checked)} className="peer sr-only" />
+      <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${canTrim ? "cursor-pointer" : "opacity-50"}`}>
+        <input type="checkbox" disabled={!canTrim} checked={canTrim && trimSilence} onChange={(e) => setTrimSilence(e.target.checked)} className="peer sr-only" />
         <span className="relative h-4 w-7 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-3" />
         <span>
-          {!vip && "🔒 "}Cortar partes sem som{" "}
+          {!canTrim && "🔒 "}Cortar partes sem som{" "}
           <span className="text-foreground/45">({trimSilence ? "tira o silêncio do começo e do fim de cada clipe" : "desligado, clipes inteiros"})</span>
         </span>
       </label>
 
-      <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${vip ? "cursor-pointer" : "opacity-50"}`}>
-        <input type="checkbox" disabled={!vip} checked={vip && autoCaptions} onChange={(e) => setAutoCaptions(e.target.checked)} className="peer sr-only" />
+      <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${canAuto ? "cursor-pointer" : "opacity-50"}`}>
+        <input type="checkbox" disabled={!canAuto} checked={canAuto && autoCaptions} onChange={(e) => setAutoCaptions(e.target.checked)} className="peer sr-only" />
         <span className="relative h-4 w-7 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-3" />
         <span>
-          {!vip && "🔒 "}Legenda automática{" "}
+          {!canAuto && "🔒 "}Legenda automática{" "}
           <span className="text-foreground/45">({autoCaptions ? "a fala aparece palavra por palavra" : "desligada"})</span>
         </span>
       </label>
@@ -466,13 +472,14 @@ export default function UploadForm() {
           </a>
         </p>
       )}
-      {saldo && !vip && (
+      {saldo && !(canMusic && canText && canTrim && canAuto) && (
         <a
           href={vipHref}
           className="flex items-center justify-between gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-xs hover:bg-accent/15"
         >
           <span>
-            <b>🔒 Música, textos no vídeo e cortar silêncio</b> são exclusivos do VIP.
+            <b>🔒 {[!canMusic && "Música", !canText && "textos no vídeo", !canTrim && "cortar silêncio", !canAuto && "legenda automática"].filter(Boolean).join(", ").replace(/^./, (c) => c.toUpperCase()).replace(/, ([^,]*)$/, " e $1")}</b>{" "}
+            {[canMusic, canText, canTrim, canAuto].filter((x) => !x).length > 1 ? "são exclusivos" : "é exclusivo"} do VIP.
           </span>
           <span className="shrink-0 rounded-lg bg-accent px-2.5 py-1.5 font-black text-white">Seja VIP · R$ 14,99/mês</span>
         </a>

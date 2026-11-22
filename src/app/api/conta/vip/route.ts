@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { cancelSubscription } from "@/lib/asaas";
 import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { vipStatus } from "@/lib/vip";
+import { redeemVipCoupon, vipStatus } from "@/lib/vip";
 
 // Status do VIP da conta logada.
 export async function GET() {
@@ -26,4 +26,15 @@ export async function DELETE() {
   }
   await supabaseAdmin().from("profiles").update({ vip_canceled_at: new Date().toISOString() }).eq("id", user.id);
   return Response.json({ ok: true, until: st.until });
+}
+
+// Resgatar cupom de recursos VIP (criado pelo admin, tipo "Recursos VIP").
+export async function POST(req: Request) {
+  await connection();
+  const user = await currentUser().catch(() => null);
+  if (!user) return Response.json({ error: "Entre na sua conta." }, { status: 401 });
+  const b = await req.json().catch(() => ({}));
+  const r = await redeemVipCoupon(user.id, String(b.code || ""));
+  if (!r.ok) return Response.json({ error: r.error }, { status: 400 });
+  return Response.json(r);
 }
