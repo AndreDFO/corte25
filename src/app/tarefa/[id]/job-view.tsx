@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
-import { ZIP_PART } from "@/lib/pricing";
 import { rememberJob, timeLeft } from "@/lib/my-jobs";
 
 export default function JobView({ id }: { id: string }) {
@@ -86,37 +85,28 @@ export default function JobView({ id }: { id: string }) {
           )}
         </div>
         {done > 0 && (
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            {finished ? (
+              <SaveButton
+                id={id}
+                files={job.variations.filter((v) => v.status === "done").map((v) => v.file)}
+                all
+                className="rounded-lg bg-brand px-4 py-2.5 font-bold text-on-brand hover:bg-brand-dark disabled:opacity-60"
+              />
+            ) : (
+              <span className="rounded-lg bg-foreground/10 px-4 py-2.5 font-bold text-foreground/50">Baixar todos ao terminar</span>
+            )}
             <a href={`/api/jobs/${id}/legendas`} className="rounded-lg border border-foreground/20 px-4 py-2.5 font-semibold hover:bg-foreground/5">
               Baixar legendas
-            </a>
-            <a
-              href={`/api/jobs/${id}/zip`}
-              className={`rounded-lg px-4 py-2.5 font-bold ${finished ? "bg-brand text-on-brand hover:bg-brand-dark" : "bg-foreground/10 pointer-events-none text-foreground/50"}`}
-            >
-              {finished ? `Baixar tudo (ZIP, ${done} vídeos)` : "ZIP disponível ao terminar"}
             </a>
           </div>
         )}
       </div>
-      {finished && done > ZIP_PART && (
-        <div className="mt-3 rounded-xl bg-accent/10 border border-accent/30 px-4 py-3 text-sm">
-          <b>No celular?</b> O ZIP completo é grande. Baixe em partes menores
-          <span className="inline-flex flex-wrap gap-2 ml-2 align-middle">
-            {Array.from({ length: Math.ceil(done / ZIP_PART) }, (_, i) => (
-              <a
-                key={i}
-                href={`/api/jobs/${id}/zip?parte=${i + 1}`}
-                className="rounded-md bg-accent px-2.5 py-1 text-xs font-bold text-white hover:bg-accent-dark"
-              >
-                Parte {i + 1} ({i * ZIP_PART + 1}–{Math.min(done, (i + 1) * ZIP_PART)})
-              </a>
-            ))}
-          </span>
-          <span className="block mt-1 text-foreground/60">
-            Ou marque os vídeos que quiser (quadradinho em cada um) e baixe só eles, sem ZIP.
-          </span>
-        </div>
+      {finished && done > 0 && (
+        <p className="mt-3 text-sm text-foreground/60">
+          📱 No celular, toque em <b>Baixar todos</b> e depois em <b>Salvar vídeos</b> para mandar direto para a galeria
+          {done > SHARE_CHUNK ? ` (vão de ${SHARE_CHUNK} em ${SHARE_CHUNK})` : ""}. Ou marque só os que quiser.
+        </p>
       )}
 
       <div className="mt-6 h-2 rounded-full bg-foreground/10 overflow-hidden">
@@ -190,48 +180,50 @@ function canShareVideos() {
   }
 }
 
-function SelectionBar({
-  id,
-  files,
-  allCount,
-  onAll,
-  onClear,
-}: {
-  id: string;
-  files: string[];
-  allCount: number;
-  onAll: () => void;
-  onClear: () => void;
-}) {
-  const [busy, setBusy] = useState<string | null>(null);
-  const [ready, setReady] = useState<File[] | null>(null);
-  const key = files.join(",");
-  const [readyKey, setReadyKey] = useState("");
-  const n = files.length;
-  const prepared = ready && readyKey === key ? ready : null;
+const SHARE_CHUNK = 10;
 
-  async function download() {
+// Baixa vídeos um por um. No celular: prepara de 10 em 10 e abre o "Salvar vídeos" do aparelho (galeria).
+function SaveButton({ id, files, all, className }: { id: string; files: string[]; all?: boolean; className: string }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [ready, setReady] = useState<{ key: string; start: number; files: File[] } | null>(null);
+  const [sharedUpTo, setSharedUpTo] = useState<{ key: string; n: number } | null>(null);
+  const key = files.join(",");
+  const n = files.length;
+  const prepared = ready && ready.key === key ? ready : null;
+  const savedN = sharedUpTo && sharedUpTo.key === key ? sharedUpTo.n : 0;
+  const many = n > SHARE_CHUNK;
+
+  async function prepare(start: number) {
+    const part = files.slice(start, start + SHARE_CHUNK);
+    const out: File[] = [];
+    try {
+      for (let i = 0; i < part.length; i++) {
+        setBusy(`Preparando ${start + i + 1} de ${n}…`);
+        const blob = await (await fetch(fileUrl(id, part[i]))).blob();
+        out.push(new File([blob], part[i], { type: "video/mp4" }));
+      }
+      setReady({ key, start, files: out });
+    } catch {
+      setBusy("Falhou. Toque de novo.");
+      await new Promise((r) => setTimeout(r, 1500));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function run() {
     if (!n) return;
     if (canShareVideos()) {
-      // 1º toque: baixa os vídeos para a memória. 2º toque: abre "Salvar vídeos" do celular.
-      if (prepared) {
-        try {
-          await navigator.share({ files: prepared });
-        } catch {}
-        return;
-      }
+      if (!prepared) return prepare(savedN < n ? savedN : 0);
       try {
-        const out: File[] = [];
-        for (let i = 0; i < n; i++) {
-          setBusy(`Preparando ${i + 1} de ${n}…`);
-          const blob = await (await fetch(fileUrl(id, files[i]))).blob();
-          out.push(new File([blob], files[i], { type: "video/mp4" }));
-        }
-        setReady(out);
-        setReadyKey(key);
-      } finally {
-        setBusy(null);
+        await navigator.share({ files: prepared.files });
+      } catch {
+        return; // cancelou: mantém pronto para tentar de novo
       }
+      const next = prepared.start + prepared.files.length;
+      setReady(null);
+      setSharedUpTo({ key, n: next });
+      if (next < n) await prepare(next);
       return;
     }
     // Computador: um download por vídeo, em sequência (o navegador pode pedir para permitir vários downloads).
@@ -248,6 +240,38 @@ function SelectionBar({
     setBusy(null);
   }
 
+  const plural = (k: number) => `${k} vídeo${k === 1 ? "" : "s"}`;
+  let label: string;
+  if (busy) label = busy;
+  else if (prepared) {
+    const a = prepared.start + 1;
+    const b = prepared.start + prepared.files.length;
+    label = many ? `Salvar ${a}–${b} de ${n} na galeria` : `Salvar ${plural(n)} na galeria`;
+  } else if (savedN >= n && n > 0) label = `✓ ${plural(n)} salvos. Salvar de novo`;
+  else if (!n) label = "Marque os vídeos para baixar";
+  else label = all ? `Baixar todos (${plural(n)})` : `Baixar ${plural(n)}`;
+
+  return (
+    <button type="button" disabled={!n || !!busy} onClick={run} className={className}>
+      {label}
+    </button>
+  );
+}
+
+function SelectionBar({
+  id,
+  files,
+  allCount,
+  onAll,
+  onClear,
+}: {
+  id: string;
+  files: string[];
+  allCount: number;
+  onAll: () => void;
+  onClear: () => void;
+}) {
+  const n = files.length;
   return (
     <div className="sticky bottom-3 z-20 mt-6 flex flex-wrap items-center gap-2 rounded-2xl bg-surface/95 p-3 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.35)] ring-1 ring-foreground/10 backdrop-blur">
       <span className="text-sm font-semibold">
@@ -256,19 +280,11 @@ function SelectionBar({
       <button type="button" onClick={n === allCount ? onClear : onAll} className="text-sm text-accent-ink underline">
         {n === allCount ? "Limpar" : "Marcar todos"}
       </button>
-      <button
-        type="button"
-        disabled={!n || !!busy}
-        onClick={download}
+      <SaveButton
+        id={id}
+        files={files}
         className="ml-auto rounded-xl bg-brand px-4 py-2.5 text-sm font-black text-on-brand hover:bg-brand-dark disabled:opacity-50"
-      >
-        {busy ??
-          (prepared
-            ? `Salvar ${n} vídeo${n === 1 ? "" : "s"} no celular`
-            : n
-              ? `Baixar ${n} vídeo${n === 1 ? "" : "s"}`
-              : "Marque os vídeos para baixar")}
-      </button>
+      />
     </div>
   );
 }

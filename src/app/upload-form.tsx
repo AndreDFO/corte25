@@ -399,7 +399,7 @@ export default function UploadForm() {
             <h3 className="text-xl font-bold">Compre créditos</h3>
             <p className="text-foreground/70 text-sm">
               Cada lote vale {VIDEOS_PER_LOT} vídeos de saldo. Você escolhe quantos gerar por vez e, gerando {BATCH_VIDEOS} de uma vez, ganha mais {FREE_VIDEOS} grátis. Tudo combinando seus ganchos, corpos e CTAs, sem marca
-              d&apos;água, com legendas e download em ZIP.
+              d&apos;água, com legendas e download direto na galeria do celular.
             </p>
             <PlanPicker
               avulsos={PACKAGES.map((x) => ({
