@@ -3,10 +3,25 @@
 // Sandbox: https://api-sandbox.asaas.com/v3 · Produção: https://api.asaas.com/v3
 import { AFFILIATE_PERCENT, CATALOG, type ProductId } from "./pricing";
 
-const API = process.env.ASAAS_API_URL || "https://api-sandbox.asaas.com/v3";
+const API = (process.env.ASAAS_API_URL || "https://api-sandbox.asaas.com/v3").replace(/\s+/g, "").replace(/\/+$/, "");
+// Tira espaços e quebras de linha coladas junto com a chave.
+const KEY = (process.env.ASAAS_API_KEY || "").replace(/\s+/g, "");
 
 export function asaasConfigured() {
-  return Boolean(process.env.ASAAS_API_KEY);
+  return Boolean(KEY);
+}
+
+// Diagnóstico sem segredos (para /api/saude): modo e se a chave é aceita pelo Asaas.
+export async function asaasStatus() {
+  const modo = API.includes("sandbox") ? "sandbox (teste)" : "produção (dinheiro real)";
+  if (!KEY) return { modo, chave: "não configurada" };
+  const tipoChave = KEY.startsWith("$aact_prod_") ? "produção" : KEY.startsWith("$aact_hmlg_") ? "sandbox" : "desconhecido";
+  try {
+    const r = await fetch(`${API}/customers?limit=1`, { headers: { access_token: KEY, "User-Agent": "corte25" }, cache: "no-store" });
+    return { modo, tipo_da_chave: tipoChave, chave: r.ok ? "ok" : `recusada (erro ${r.status})`, webhook_token: Boolean(process.env.ASAAS_WEBHOOK_TOKEN) };
+  } catch (err) {
+    return { modo, tipo_da_chave: tipoChave, chave: `falhou: ${(err as Error).message}`.slice(0, 120) };
+  }
 }
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -14,7 +29,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     method,
     headers: {
       "Content-Type": "application/json",
-      access_token: process.env.ASAAS_API_KEY || "",
+      access_token: KEY,
       "User-Agent": "corte25",
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -86,8 +101,8 @@ export async function cancelSubscription(id: string) {
 
 // Webhook: o Asaas manda o token configurado no painel neste cabeçalho.
 export function webhookAuthorized(req: Request) {
-  const expected = process.env.ASAAS_WEBHOOK_TOKEN;
-  return Boolean(expected) && req.headers.get("asaas-access-token") === expected;
+  const expected = (process.env.ASAAS_WEBHOOK_TOKEN || "").trim();
+  return Boolean(expected) && (req.headers.get("asaas-access-token") || "").trim() === expected;
 }
 
 export interface AsaasPaymentEvent {

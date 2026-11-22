@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { asaasConfigured } from "@/lib/asaas";
+import { asaasStatus } from "@/lib/asaas";
 import { ANON_FROM_ENV, SERVICE_KEY_OK, SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "@/lib/supabase-admin";
 
 // Diagnóstico sem segredos: qual versão está no ar e quais configurações o site enxerga.
@@ -32,7 +32,8 @@ export async function GET() {
         chave_service_role: SERVICE_KEY_OK ? "ok" : "inválida",
         login: supabaseAuth,
       },
-      asaas: asaasConfigured(),
+      asaas: await asaasStatus(),
+      site_url: process.env.SITE_URL || null,
     },
     { headers: { "Cache-Control": "no-store" } },
   );
