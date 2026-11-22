@@ -10,6 +10,9 @@ import { listLeads } from "@/lib/leads";
 export const metadata = { title: "Contatos do teste grátis · Corte25", robots: { index: false } };
 
 // Página só do dono (veja src/lib/admin.ts).
+const app = (n: string, msg: string) => `https://wa.me/${n}?text=${encodeURIComponent(msg)}`;
+const web = (n: string, msg: string) => `https://web.whatsapp.com/send?phone=${n}&text=${encodeURIComponent(msg)}`;
+
 function fmtPhone(n: string) {
   const d = n.slice(2);
   return `(${d.slice(0, 2)}) ${d.slice(2, d.length - 4)}-${d.slice(-4)}`;
@@ -43,6 +46,7 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
   const all = await listLeads();
   // Endereço público do site para o link da mensagem (SITE_URL ou o endereço que você está usando agora).
   const h = await headers();
+  const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(h.get("user-agent") || "");
   const site = (process.env.SITE_URL || `https://${h.get("x-forwarded-host") || h.get("host")}`).replace(/\/$/, "");
   const entry = PACKAGES[0];
   // Preço por vídeo do pacote de entrada, contando só os 25 pagos de cada lote (os 2 de bônus ficam de fora).
@@ -85,21 +89,22 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
                 </p>
               </div>
               <div className="grid justify-items-end gap-1">
+                {/* No celular o botão principal abre o app do WhatsApp; no computador, o WhatsApp Web. */}
                 <a
-                  href={`https://web.whatsapp.com/send?phone=${l.whatsapp}&text=${encodeURIComponent(msg)}`}
+                  href={mobile ? app(l.whatsapp, msg) : web(l.whatsapp, msg)}
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-xl bg-brand px-4 py-2 text-sm font-black text-on-brand hover:bg-brand-dark"
                 >
-                  Chamar no WhatsApp Web
+                  {mobile ? "Chamar no WhatsApp" : "Chamar no WhatsApp Web"}
                 </a>
                 <a
-                  href={`https://wa.me/${l.whatsapp}?text=${encodeURIComponent(msg)}`}
+                  href={mobile ? web(l.whatsapp, msg) : app(l.whatsapp, msg)}
                   target="_blank"
                   rel="noreferrer"
                   className="text-xs text-foreground/60 underline"
                 >
-                  abrir no celular
+                  {mobile ? "abrir no WhatsApp Web" : "abrir no celular"}
                 </a>
               </div>
             </li>
