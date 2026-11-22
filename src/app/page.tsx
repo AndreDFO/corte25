@@ -74,7 +74,7 @@ export default function Home() {
               "Ordem certa: gancho, corpo e CTA",
               "Texto na tela e chamada final",
               "Legenda e hashtags prontas",
-              "Playlist de músicas e salva na galeria",
+              "Música grátis ou som do seu vídeo",
             ].map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-on-brand text-xs font-black">
