@@ -163,10 +163,10 @@ export default function RelatarProblema() {
           type="button"
           onClick={() => setOpen(true)}
           title="Relatar problema"
-          className="group fixed bottom-3 right-3 z-40 flex h-10 items-center gap-1.5 rounded-full border border-foreground/15 bg-surface/90 px-2.5 text-sm font-bold opacity-70 shadow-md backdrop-blur hover:opacity-100 sm:bottom-5 sm:right-5"
+          className="group fixed bottom-3 left-3 z-40 flex h-10 items-center gap-1.5 rounded-full border border-foreground/15 bg-surface/90 px-2.5 text-sm font-bold opacity-70 shadow-md backdrop-blur hover:opacity-100 sm:bottom-5 sm:left-5"
           aria-label="Relatar problema no site"
         >
-          {/* Recolhido: só o ícone; o texto aparece ao passar o mouse (pedido do Andre). */}
+          {/* Recolhido: só o ícone; o texto aparece ao passar o mouse. Fica no canto ESQUERDO para não cobrir a barra "Baixar" (que fica à direita). */}
           <span aria-hidden>🐞</span>
           <span className="hidden whitespace-nowrap pr-1 group-hover:inline group-focus-visible:inline">Relatar problema</span>
         </button>
@@ -175,7 +175,7 @@ export default function RelatarProblema() {
         <div
           role="dialog"
           aria-label="Relatar problema"
-          className="fixed inset-x-2 bottom-2 z-50 flex max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-foreground/15 bg-surface shadow-2xl sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-96"
+          className="fixed inset-x-2 bottom-2 z-50 flex max-h-[80vh] flex-col overflow-hidden rounded-2xl border border-foreground/15 bg-surface shadow-2xl sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-96"
         >
           <div className="flex items-center justify-between border-b border-foreground/10 bg-accent/15 px-4 py-2.5">
             <div>
