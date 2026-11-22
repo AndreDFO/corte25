@@ -65,6 +65,7 @@ export default function BigPlayer({ src, title, startAt, onClose }: { src: strin
           ref={ref}
           src={src}
           playsInline
+          loop
           autoPlay
           muted={muted}
           preload="auto"

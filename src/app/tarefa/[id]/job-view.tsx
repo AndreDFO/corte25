@@ -443,6 +443,7 @@ function Card({
               key={src}
               src={src}
               playsInline
+              loop
               preload="metadata"
               onClick={(e) => (e.currentTarget.paused ? e.currentTarget.play() : e.currentTarget.pause())}
               onPlay={() => setPaused(false)}
