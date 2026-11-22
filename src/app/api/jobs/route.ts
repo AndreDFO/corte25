@@ -114,6 +114,7 @@ export async function POST(req: Request) {
     product,
     productGiven: Boolean(typed),
     captions: form.get("captions") !== "0",
+    ...(form.get("trimSilence") === "1" ? { trimSilence: true } : {}),
     details,
     inputs: [...blocks.hooks, ...blocks.bodies, ...blocks.ctas],
     blocks,

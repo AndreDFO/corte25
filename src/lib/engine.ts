@@ -15,8 +15,9 @@ const FONT_SRC = path.join(process.cwd(), "assets", "fonts", "Inter-ExtraBold.ot
 
 interface ClipInfo {
   file: string;
-  duration: number;
+  duration: number; // duração usada (já sem as partes sem som, se o corte estiver ligado)
   hasAudio: boolean;
+  offset?: number; // segundos cortados no começo (corte das partes sem som)
 }
 
 function run(cmd: string, args: string[], cwd?: string): Promise<string> {
@@ -159,9 +160,9 @@ export function buildRecipe(
   // Pequenas diferenças visuais em cada vídeo para não ficarem idênticos.
   const zoom = r() < 0.5 ? 1 : 1.04 + r() * 0.06;
   const segments: Segment[] = [
-    { clip: hook, input: 0, start: 0, dur: hDur, speed: 1, zoom },
-    { clip: body, input: 1, start: 0, dur: bDur, speed: 1, zoom },
-    { clip: cta, input: 2, start: 0, dur: cDur, speed: 1, zoom },
+    { clip: hook, input: 0, start: hook.offset ?? 0, dur: hDur, speed: 1, zoom },
+    { clip: body, input: 1, start: body.offset ?? 0, dur: bDur, speed: 1, zoom },
+    { clip: cta, input: 2, start: cta.offset ?? 0, dur: cDur, speed: 1, zoom },
   ];
   return {
     segments,
@@ -277,6 +278,41 @@ async function renderVariation(
   await run(FFMPEG, args, dir);
 }
 
+// Corte das partes sem som (opcional, chave na tela de geração): acha onde o som começa e termina
+// em cada clipe pelo volume (silencedetect do FFmpeg) e deixa uma folga para não comer a fala.
+// Devolve null quando não há o que cortar (clipe sem áudio, com música o tempo todo, ou corte pequeno).
+const TRIM_BEFORE = 0.2;
+const TRIM_AFTER = 0.35;
+async function soundBounds(c: ClipInfo): Promise<{ start: number; end: number } | null> {
+  if (!c.hasAudio) return null;
+  const dur = c.duration;
+  const log = await new Promise<string>((resolve) => {
+    const p = spawn(
+      FFMPEG,
+      ["-hide_banner", "-nostats", "-i", c.file, "-vn", "-af", "silencedetect=noise=-38dB:d=0.25", "-f", "null", "-"],
+      { windowsHide: true },
+    );
+    let err = "";
+    p.stderr.on("data", (d) => (err += d));
+    p.on("error", () => resolve(""));
+    p.on("close", () => resolve(err));
+  });
+  const starts = [...log.matchAll(/silence_start: (-?[\d.]+)/g)].map((m) => Number(m[1]));
+  const ends = [...log.matchAll(/silence_end: ([\d.]+)/g)].map((m) => Number(m[1]));
+  if (!starts.length) return null;
+  let start = 0;
+  let end = dur;
+  // Silêncio desde o 0: o som começa quando ele termina.
+  if (starts[0] <= 0.05 && ends.length) start = Math.max(0, ends[0] - TRIM_BEFORE);
+  // Silêncio que vai até o fim: o som termina quando ele começa.
+  const lastStart = starts[starts.length - 1];
+  if ((ends.length < starts.length || ends[ends.length - 1] >= dur - 0.05) && lastStart > start)
+    end = Math.min(dur, lastStart + TRIM_AFTER);
+  // Só corta se tirar pelo menos 0,15 s e sobrar pelo menos 1 s.
+  if (end - start < 1 || dur - (end - start) < 0.15) return null;
+  return { start: Math.round(start * 100) / 100, end: Math.round(end * 100) / 100 };
+}
+
 const running = new Set<string>();
 
 export function startJob(id: string) {
@@ -316,6 +352,16 @@ async function processJob(id: string) {
     bodies: await probeAll(job.blocks.bodies),
     ctas: await probeAll(job.blocks.ctas),
   };
+  if (job.trimSilence) {
+    job.message = "Cortando as partes sem som…";
+    await saveJob(job);
+    for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) {
+      const r = await soundBounds(c).catch(() => null);
+      if (!r) continue;
+      c.offset = r.start;
+      c.duration = r.end - r.start;
+    }
+  }
   // Sempre entrega job.count vídeos. Se houver menos combinações que isso, elas se repetem
   // com outro texto de gancho, outra legenda e pequenas mudanças visuais.
   // O lote pago entrega 25 + 2 de bônus (27): com 3 × 3 × 3, todas as combinações sem repetir.
