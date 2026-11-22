@@ -1,5 +1,6 @@
 // Preços e limites. Troque aqui para mudar o que aparece no site.
 export const MAX_PER_BLOCK = 5; // até 5 ganchos, 5 corpos e 5 CTAs
+export const FREE_MAX_PER_BLOCK = 3; // teste grátis: até 3 por bloco, para os 2 vídeos saírem diferentes
 export const BATCH_VIDEOS = 25; // vídeos por lote (1 crédito), sempre 25
 export const FULL_PRICE = "1 crédito"; // (antigo) o que aparecia no botão do lote completo
 // Saldo em vídeos (22/11): cada lote comprado vira 25 vídeos de saldo. A pessoa escolhe quantos

@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
-import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 import { currentUser } from "@/lib/auth";
@@ -41,8 +41,8 @@ export async function POST(req: Request) {
   }
 
   const plan = form.get("plan") === "full" ? "full" : "free";
-  if (plan === "free" && [hooks, bodies, ctas].some((l) => l.length > 1))
-    return Response.json({ error: "No teste grátis envie só 1 gancho, 1 corpo e 1 CTA." }, { status: 400 });
+  if (plan === "free" && [hooks, bodies, ctas].some((l) => l.length > FREE_MAX_PER_BLOCK))
+    return Response.json({ error: `No teste grátis envie até ${FREE_MAX_PER_BLOCK} vídeos em cada bloco.` }, { status: 400 });
   // Com login ativo (Supabase configurado), o lote completo gasta 1 crédito da conta.
   // Sem login (PC de teste), vale a trava antiga: só libera com UNLOCK_FULL=true.
   const online = supabaseConfigured();

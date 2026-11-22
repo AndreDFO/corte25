@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import PlanPicker from "./plan-picker";
 import { useEffect, useRef, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
-import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
 
 function clientId() {
   try {
@@ -63,12 +63,12 @@ export default function UploadForm() {
   // Textos gravados no vídeo (gancho e chamada final): opcional, pedido do Andre.
   const [captions, setCaptions] = useState(false);
 
-  // Teste grátis: 1 gancho, 1 corpo e 1 CTA (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
-  const maxPer = plan === "free" ? 1 : MAX_PER_BLOCK;
+  // Teste grátis: até 3 por bloco, para os 2 vídeos saírem misturados (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
+  const maxPer = plan === "free" ? FREE_MAX_PER_BLOCK : MAX_PER_BLOCK;
   function choosePlan(next: "free" | "full") {
     touched.current = true;
     setPlan(next);
-    if (next === "free") setClips((c) => ({ hooks: c.hooks.slice(0, 1), bodies: c.bodies.slice(0, 1), ctas: c.ctas.slice(0, 1) }));
+    if (next === "free") setClips((c) => ({ hooks: c.hooks.slice(0, FREE_MAX_PER_BLOCK), bodies: c.bodies.slice(0, FREE_MAX_PER_BLOCK), ctas: c.ctas.slice(0, FREE_MAX_PER_BLOCK) }));
   }
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
 
@@ -272,7 +272,7 @@ export default function UploadForm() {
         )}
         {plan === "free" && (
           <span className="w-full text-center text-[11px] font-semibold text-foreground/60">
-            No teste grátis basta 1 gancho, 1 corpo e 1 CTA. Os 2 vídeos saem com legendas e hashtags diferentes.
+            Coloque 2 ou 3 vídeos em cada bloco para os 2 grátis saírem misturados. Com só 1 de cada, saem quase iguais.
           </span>
         )}
         {plan === "full" && total > 0 && total < videos + bonus && (
