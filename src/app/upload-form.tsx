@@ -252,7 +252,12 @@ export default function UploadForm() {
             <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">{FREE_VIDEOS} grátis</span>
           </>
         )}
-        {total > 0 && total < (plan === "full" ? videos + bonus : FREE_VIDEOS + BATCH_VIDEOS) && (
+        {plan === "free" && (
+          <span className="w-full text-center text-[11px] font-semibold text-foreground/60">
+            No teste grátis basta 1 gancho, 1 corpo e 1 CTA. Os 2 vídeos saem com textos e legendas diferentes.
+          </span>
+        )}
+        {plan === "full" && total > 0 && total < videos + bonus && (
           <span className="w-full text-center text-[11px] text-foreground/50">
             Com menos de 3 clipes por bloco, algumas combinações se repetem com textos diferentes.
           </span>
