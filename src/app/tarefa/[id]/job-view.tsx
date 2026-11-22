@@ -150,7 +150,8 @@ export default function JobView({ id }: { id: string }) {
             v={v}
             selected={sel.has(v.file)}
             shown={shownFile(v, original)}
-            onNarrate={job.canNarrate && v.status === "done" ? () => setNarrating(v) : undefined}
+            onNarrate={v.status === "done" ? () => setNarrating(v) : undefined}
+            narrateLocked={!job.canNarrate && !v.vip}
             onOriginal={(o) =>
               setOriginal((s) => {
                 const n = new Set(s);
@@ -361,6 +362,7 @@ function Card({
   onToggle,
   shown,
   onNarrate,
+  narrateLocked,
   onOriginal,
 }: {
   id: string;
@@ -369,6 +371,7 @@ function Card({
   onToggle: () => void;
   shown: string;
   onNarrate?: () => void;
+  narrateLocked?: boolean;
   onOriginal: (original: boolean) => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -467,15 +470,20 @@ function Card({
         <p className="font-bold leading-snug line-clamp-2">
           #{v.index + 1} · <span className="text-accent-ink">{v.durationSec}s</span> · {v.hook}
         </p>
-        {onNarrate && (
-          <button
-            type="button"
-            onClick={onNarrate}
-            className="rounded-md bg-accent py-1 font-bold text-white hover:bg-accent-dark"
-          >
-            🎙 {v.narrated ? "Narrar de novo" : "Narrar"}
-          </button>
-        )}
+        {onNarrate &&
+          (narrateLocked ? (
+            <Link
+              href="/conta#vip"
+              title="Narração é exclusiva do plano VIP"
+              className="rounded-md border border-accent/50 py-1 text-center font-bold text-accent-ink hover:bg-accent/10"
+            >
+              🎙 Narrar <span className="text-[9px]">⭐ VIP</span>
+            </Link>
+          ) : (
+            <button type="button" onClick={onNarrate} className="rounded-md bg-accent py-1 font-bold text-white hover:bg-accent-dark">
+              🎙 {v.narrated ? "Narrar de novo" : "Narrar"}
+            </button>
+          ))}
         {v.narrated && (
           <div className="flex overflow-hidden rounded-md bg-foreground/10 text-[10px] font-bold">
             <button type="button" onClick={() => onOriginal(true)} className={`flex-1 py-0.5 ${!isNarr ? "bg-foreground text-surface" : ""}`}>

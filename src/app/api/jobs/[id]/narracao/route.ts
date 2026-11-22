@@ -7,12 +7,12 @@ const err = (error: string, status: number) => Response.json({ error }, { status
 
 async function target(id: string, index: number): Promise<{ res: Response; v?: never } | { res?: never; v: Variation }> {
   if (!/^[a-f0-9]{16}$/.test(id)) return { res: err("não encontrado", 404) };
-  if (!(await canNarrate())) return { res: err("Narração ainda não está liberada.", 403) };
   const job = await loadJob(id);
   if (!job) return { res: err("Esses vídeos não estão mais disponíveis.", 404) };
   if (!(await canAccessJob(job))) return { res: forbidden() };
   const v = job.variations.find((x) => x.index === index);
   if (!v || v.status !== "done") return { res: err("Vídeo não encontrado.", 404) };
+  if (!(await canNarrate(v))) return { res: err("A narração é exclusiva do plano VIP.", 403) };
   return { v };
 }
 
