@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   // Assinante mensal sem VIP: os primeiros vídeos da cota do mês (3) saem com os recursos VIP.
   const allowance = await vipAllowance(user);
   const wantsVip =
-    form.get("captions") === "1" || form.get("trimSilence") === "1" || Boolean(form.get("track")) || (music instanceof File && music.size > 0);
+    form.get("captions") === "1" || form.get("trimSilence") === "1" || form.get("autoCaptions") === "1" || Boolean(form.get("track")) || (music instanceof File && music.size > 0);
   const quotaVideos = !allowance.vip && plan === "full" && wantsVip ? allowance.quota : 0;
   const vip = allowance.vip || quotaVideos > 0;
   const whatsapp = plan === "free" ? normalizeWhatsapp(String(form.get("whatsapp") || "")) : null;
@@ -131,6 +131,7 @@ export async function POST(req: Request) {
     productGiven: Boolean(typed),
     captions: vip && form.get("captions") === "1",
     ...(vip && form.get("trimSilence") === "1" ? { trimSilence: true } : {}),
+    ...(vip && form.get("autoCaptions") === "1" ? { autoCaptions: true } : {}),
     details,
     inputs: [...blocks.hooks, ...blocks.bodies, ...blocks.ctas],
     blocks,

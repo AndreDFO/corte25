@@ -4,6 +4,8 @@ import path from "path";
 import { Job, Variation, jobDir, loadJob, saveJob } from "./jobs";
 import { generateCopy } from "./copy";
 import { VIDEO_CTA_BG, VIDEO_CTA_TEXT } from "./theme";
+import { Word, transcribeClip, whisperAvailable } from "./transcribe";
+import { buildAss } from "./captions-ass";
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH || "ffprobe";
@@ -187,7 +189,27 @@ async function renderVariation(
   v: Variation,
   rc: Recipe,
   musicFile: string | undefined,
+  speech: Map<string, Word[]> | null = null,
 ): Promise<void> {
+  // Legenda automática (VIP): a fala de cada clipe aparece 1 a 3 palavras por vez, a falada em verde-limão.
+  let assFile = "";
+  if (job.autoCaptions && speech) {
+    const words: Word[] = [];
+    let offset = 0;
+    for (const s of rc.segments) {
+      const cut = s.clip.offset ?? 0;
+      for (const w of speech.get(s.clip.file) || []) {
+        const ws = w.s - cut;
+        if (ws < -0.05 || ws >= s.dur - 0.05) continue;
+        words.push({ w: w.w, s: offset + Math.max(0, ws), e: offset + Math.min(w.e - cut, s.dur) });
+      }
+      offset += s.dur;
+    }
+    if (words.length) {
+      assFile = `legenda_${v.index}.ass`;
+      await fs.writeFile(path.join(dir, assFile), buildAss(words, null));
+    }
+  }
   const hookFile = `hook_${v.index}.txt`;
   const ctaFile = `cta_${v.index}.txt`;
   await fs.writeFile(path.join(dir, hookFile), wrap(v.hook, 18));
@@ -253,6 +275,7 @@ async function renderVariation(
         ? `,drawtext=fontfile=font.otf:textfile=marca.txt:fontsize=46:fontcolor=white@0.55` +
           `:borderw=3:bordercolor=black@0.4:x=(w-text_w)/2:y=h*0.58`
         : "") +
+      (assFile ? `,subtitles=${assFile}:fontsdir=.` : "") +
       `[vout]`,
   );
   if (musicInput >= 0) {
@@ -356,6 +379,24 @@ async function processJob(id: string) {
   const vipFor = (i: number) => job.vipLimit === undefined || i < job.vipLimit;
   // Cópia sem o corte de silêncio, para os vídeos fora da cota VIP.
   const plain = { hooks: blocks.hooks.map((c) => ({ ...c })), bodies: blocks.bodies.map((c) => ({ ...c })), ctas: blocks.ctas.map((c) => ({ ...c })) };
+  // Legenda automática (VIP): ouve a fala de cada clipe uma vez, antes do corte do silêncio.
+  let speech: Map<string, Word[]> | null = null;
+  if (job.autoCaptions) {
+    if (await whisperAvailable()) {
+      job.message = "Ouvindo a fala dos vídeos para a legenda…";
+      await saveJob(job);
+      speech = new Map();
+      for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) {
+        const words = await transcribeClip(c.file, c.hasAudio).catch((e) => {
+          console.error(`[legenda] ${path.basename(c.file)}:`, e);
+          return [] as Word[];
+        });
+        speech.set(c.file, words);
+      }
+    } else {
+      console.warn("[legenda] servidor sem whisper; vídeos saem sem a legenda automática");
+    }
+  }
   if (job.trimSilence) {
     job.message = "Cortando as partes sem som…";
     await saveJob(job);
@@ -412,7 +453,14 @@ async function processJob(id: string) {
       const v = job.variations[i];
       await queueUpdate(i, { status: "rendering" });
       try {
-        await renderVariation(vipFor(i) ? job : { ...job, captions: false }, dir, v, recipes[i], vipFor(i) ? music : undefined);
+        await renderVariation(
+          vipFor(i) ? job : { ...job, captions: false, autoCaptions: false },
+          dir,
+          v,
+          recipes[i],
+          vipFor(i) ? music : undefined,
+          vipFor(i) ? speech : null,
+        );
         await queueUpdate(i, { status: "done" });
       } catch (err) {
         console.error(`[job ${id}] vídeo ${i + 1}:`, err);

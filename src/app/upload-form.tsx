@@ -106,6 +106,7 @@ export default function UploadForm() {
   // Textos gravados no vídeo (gancho e chamada final): opcional, pedido do Andre.
   const [captions, setCaptions] = useState(false);
   const [trimSilence, setTrimSilence] = useState(false);
+  const [autoCaptions, setAutoCaptions] = useState(false);
 
   // Teste grátis: até 3 por bloco, para os 2 vídeos saírem misturados (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
   const maxPer = plan === "free" ? FREE_MAX_PER_BLOCK : MAX_PER_BLOCK;
@@ -139,6 +140,7 @@ export default function UploadForm() {
     fd.append("duration", duration);
     fd.append("captions", captions ? "1" : "0");
     if (trimSilence) fd.append("trimSilence", "1");
+    if (autoCaptions) fd.append("autoCaptions", "1");
     fd.append("plan", plan);
     if (plan === "full") fd.append("videos", String(videos));
     if (plan === "free") fd.append("whatsapp", whatsapp);
@@ -443,6 +445,15 @@ export default function UploadForm() {
         <span>
           {!vip && "🔒 "}Cortar partes sem som{" "}
           <span className="text-foreground/45">({trimSilence ? "tira o silêncio do começo e do fim de cada clipe" : "desligado, clipes inteiros"})</span>
+        </span>
+      </label>
+
+      <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${vip ? "cursor-pointer" : "opacity-50"}`}>
+        <input type="checkbox" disabled={!vip} checked={vip && autoCaptions} onChange={(e) => setAutoCaptions(e.target.checked)} className="peer sr-only" />
+        <span className="relative h-4 w-7 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-3" />
+        <span>
+          {!vip && "🔒 "}Legenda automática{" "}
+          <span className="text-foreground/45">({autoCaptions ? "a fala aparece palavra por palavra" : "desligada"})</span>
         </span>
       </label>
 
