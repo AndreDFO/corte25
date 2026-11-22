@@ -20,3 +20,12 @@ export function comboCount(h: number, b: number, c: number) {
 
 // Vídeos por parte do ZIP (download no celular): ZIP de 300 MB costuma falhar no download ou ao abrir.
 export const ZIP_PART = 9;
+
+// Catálogo para cobrança (valores em reais). O id vai no pagamento do Asaas (externalReference).
+export const CATALOG = {
+  "pacote-3": { credits: 3, value: 14.9, label: "3 lotes", recurring: false },
+  "pacote-10": { credits: 10, value: 29.9, label: "10 lotes", recurring: false },
+  "pacote-40": { credits: 40, value: 89.99, label: "40 lotes", recurring: false },
+  assinatura: { credits: 15, value: 39.9, label: "Assinatura mensal · 15 lotes", recurring: true },
+} as const;
+export type ProductId = keyof typeof CATALOG;
