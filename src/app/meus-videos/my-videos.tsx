@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { forgetJobs, readMyJobs, timeLeft } from "@/lib/my-jobs";
-import type { Job } from "@/lib/jobs";
-
-type Row = Job & { expiresAt: string };
+type Row = { id: string; product: string; plan: "free" | "full"; createdAt: string; expiresAt: string; done: number };
 
 export default function MyVideos() {
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -33,25 +31,18 @@ export default function MyVideos() {
 
   useEffect(() => {
     (async () => {
-      // Com login: só os lotes da conta (de qualquer aparelho). Sem login: os lotes deste navegador.
-      let mine = readMyJobs();
+      // Uma ida só ao servidor (antes era um pedido por lote, um depois do outro).
+      // Com login: os lotes da conta (de qualquer aparelho). Sem login: os lotes deste navegador.
+      const ids = readMyJobs().map((m) => m.id).join(",");
       try {
-        const r = await fetch("/api/conta/videos", { cache: "no-store" });
-        const j = r.ok ? ((await r.json()) as { logged: boolean; ids: string[] }) : null;
-        if (j?.logged) mine = j.ids.map((id) => ({ id, product: "", createdAt: "" }));
-      } catch {}
-      const gone: string[] = [];
-      const found: Row[] = [];
-      for (const m of mine) {
-        try {
-          const res = await fetch(`/api/jobs/${m.id}`, { cache: "no-store" });
-          if (res.status === 404 || res.status === 403) gone.push(m.id);
-          else if (res.ok) found.push(await res.json());
-        } catch {}
+        const r = await fetch(`/api/conta/videos?ids=${ids}`, { cache: "no-store" });
+        const j = r.ok ? ((await r.json()) as { logged: boolean; rows: Row[]; gone: string[] }) : null;
+        if (!j) return setRows([]);
+        if (!j.logged && j.gone.length) forgetJobs(j.gone);
+        setRows(j.rows);
+      } catch {
+        setRows([]);
       }
-      if (gone.length) forgetJobs(gone);
-      found.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      setRows(found);
     })();
     const first = setTimeout(() => setNow(Date.now()), 0);
     const t = setInterval(() => setNow(Date.now()), 30_000);
@@ -79,7 +70,7 @@ export default function MyVideos() {
       ) : (
         <ul className="mt-3 divide-y divide-foreground/10 rounded-xl bg-surface ring-1 ring-foreground/10">
           {rows.map((j) => {
-            const done = j.variations.filter((v) => v.status === "done").length;
+            const done = j.done;
             return (
               <li key={j.id} className="flex items-center">
                 <Link
