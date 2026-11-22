@@ -85,7 +85,7 @@ export default function JobView({ id }: { id: string }) {
           )}
         </div>
         {done > 0 && (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {finished ? (
               <SaveButton
                 id={id}
@@ -96,7 +96,7 @@ export default function JobView({ id }: { id: string }) {
             ) : (
               <span className="rounded-lg bg-foreground/10 px-4 py-2.5 font-bold text-foreground/50">Baixar todos ao terminar</span>
             )}
-            <a href={`/api/jobs/${id}/legendas`} className="rounded-lg border border-foreground/20 px-4 py-2.5 font-semibold hover:bg-foreground/5">
+            <a href={`/api/jobs/${id}/legendas`} className="text-xs font-semibold text-foreground/60 underline hover:text-foreground">
               Baixar legendas
             </a>
           </div>
@@ -252,7 +252,16 @@ function SaveButton({ id, files, all, className }: { id: string; files: string[]
   else label = all ? `Baixar todos (${plural(n)})` : `Baixar ${plural(n)}`;
 
   return (
-    <button type="button" disabled={!n || !!busy} onClick={run} className={className}>
+    <button
+      type="button"
+      disabled={!n || !!busy}
+      onClick={run}
+      className={
+        prepared && !busy
+          ? `${className} bg-accent! text-white! hover:bg-accent-dark! ring-4 ring-accent/40 animate-pulse`
+          : className
+      }
+    >
       {label}
     </button>
   );
