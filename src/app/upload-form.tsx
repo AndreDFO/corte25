@@ -161,20 +161,20 @@ export default function UploadForm() {
           onClick={() => choosePlan("free")}
           className={`rounded-xl border px-3 py-2 text-left ${plan === "free" ? "border-accent bg-accent/10 ring-2 ring-accent/30" : "border-foreground/15 hover:bg-foreground/5"}`}
         >
-          <span className="flex items-center gap-1.5 text-sm font-bold">
-            Teste grátis
-            <span className="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-black uppercase text-white">Sem pagar</span>
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-lg bg-brand px-2 py-0.5 text-base font-black uppercase tracking-wide text-on-brand shadow-sm">Grátis</span>
+            <span className="text-sm font-black">{FREE_VIDEOS} vídeos</span>
           </span>
-          <span className="block text-xs text-foreground/60">{FREE_VIDEOS} vídeos com marca d&apos;água</span>
+          <span className="mt-0.5 block text-xs text-foreground/60">Teste sem pagar · com marca d&apos;água</span>
         </button>
         <button
           type="button"
           onClick={() => choosePlan("full")}
           className={`rounded-xl border px-3 py-2 text-left ${plan === "full" ? "border-brand bg-brand/10 ring-2 ring-brand/30" : "border-foreground/15 hover:bg-foreground/5"}`}
         >
-          <span className="block text-sm font-bold">Lote completo</span>
-          <span className="block text-xs text-foreground/60">
-            Até {BATCH_VIDEOS} + {FREE_VIDEOS} grátis · usa seu saldo
+          <span className="block text-sm font-bold leading-tight">Usar meus créditos de vídeos</span>
+          <span className="mt-0.5 block text-xs text-foreground/60">
+            Até {BATCH_VIDEOS} + {FREE_VIDEOS} grátis · sem marca d&apos;água
           </span>
         </button>
       </div>
