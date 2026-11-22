@@ -22,13 +22,13 @@ export async function HeaderAccount() {
       <span className="hidden max-w-32 truncate text-foreground/70 md:inline" title={user.email || ""}>
         Olá, <b className="text-foreground">{first}</b>
       </span>
-      <span className="flex flex-col items-center leading-none">
+      <span className="flex items-center gap-1">
         <Link href="/conta" className={btn} title="Minha conta e saldo">
-          {credits === null ? "Minha conta" : `${credits} vídeo${credits === 1 ? "" : "s"}`}
+          {credits === null ? "Minha conta" : `${credits} crédito${credits === 1 ? "" : "s"}`}
         </Link>
         <Link
           href="/conta#comprar"
-          className="mt-1 whitespace-nowrap rounded-full bg-accent px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm hover:bg-accent-dark"
+          className="whitespace-nowrap rounded-lg bg-accent px-2 py-1.5 font-bold text-white hover:bg-accent-dark min-[361px]:px-2.5"
         >
           + Comprar
         </Link>

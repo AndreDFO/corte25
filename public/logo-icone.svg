@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120"><rect x="0" y="0" width="120" height="120" rx="30" fill="#8b7bff"/>
+<clipPath id="a1"><polygon points="0,0 120,0 120,74 0,52"/></clipPath>
+<clipPath id="a2"><polygon points="0,62 120,84 120,120 0,120"/></clipPath>
+<g clip-path="url(#a1)"><path d="M42 30 L92 60 L42 90 Z" fill="#c8f135" stroke="#c8f135" stroke-width="10" stroke-linejoin="round"/></g>
+<g clip-path="url(#a2)" transform="translate(3,4)"><path d="M42 30 L92 60 L42 90 Z" fill="#ffffff" stroke="#ffffff" stroke-width="10" stroke-linejoin="round"/></g></svg>
