@@ -3,7 +3,7 @@
 import Link from "next/link";
 import PlanPicker from "../plan-picker";
 import { useState } from "react";
-import { AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION_OPTIONS, brl, discounted, type ProductId } from "@/lib/pricing";
+import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION_OPTIONS, brl, discounted, type ProductId } from "@/lib/pricing";
 
 type Payment = { id: string; product: string; value: number; status: string; created_at: string };
 
@@ -42,6 +42,14 @@ export default function AccountPanel(p: {
   const [walletMsg, setWalletMsg] = useState("");
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [showComm, setShowComm] = useState(false);
+  // Comissão em centavos inteiros (39,90 × 15% = 5,985 → R$ 5,99).
+  const comm = (value: number, percent: number) => Math.round(Math.round(value * 100) * percent / 100) / 100;
+  // Tabela de comissões: assinaturas primeiro, depois avulsos.
+  const commissionRows = [
+    ...SUBSCRIPTION_OPTIONS.map((x) => ({ id: x.id, label: `Assinatura ${(x.credits * 25).toLocaleString("pt-BR")} vídeos/mês`, value: CATALOG[x.id as ProductId].value })),
+    ...PACKAGES.map((x) => ({ id: `pacote-${x.credits}`, label: `Avulso ${(x.credits * 25).toLocaleString("pt-BR")} vídeos`, value: x.value })),
+  ];
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; msg: string; price: string; full: string | null; product: string } | null>(null);
@@ -271,9 +279,53 @@ export default function AccountPanel(p: {
           </div>
           <div className="rounded-xl bg-brand px-4 py-3 text-on-brand">
             <p className="text-2xl font-black">💰 {p.affiliatePercent}% para você</p>
-            <p className="text-sm font-semibold">nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada indicado</p>
+            <p className="text-sm font-semibold">
+              nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada indicado, depois {AFFILIATE_LATER_PERCENT}% para sempre
+            </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowComm((v) => !v)}
+          className="justify-self-start rounded-lg border border-foreground/20 px-3 py-1.5 text-sm font-bold"
+        >
+          {showComm ? "Fechar comissões" : "💰 Comissões: veja quanto você ganha"}
+        </button>
+        {showComm && (
+          <div className="grid gap-2 rounded-xl bg-foreground/5 p-3">
+            <p className="text-xs text-foreground/70">
+              Você ganha <b>{p.affiliatePercent}%</b> nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada pessoa que indicar e{" "}
+              <b>{AFFILIATE_LATER_PERCENT}% em todas as compras seguintes, para sempre</b>, inclusive em cada mensalidade da assinatura.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-foreground/60">
+                    <th className="py-1 pr-2 font-semibold">Plano</th>
+                    <th className="py-1 pr-2 font-semibold">Preço</th>
+                    <th className="py-1 pr-2 font-semibold">3 primeiras ({p.affiliatePercent}%)</th>
+                    <th className="py-1 font-semibold">Depois ({AFFILIATE_LATER_PERCENT}%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {commissionRows.map((r) => (
+                    <tr key={r.id} className="border-t border-foreground/10">
+                      <td className="py-1 pr-2">{r.label}</td>
+                      <td className="whitespace-nowrap py-1 pr-2">{brl(r.value)}</td>
+                      <td className="whitespace-nowrap py-1 pr-2 font-bold">{brl(comm(r.value, p.affiliatePercent))}</td>
+                      <td className="whitespace-nowrap py-1 font-bold">{brl(comm(r.value, AFFILIATE_LATER_PERCENT))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[11px] text-foreground/50">
+              Exemplo: alguém assina o plano de 1.150 vídeos pelo seu link. Você recebe {brl(comm(99.9, p.affiliatePercent))} em cada uma das 3
+              primeiras mensalidades e {brl(comm(99.9, AFFILIATE_LATER_PERCENT))} todo mês depois disso. Na 1ª compra o indicado tem{" "}
+              {REFERRAL_DISCOUNT}% de desconto, e a comissão é sobre o valor pago.
+            </p>
+          </div>
+        )}
         <p className="text-sm text-foreground/70">
           Quem criar conta pelo seu link vira sua indicação. A comissão cai direto na sua conta do Asaas, sem pedir saque.
         </p>

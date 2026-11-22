@@ -2,7 +2,7 @@ import { asaasConfigured, createCheckout, createCustomer } from "@/lib/asaas";
 import { currentUser, getProfile, updateProfile } from "@/lib/auth";
 import { CATALOG, type ProductId } from "@/lib/pricing";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { affiliateStillEarns, referralDiscount } from "@/lib/credits";
+import { affiliatePercentFor, referralDiscount } from "@/lib/credits";
 import { checkCoupon } from "@/lib/coupons";
 import { discounted } from "@/lib/pricing";
 
@@ -41,8 +41,9 @@ export async function POST(req: Request) {
   // Afiliado: quem indicou e já cadastrou a carteira do Asaas recebe 15% via split,
   // só nas 3 primeiras compras pagas do indicado.
   let wallet: string | null = null;
-  const earns = Boolean(profile.referred_by) && (await affiliateStillEarns(user.id));
-  if (earns) {
+  // 15% nas 3 primeiras compras pagas do indicado; depois 3% para sempre.
+  const affiliatePercent = profile.referred_by ? await affiliatePercentFor(user.id) : null;
+  if (affiliatePercent) {
     const { data } = await supabaseAdmin()
       .from("profiles")
       .select("affiliate_wallet_id")
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
   try {
     let out;
     try {
-      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: wallet, ...discountArgs });
+      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: wallet, affiliatePercent: affiliatePercent ?? undefined, ...discountArgs });
     } catch (err) {
       if (!wallet) throw err;
       // Carteira do afiliado recusada (ID errado ou a própria conta): a venda não pode travar.
@@ -93,7 +94,8 @@ export async function POST(req: Request) {
       credits: CATALOG[product].credits,
       value: out.value,
       status: "PENDING",
-      affiliate_code: earns ? profile.referred_by : null,
+      affiliate_code: affiliatePercent ? profile.referred_by : null,
+      affiliate_percent: affiliatePercent,
       subscription_id: out.subscription || null,
       coupon_code: couponCode,
       bonus_videos: bonusVideos,

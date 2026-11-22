@@ -16,6 +16,7 @@ export interface Sale {
   email: string;
   coupon: string;
   affiliate: string;
+  commission: number;
 }
 
 export async function buildReport(deRaw: string, ateRaw: string, now = new Date()) {
@@ -29,7 +30,7 @@ export async function buildReport(deRaw: string, ateRaw: string, now = new Date(
 
   const [{ data: pays }, { data: profs }, leads, { data: used }] = await Promise.all([
     // Pagamento confirmado: a data é a da confirmação (updated_at).
-    db.from("payments").select("id, user_id, product, value, status, affiliate_code, coupon_code, bonus_videos, created_at, updated_at").limit(10000),
+    db.from("payments").select("id, user_id, product, value, status, affiliate_code, affiliate_percent, coupon_code, bonus_videos, created_at, updated_at").limit(10000),
     db.from("profiles").select("id, name, email, created_at").limit(10000),
     listLeads().catch(() => []),
     db.from("credit_ledger").select("delta, created_at").lt("delta", 0).gte("created_at", from).lte("created_at", to).limit(10000),
@@ -50,6 +51,7 @@ export async function buildReport(deRaw: string, ateRaw: string, now = new Date(
       email: people.get(p.user_id)?.email || "",
       coupon: p.coupon_code || "",
       affiliate: p.affiliate_code || "",
+      commission: p.affiliate_code ? round((Number(p.value) * Number(p.affiliate_percent ?? AFFILIATE_PERCENT)) / 100) : 0,
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
   const revenue = round(sales.reduce((a, s) => a + s.value, 0));
@@ -84,7 +86,10 @@ export async function buildReport(deRaw: string, ateRaw: string, now = new Date(
     }
     return [...m.entries()].map(([code, g]) => ({ code, ...g }));
   };
-  const affiliates = group("affiliate").map((a) => ({ ...a, commission: round((a.revenue * AFFILIATE_PERCENT) / 100) }));
+  const affiliates = group("affiliate").map((a) => ({
+    ...a,
+    commission: round(sales.filter((s) => s.affiliate === a.code).reduce((t, s) => t + s.commission, 0)),
+  }));
   const buyers = new Set(paid.map((p) => p.user_id)).size;
 
   return {

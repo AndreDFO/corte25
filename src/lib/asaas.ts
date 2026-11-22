@@ -46,8 +46,8 @@ export async function createCustomer(c: { name: string; email: string; cpfCnpj: 
   return call<{ id: string }>("POST", "/customers", { ...c, notificationDisabled: false });
 }
 
-function split(affiliateWallet?: string | null) {
-  return affiliateWallet ? [{ walletId: affiliateWallet, percentualValue: AFFILIATE_PERCENT }] : undefined;
+function split(affiliateWallet?: string | null, percent = AFFILIATE_PERCENT) {
+  return affiliateWallet ? [{ walletId: affiliateWallet, percentualValue: percent }] : undefined;
 }
 
 function today(days = 0) {
@@ -61,6 +61,7 @@ export async function createCheckout(opts: {
   userId: string;
   product: ProductId;
   affiliateWallet?: string | null;
+  affiliatePercent?: number; // 15 nas 3 primeiras compras do indicado, depois 3
   value?: number; // preço da 1ª cobrança já com desconto (indicação ou cupom); sem isso, preço cheio
   note?: string; // aparece na descrição da cobrança (ex.: "cupom BLACK10")
 }): Promise<{ id: string; url: string; subscription?: string; value: number }> {
@@ -72,7 +73,7 @@ export async function createCheckout(opts: {
     value: item.recurring ? item.value : value,
     description: `Corte25 · ${item.label}${opts.note ? ` · ${opts.note}` : ""}`,
     externalReference: `${opts.userId}:${opts.product}`,
-    split: split(opts.affiliateWallet),
+    split: split(opts.affiliateWallet, opts.affiliatePercent),
   };
   // Depois de pagar, o Asaas volta para a conta. Ele só aceita se o domínio do site estiver
   // cadastrado na conta do Asaas; se recusar, a cobrança é criada sem o retorno automático.
@@ -115,9 +116,9 @@ export async function getPayment(id: string) {
   );
 }
 
-// Para de repassar comissão nas próximas mensalidades (o afiliado já recebeu nas 3 primeiras compras).
-export async function removeSubscriptionSplit(id: string) {
-  return call("PUT", `/subscriptions/${encodeURIComponent(id)}`, { split: [] });
+// Troca a comissão das próximas mensalidades (ex.: de 15% para 3% depois da 3ª compra paga).
+export async function setSubscriptionSplit(id: string, walletId: string, percent: number) {
+  return call("PUT", `/subscriptions/${encodeURIComponent(id)}`, { split: [{ walletId, percentualValue: percent }] });
 }
 
 export async function cancelSubscription(id: string) {

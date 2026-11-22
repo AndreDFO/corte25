@@ -15,10 +15,10 @@ async function affiliateStats(userId: string) {
   if (!me?.ref_code) return { referrals: 0, sales: 0, commission: 0 };
   const [{ count }, { data: paid }] = await Promise.all([
     db.from("profiles").select("id", { count: "exact", head: true }).eq("referred_by", me.ref_code),
-    db.from("payments").select("value").eq("affiliate_code", me.ref_code).in("status", ["CONFIRMED", "RECEIVED"]),
+    db.from("payments").select("value, affiliate_percent").eq("affiliate_code", me.ref_code).in("status", ["CONFIRMED", "RECEIVED"]),
   ]);
-  const total = (paid ?? []).reduce((a, r) => a + Number(r.value), 0);
-  return { referrals: count ?? 0, sales: paid?.length ?? 0, commission: Math.round(total * AFFILIATE_PERCENT) / 100 };
+  const total = (paid ?? []).reduce((a, r) => a + Number(r.value) * Number(r.affiliate_percent ?? AFFILIATE_PERCENT), 0);
+  return { referrals: count ?? 0, sales: paid?.length ?? 0, commission: Math.round(total) / 100 };
 }
 
 export const metadata = { title: "Minha conta · Corte25" };

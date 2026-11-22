@@ -1,12 +1,24 @@
-import { AFFILIATE_MAX_PURCHASES, CATALOG, REFERRAL_DISCOUNT, VIDEOS_PER_LOT, type ProductId } from "./pricing";
+import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, AFFILIATE_PERCENT, CATALOG, REFERRAL_DISCOUNT, VIDEOS_PER_LOT, type ProductId } from "./pricing";
 import { supabaseAdmin } from "./supabase-admin";
-import { asaasConfigured, getPayment, parseReference, removeSubscriptionSplit } from "./asaas";
+import { asaasConfigured, getPayment, parseReference, setSubscriptionSplit } from "./asaas";
 
 // Credita os lotes de um pagamento confirmado. Repetir o mesmo pagamento não credita de novo
 // (índice único em payment_id + reason).
 export async function grantForPayment(p: { paymentId: string; userId: string; product: ProductId; value: number; subscription?: string | null }) {
   const db = supabaseAdmin();
   const item = CATALOG[p.product];
+  // Mensalidade nova da assinatura: herda o afiliado da 1ª cobrança e grava a comissão desta parcela.
+  let affiliate: { affiliate_code: string; affiliate_percent: number } | null = null;
+  if (p.subscription) {
+    const { data: first } = await db
+      .from("payments")
+      .select("affiliate_code")
+      .eq("subscription_id", p.subscription)
+      .not("affiliate_code", "is", null)
+      .limit(1)
+      .maybeSingle();
+    if (first?.affiliate_code) affiliate = { affiliate_code: first.affiliate_code, affiliate_percent: await affiliatePercentFor(p.userId, p.paymentId) };
+  }
   await db.from("payments").upsert({
     id: p.paymentId,
     user_id: p.userId,
@@ -16,6 +28,7 @@ export async function grantForPayment(p: { paymentId: string; userId: string; pr
     status: "CONFIRMED",
     subscription_id: p.subscription || null,
     updated_at: new Date().toISOString(),
+    ...(affiliate ?? {}),
   });
   const { error } = await db.from("credit_ledger").insert({
     user_id: p.userId,
@@ -34,11 +47,13 @@ export async function grantForPayment(p: { paymentId: string; userId: string; pr
     if (e2 && e2.code !== "23505") throw e2;
   }
 
-  // Assinatura com split: ao chegar na 3ª compra paga, tira a comissão das próximas mensalidades.
-  if (p.subscription && !(await affiliateStillEarns(p.userId))) {
-    await removeSubscriptionSplit(p.subscription).catch((err) =>
-      console.warn("[afiliado] não deu para tirar o split da assinatura", p.subscription, (err as Error).message),
-    );
+  // Assinatura com afiliado: depois da 3ª compra paga, as próximas mensalidades passam a pagar 3% (não 15%).
+  if (p.subscription && affiliate && (await paidPurchases(p.userId)) >= AFFILIATE_MAX_PURCHASES) {
+    const { data: ref } = await db.from("profiles").select("affiliate_wallet_id").eq("ref_code", affiliate.affiliate_code).maybeSingle();
+    if (ref?.affiliate_wallet_id)
+      await setSubscriptionSplit(p.subscription, ref.affiliate_wallet_id, AFFILIATE_LATER_PERCENT).catch((err) =>
+        console.warn("[afiliado] não deu para trocar o split da assinatura", p.subscription, (err as Error).message),
+      );
   }
 }
 
@@ -110,7 +125,15 @@ export async function paidPurchases(userId: string): Promise<number> {
   return count ?? 0;
 }
 
-// A comissão do afiliado vale nas AFFILIATE_MAX_PURCHASES primeiras compras pagas do indicado.
-export async function affiliateStillEarns(userId: string) {
-  return (await paidPurchases(userId)) < AFFILIATE_MAX_PURCHASES;
+// Comissão do afiliado nesta compra: 15% nas AFFILIATE_MAX_PURCHASES primeiras compras pagas do indicado,
+// depois 3% para sempre. exceptId: não conta o próprio pagamento (quando ele já está gravado).
+export async function affiliatePercentFor(userId: string, exceptId?: string) {
+  let q = supabaseAdmin()
+    .from("payments")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .in("status", ["CONFIRMED", "RECEIVED", "REFUNDED"]);
+  if (exceptId) q = q.neq("id", exceptId);
+  const { count } = await q;
+  return (count ?? 0) < AFFILIATE_MAX_PURCHASES ? AFFILIATE_PERCENT : AFFILIATE_LATER_PERCENT;
 }
