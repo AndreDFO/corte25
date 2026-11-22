@@ -371,9 +371,21 @@ export default function AccountPanel(p: {
             {copied ? "Copiado!" : "Copiar"}
           </button>
         </div>
-        <p className="mt-1 text-xs text-foreground/60">
-          Para receber, informe o ID da sua carteira do Asaas (no app do Asaas: Minha conta → Integrações → Carteira).
-        </p>
+        {!savedWallet && (
+          <div className="mt-1 flex flex-wrap items-center gap-2 rounded-lg bg-accent/10 px-3 py-2">
+            <p className="min-w-0 flex-1 text-xs text-foreground/70">
+              Para receber, crie sua conta grátis no Asaas e cole aqui o ID da carteira (no Asaas: Minha conta → Integrações → Carteira).
+            </p>
+            <a
+              href="https://www.asaas.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-white hover:bg-accent-dark"
+            >
+              Abrir conta no Asaas ↗
+            </a>
+          </div>
+        )}
         <div className="flex gap-2">
           <input
             value={wallet}
