@@ -178,7 +178,7 @@ export default function AccountPanel(p: {
               Área do administrador
             </Link>
           )}
-          <button onClick={logout} className="text-sm text-foreground/60 underline">
+          <button onClick={logout} className="rounded-lg border border-foreground/20 px-3 py-1.5 text-sm font-bold text-foreground/70 hover:bg-foreground/5">
             Sair
           </button>
         </div>
