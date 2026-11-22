@@ -17,8 +17,9 @@ const FONT_SRC = path.join(process.cwd(), "assets", "fonts", "Inter-ExtraBold.ot
 
 interface ClipInfo {
   file: string;
-  duration: number;
+  duration: number; // duração usada (depois do corte do silêncio, se ligado)
   hasAudio: boolean;
+  offset?: number; // segundos cortados no começo (corte do silêncio, melhoria em teste)
 }
 
 function run(cmd: string, args: string[], cwd?: string): Promise<string> {
@@ -161,9 +162,9 @@ export function buildRecipe(
   // Pequenas diferenças visuais em cada vídeo para não ficarem idênticos.
   const zoom = r() < 0.5 ? 1 : 1.04 + r() * 0.06;
   const segments: Segment[] = [
-    { clip: hook, input: 0, start: 0, dur: hDur, speed: 1, zoom },
-    { clip: body, input: 1, start: 0, dur: bDur, speed: 1, zoom },
-    { clip: cta, input: 2, start: 0, dur: cDur, speed: 1, zoom },
+    { clip: hook, input: 0, start: hook.offset ?? 0, dur: hDur, speed: 1, zoom },
+    { clip: body, input: 1, start: body.offset ?? 0, dur: bDur, speed: 1, zoom },
+    { clip: cta, input: 2, start: cta.offset ?? 0, dur: cDur, speed: 1, zoom },
   ];
   return {
     segments,
@@ -197,9 +198,11 @@ async function renderVariation(
     const words: Word[] = [];
     let offset = 0;
     for (const s of rc.segments) {
+      const cut = s.clip.offset ?? 0;
       for (const w of speech?.get(s.clip.file) || []) {
-        if (w.s >= s.dur - 0.05) continue;
-        words.push({ w: w.w, s: offset + w.s, e: offset + Math.min(w.e, s.dur) });
+        const ws = w.s - cut;
+        if (ws < -0.05 || ws >= s.dur - 0.05) continue;
+        words.push({ w: w.w, s: offset + Math.max(0, ws), e: offset + Math.min(w.e - cut, s.dur) });
       }
       offset += s.dur;
     }
@@ -297,6 +300,40 @@ async function renderVariation(
   await run(FFMPEG, args, dir);
 }
 
+// Corte do silêncio: acha onde a voz começa e termina no clipe. Primeiro pelo volume (silencedetect,
+// preciso nas bordas); se o clipe tiver música de fundo e nunca ficar "em silêncio", usa os tempos da
+// transcrição. Deixa uma margem para não comer o começo nem o fim da fala. Devolve null se não deve cortar.
+const TRIM_BEFORE = 0.2;
+const TRIM_AFTER = 0.35;
+async function speechBounds(c: ClipInfo, words: Word[]): Promise<{ start: number; end: number } | null> {
+  if (!c.hasAudio) return null;
+  const dur = c.duration;
+  let start = 0;
+  let end = dur;
+  const log = await new Promise<string>((resolve) => {
+    const p = spawn(FFMPEG, ["-hide_banner", "-nostats", "-i", c.file, "-vn", "-af", "silencedetect=noise=-38dB:d=0.25", "-f", "null", "-"], { windowsHide: true });
+    let err = "";
+    p.stderr.on("data", (d) => (err += d));
+    p.on("error", () => resolve(""));
+    p.on("close", () => resolve(err));
+  });
+  const starts = [...log.matchAll(/silence_start: (-?[\d.]+)/g)].map((m) => Number(m[1]));
+  const ends = [...log.matchAll(/silence_end: ([\d.]+)/g)].map((m) => Number(m[1]));
+  // Silêncio que começa no 0 → a voz começa quando ele termina.
+  if (starts.length && starts[0] <= 0.05 && ends.length) start = Math.max(0, ends[0] - TRIM_BEFORE);
+  // Silêncio que vai até o fim do clipe → a voz termina quando ele começa.
+  const lastStart = starts[starts.length - 1];
+  if (starts.length && (ends.length < starts.length || ends[ends.length - 1] >= dur - 0.05) && lastStart > start)
+    end = Math.min(dur, lastStart + TRIM_AFTER);
+  if (start === 0 && end === dur && words.length) {
+    start = Math.max(0, words[0].s - 0.3);
+    end = Math.min(dur, words[words.length - 1].e + 0.5);
+  }
+  // Só corta se tirar pelo menos 0,15 s e sobrar pelo menos 1 s de clipe.
+  if (end - start < 1 || dur - (end - start) < 0.15) return null;
+  return { start: Math.round(start * 100) / 100, end: Math.round(end * 100) / 100 };
+}
+
 const running = new Set<string>();
 
 export function startJob(id: string) {
@@ -347,7 +384,7 @@ async function processJob(id: string) {
   // e para a IA escrever textos que combinam com o que é falado).
   let speech: Map<string, Word[]> | null = null;
   let spoken = "";
-  if (job.extras?.animatedCaptions || job.extras?.richCopy) {
+  if (job.extras?.animatedCaptions || job.extras?.richCopy || job.extras?.trimSilence) {
     if (await whisperAvailable()) {
       job.status = "writing";
       job.message = "Ouvindo a fala dos vídeos…";
@@ -368,6 +405,20 @@ async function processJob(id: string) {
       job.speechFound = parts.length;
     } else {
       job.speechFound = -1; // servidor sem o programa de transcrição
+    }
+  }
+
+  // Melhoria em teste (só admin): corta o começo e o fim sem voz de cada clipe.
+  if (job.extras?.trimSilence) {
+    job.message = "Cortando o silêncio dos clipes…";
+    await saveJob(job);
+    job.trims = [];
+    for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) {
+      const r = await speechBounds(c, speech?.get(c.file) || []).catch(() => null);
+      if (!r) continue;
+      job.trims.push({ file: path.basename(c.file), start: r.start, end: r.end, original: c.duration });
+      c.offset = r.start;
+      c.duration = r.end - r.start;
     }
   }
 

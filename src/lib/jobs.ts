@@ -37,6 +37,7 @@ export interface Job {
   variations: Variation[];
   ownerId?: string | null; // conta que gerou (null = sem login); só ela vê o lote
   extras?: JobExtras; // melhorias em teste, só para o administrador
+  trims?: { file: string; start: number; end: number; original: number }[]; // corte do silêncio (teste)
   speechFound?: number; // quantos clipes tinham fala (-1 = servidor sem transcrição)
 }
 

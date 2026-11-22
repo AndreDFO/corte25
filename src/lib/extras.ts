@@ -23,6 +23,7 @@ export interface JobExtras {
   animatedCaptions?: boolean; // legendas da fala palavra por palavra + gancho entrando palavra por palavra
   richCopy?: boolean; // descrição mais completa e mais hashtags
   niche?: Niche; // ganchos e hashtags do nicho
+  trimSilence?: boolean; // corta o começo e o fim sem voz de cada clipe enviado
 }
 
 export function parseExtras(raw: unknown): JobExtras | undefined {
@@ -32,6 +33,7 @@ export function parseExtras(raw: unknown): JobExtras | undefined {
     const out: JobExtras = {};
     if (j.animatedCaptions === true) out.animatedCaptions = true;
     if (j.richCopy === true) out.richCopy = true;
+    if (j.trimSilence === true) out.trimSilence = true;
     if (typeof j.niche === "string" && j.niche in NICHES) out.niche = j.niche as Niche;
     return Object.keys(out).length ? out : undefined;
   } catch {
@@ -44,6 +46,7 @@ export function describeExtras(x?: JobExtras): string[] {
   const l: string[] = [];
   if (x.animatedCaptions) l.push("Legendas animadas");
   if (x.richCopy) l.push("Descrição e hashtags turbinadas");
+  if (x.trimSilence) l.push("Corte do silêncio no começo e no fim");
   if (x.niche) l.push(`Nicho: ${NICHES[x.niche].label}`);
   return l;
 }

@@ -85,6 +85,10 @@ export default function JobView({ id }: { id: string }) {
               🧪 <b>Lote de teste:</b> {describeExtras(job.extras).join(" · ")}
               {job.extras.animatedCaptions && job.speechFound === -1 && " (este servidor não tem a transcrição da fala; só o gancho fica animado)"}
               {job.extras.animatedCaptions && job.speechFound === 0 && " (não encontrei fala nos clipes; só o gancho fica animado)"}
+              {job.extras.trimSilence &&
+                (job.trims?.length
+                  ? ` · Cortei: ${job.trims.map((c) => `${c.file.replace(/_.*/, "")} ${c.start.toFixed(1)}s no começo e ${(c.original - c.end).toFixed(1)}s no fim`).join("; ")}`
+                  : " · Nenhum clipe tinha silêncio para cortar")}
             </p>
           )}
           {job.expiresAt && now > 0 && (

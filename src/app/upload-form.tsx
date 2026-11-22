@@ -57,8 +57,9 @@ export default function UploadForm() {
   const [doneId, setDoneId] = useState("");
   // Melhorias em teste: o quadro só aparece para o administrador (o servidor confere de novo).
   const [isAdmin, setIsAdmin] = useState(false);
-  const [testes, setTestes] = useState<{ animatedCaptions: boolean; richCopy: boolean; niche: string }>({
+  const [testes, setTestes] = useState<{ animatedCaptions: boolean; richCopy: boolean; trimSilence: boolean; niche: string }>({
     animatedCaptions: false,
+    trimSilence: false,
     richCopy: false,
     niche: "",
   });
@@ -105,7 +106,7 @@ export default function UploadForm() {
     fd.append("clientId", clientId());
     (Object.keys(clips) as BlockKey[]).forEach((k) => clips[k].forEach((f) => fd.append(k, f)));
     if (music) fd.append("music", music);
-    if (isAdmin && (testes.animatedCaptions || testes.richCopy || testes.niche)) fd.append("testes", JSON.stringify(testes));
+    if (isAdmin && (testes.animatedCaptions || testes.richCopy || testes.trimSilence || testes.niche)) fd.append("testes", JSON.stringify(testes));
 
     // Os vídeos abrem numa aba nova (pedido do Andre). A aba é aberta já no clique,
     // senão o navegador bloqueia como pop-up; ela recebe o endereço quando o envio termina.
@@ -366,6 +367,14 @@ export default function UploadForm() {
               onChange={(e) => setTestes((t) => ({ ...t, richCopy: e.target.checked }))}
             />
             Descrição e hashtags turbinadas
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={testes.trimSilence}
+              onChange={(e) => setTestes((t) => ({ ...t, trimSilence: e.target.checked }))}
+            />
+            Cortar o começo e o fim sem voz de cada clipe
           </label>
           <label className="flex items-center gap-2">
             Nicho:
