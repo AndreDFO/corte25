@@ -30,6 +30,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Páginas e APIs de conta; arquivos estáticos e vídeos ficam de fora.
-  matcher: ["/((?!_next/|favicon.ico|api/jobs/.*/files|api/asaas).*)"],
+  // Páginas e APIs de conta. Ficam de fora: arquivos estáticos, o envio e os vídeos (/api/jobs:
+  // passando pelo proxy, o envio é cortado em 10 MB e falha) e o webhook do Asaas.
+  matcher: ["/((?!_next/|favicon.ico|api/jobs|api/asaas).*)"],
 };

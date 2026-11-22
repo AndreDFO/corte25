@@ -87,7 +87,13 @@ export default function UploadForm() {
     xhr.upload.onprogress = (ev) => ev.lengthComputable && setProgress(Math.round((ev.loaded / ev.total) * 100));
     xhr.onload = () => {
       try {
-        const res = JSON.parse(xhr.responseText);
+        let res = {} as { id: string; error?: string };
+        try {
+          res = JSON.parse(xhr.responseText);
+        } catch {
+          if (xhr.status === 413) throw new Error("Os vídeos ficaram grandes demais. Envie clipes menores.");
+          throw new Error(`O servidor não respondeu direito (erro ${xhr.status}). Tente de novo em instantes.`);
+        }
         if (xhr.status === 401) {
           closeTab();
           window.location.href = "/entrar?volta=/%23criar";
