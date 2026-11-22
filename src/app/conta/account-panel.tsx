@@ -190,6 +190,7 @@ export default function AccountPanel(p: {
     return p.discount ? { full: brl(full), now: brl(discounted(full, p.discount)) } : { full: "", now: brl(full) };
   };
   const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";
+  const cardSm = "rounded-2xl bg-surface p-4 ring-1 ring-foreground/10"; // saldo e VIP: um pouco mais compactos
   const [savedName, setSavedName] = useState(p.name);
   const [nameMsg, setNameMsg] = useState("");
   async function saveName(e: React.FormEvent) {
@@ -267,7 +268,7 @@ export default function AccountPanel(p: {
         </div>
       )}
 
-      <div className={`${card} grid gap-2`}>
+      <div className={`${cardSm} grid gap-1`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-foreground/60">Seu saldo</p>
           {!freeOpen ? (
@@ -299,24 +300,24 @@ export default function AccountPanel(p: {
         {freeMsg && <p className={`text-sm font-semibold sm:text-right ${freeMsg.ok ? "text-foreground" : "text-brand-ink"}`}>{freeMsg.text}</p>}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-4xl font-black">
+            <p className="text-3xl font-black leading-tight">
               {p.credits} <span className="text-lg font-bold text-foreground/60">vídeo{p.credits === 1 ? "" : "s"}</span>
             </p>
             <p className="text-xs text-foreground/50">Cada lote = 25 vídeos. Gere quantos quiser por vez; gerando 25 de uma vez, ganha +2 grátis.</p>
           </div>
-          <Link href="/#criar" className="rounded-xl bg-brand px-5 py-3 font-black text-on-brand hover:bg-brand-dark">
+          <Link href="/#criar" className="rounded-xl bg-brand px-5 py-2.5 font-black text-on-brand hover:bg-brand-dark">
             Gerar vídeos
           </Link>
         </div>
       </div>
 
 
-      <div id="vip" className={`${card} grid gap-2 scroll-mt-24 border-2 border-accent/40`}>
+      <div id="vip" className={`${cardSm} grid gap-1.5 scroll-mt-24 border-2 border-accent/40`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-black">⭐ VIP · {brl(VIP_PRICE)}/mês</h2>
-          {p.vip.active && <span className="rounded-full bg-accent px-3 py-1 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : p.vip.coupon ? "VIP por cupom" : "VIP ativo"}</span>}
+          <h2 className="text-base font-black">⭐ VIP · {brl(VIP_PRICE)}/mês</h2>
+          {p.vip.active && <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : p.vip.coupon ? "VIP por cupom" : "VIP ativo"}</span>}
         </div>
-        <p className="text-sm text-foreground/70">
+        <p className="text-[13px] leading-snug text-foreground/70">
           Libera em todos os vídeos: <b>música</b>, <b>textos no vídeo</b>, <b>cortar partes sem som</b>, <b>narração</b>, <b>legenda automática</b> e <b>transição suave</b>. E ainda
           inclui <b>25 vídeos + 2 grátis</b> no seu saldo a cada mês pago.
         </p>
@@ -339,30 +340,32 @@ export default function AccountPanel(p: {
             </p>
           ))}
         {vipMsg && <p className="text-sm text-brand-ink">{vipMsg}</p>}
-        {!p.vip.admin && (!p.vip.active || vipCanceled || p.vip.coupon) && (
-          <button
-            type="button"
-            onClick={() => {
-              choose("vip");
-              document.getElementById("comprar")?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="justify-self-start rounded-xl bg-accent px-5 py-2.5 font-black text-white hover:bg-accent-dark"
-          >
-            {p.vip.active && !p.vip.coupon ? "Assinar VIP de novo" : `Quero ser VIP · ${brl(VIP_PRICE)}/mês`}
-          </button>
-        )}
-        {!p.vip.admin && (
-          <button
-            type="button"
-            onClick={() => {
-              setFreeOpen(true);
-              document.getElementById("cupom")?.scrollIntoView({ behavior: "smooth", block: "center" });
-            }}
-            className="justify-self-start text-xs text-foreground/60 underline"
-          >
-            Tem um cupom VIP? Resgate aqui
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {!p.vip.admin && (!p.vip.active || vipCanceled || p.vip.coupon) && (
+            <button
+              type="button"
+              onClick={() => {
+                choose("vip");
+                document.getElementById("comprar")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="rounded-xl bg-accent px-4 py-2 text-sm font-black text-white hover:bg-accent-dark"
+            >
+              {p.vip.active && !p.vip.coupon ? "Assinar VIP de novo" : `Quero ser VIP · ${brl(VIP_PRICE)}/mês`}
+            </button>
+          )}
+          {!p.vip.admin && (
+            <button
+              type="button"
+              onClick={() => {
+                setFreeOpen(true);
+                document.getElementById("cupom")?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              className="text-xs text-foreground/60 underline"
+            >
+              Tem um cupom VIP? Resgate aqui
+            </button>
+          )}
+        </div>
         {p.vip.active && !p.vip.admin && !p.vip.coupon && !vipCanceled && (
           <button type="button" onClick={cancelVip} className="justify-self-start text-xs text-foreground/60 underline">
             {p.vip.combo ? "Cancelar assinatura (vídeos + VIP)" : "Cancelar VIP"}
