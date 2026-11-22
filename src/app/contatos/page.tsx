@@ -62,18 +62,19 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
     .filter((l) => (seen.has(l.whatsapp) ? false : (seen.add(l.whatsapp), true)));
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 px-5 py-8">
+    <div className="mx-auto grid max-w-3xl gap-3 px-4 py-6">
       <div>
         <Link href="/admin" className="mb-2 inline-block text-sm font-semibold underline">
           ← Voltar para a área do administrador
         </Link>
-        <h1 className="text-3xl font-black tracking-tight">Contatos do teste grátis</h1>
+        <h1 className="text-2xl font-black tracking-tight">Contatos do teste grátis</h1>
         <p className="text-sm text-foreground/60">
-          {leads.length} contato{leads.length === 1 ? "" : "s"}. O botão abre a conversa no WhatsApp Web com uma mensagem pronta, que você pode editar antes de enviar.
+          {leads.length} contato{leads.length === 1 ? "" : "s"}, o mais recente primeiro. O botão abre a conversa com uma mensagem pronta, que você pode editar antes de enviar.
         </p>
       </div>
       {leads.length === 0 && <p className="text-foreground/60">Ninguém fez o teste grátis ainda.</p>}
-      <ul className="grid gap-2">
+      {/* Lista compacta: uma linha por contato (pedido do Andre, para quando houver muitos). */}
+      <ul className="divide-y divide-foreground/10 overflow-hidden rounded-xl bg-surface ring-1 ring-foreground/10">
         {leads.map((l) => {
           const msg =
             `Oi! Aqui é do Corte25 😊 Vi que você testou com o produto "${l.product}". Curtiu os 2 vídeos?\n\n` +
@@ -81,32 +82,31 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
             `É só gravar 3 ganchos, 3 corpos e 3 CTAs que o Corte25 monta tudo.\n\n` +
             `Para começar, o pacote de entrada tem ${entry.credits} lotes por ${entry.price}: são ${paidVideos} vídeos + ${bonusVideos} grátis, menos de ${perVideo} por vídeo. Garanta o seu aqui: ${site}/conta?comprar=pacote-${entry.credits}`;
           return (
-            <li key={l.whatsapp} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface p-4 ring-1 ring-foreground/10">
-              <div className="min-w-0">
-                <p className="font-bold">{fmtPhone(l.whatsapp)}</p>
-                <p className="truncate text-sm text-foreground/60">
-                  {l.product} · {new Date(l.createdAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}
-                </p>
+            <li key={l.whatsapp} className="flex items-center gap-2 px-3 py-1.5 text-sm">
+              <div className="min-w-0 flex-1 leading-tight">
+                <span className="font-bold">{fmtPhone(l.whatsapp)}</span>
+                <span className="block truncate text-[11px] text-foreground/60 sm:ml-2 sm:inline">
+                  {new Date(l.createdAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })} · {l.product}
+                </span>
               </div>
-              <div className="grid justify-items-end gap-1">
-                {/* No celular o botão principal abre o app do WhatsApp; no computador, o WhatsApp Web. */}
-                <a
-                  href={mobile ? app(l.whatsapp, msg) : web(l.whatsapp, msg)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-xl bg-brand px-4 py-2 text-sm font-black text-on-brand hover:bg-brand-dark"
-                >
-                  {mobile ? "Chamar no WhatsApp" : "Chamar no WhatsApp Web"}
-                </a>
-                <a
-                  href={mobile ? web(l.whatsapp, msg) : app(l.whatsapp, msg)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-foreground/60 underline"
-                >
-                  {mobile ? "abrir no WhatsApp Web" : "abrir no celular"}
-                </a>
-              </div>
+              {/* No celular o botão abre o app do WhatsApp; no computador, o WhatsApp Web. */}
+              <a
+                href={mobile ? app(l.whatsapp, msg) : web(l.whatsapp, msg)}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 rounded-lg bg-brand px-3 py-1 text-xs font-black text-on-brand hover:bg-brand-dark"
+              >
+                WhatsApp
+              </a>
+              <a
+                href={mobile ? web(l.whatsapp, msg) : app(l.whatsapp, msg)}
+                target="_blank"
+                rel="noreferrer"
+                title={mobile ? "Abrir no WhatsApp Web" : "Abrir no app do celular"}
+                className="hidden shrink-0 text-[11px] text-foreground/50 underline sm:inline"
+              >
+                {mobile ? "web" : "app"}
+              </a>
             </li>
           );
         })}
