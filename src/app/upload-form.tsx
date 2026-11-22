@@ -37,6 +37,7 @@ export default function UploadForm() {
   const [error, setError] = useState("");
   const [plan, setPlan] = useState<"free" | "full">("free");
   const [payOpen, setPayOpen] = useState(false);
+  const [doneId, setDoneId] = useState("");
 
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
 
@@ -53,6 +54,7 @@ export default function UploadForm() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setDoneId("");
     if (!product.trim()) return setError("Informe o nome do produto.");
     if (total === 0) return setError("Adicione pelo menos 1 gancho, 1 corpo e 1 CTA.");
     const fd = new FormData();
@@ -64,6 +66,16 @@ export default function UploadForm() {
     (Object.keys(clips) as BlockKey[]).forEach((k) => clips[k].forEach((f) => fd.append(k, f)));
     if (music) fd.append("music", music);
 
+    // Os vídeos abrem numa aba nova (pedido do Andre). A aba é aberta já no clique,
+    // senão o navegador bloqueia como pop-up; ela recebe o endereço quando o envio termina.
+    const tab = window.open("", "_blank");
+    if (tab) {
+      tab.document.title = "Corte25 · enviando…";
+      tab.document.body.innerHTML =
+        '<p style="font:600 18px system-ui;text-align:center;margin-top:30vh;color:#16170f">Enviando seus clipes…<br><small style="font-weight:400;color:#777">Esta aba mostra os vídeos assim que o envio terminar.</small></p>';
+    }
+    const closeTab = () => tab && !tab.closed && tab.close();
+
     // XMLHttpRequest para mostrar o progresso do envio.
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/jobs");
@@ -72,18 +84,25 @@ export default function UploadForm() {
       try {
         const res = JSON.parse(xhr.responseText);
         if (xhr.status === 402) {
+          closeTab();
           setProgress(null);
           setPayOpen(true);
           return;
         }
         if (xhr.status >= 400) throw new Error(res.error || "Erro no envio");
-        router.push(`/tarefa/${res.id}`);
+        if (tab && !tab.closed) {
+          tab.location.href = `/tarefa/${res.id}`;
+          setProgress(null);
+          setDoneId(res.id);
+        } else router.push(`/tarefa/${res.id}`);
       } catch (err) {
+        closeTab();
         setError((err as Error).message);
         setProgress(null);
       }
     };
     xhr.onerror = () => {
+      closeTab();
       setError("Falha de conexão no envio.");
       setProgress(null);
     };
@@ -229,6 +248,14 @@ export default function UploadForm() {
       </div>
 
       {error && <p className="text-sm text-brand-ink">{error}</p>}
+      {doneId && (
+        <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm">
+          Enviado! Seus vídeos estão sendo gerados numa aba nova.{" "}
+          <a href={`/tarefa/${doneId}`} target="_blank" rel="noopener" className="font-bold text-accent-ink underline">
+            Abrir os vídeos
+          </a>
+        </p>
+      )}
 
       <button
         disabled={sending}
