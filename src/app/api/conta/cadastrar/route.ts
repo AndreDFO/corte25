@@ -32,7 +32,14 @@ export async function POST(req: Request) {
   }
   await updateProfile(data.user.id, { name: name || null, whatsapp, referred_by: referredBy }).catch(() => {});
 
-  const sb = await supabaseServer();
-  await sb.auth.signInWithPassword({ email, password });
+  // A conta já existe neste ponto: se o login automático falhar, a pessoa só precisa usar "Entrar".
+  try {
+    const sb = await supabaseServer();
+    const { error: signErr } = await sb.auth.signInWithPassword({ email, password });
+    if (signErr) throw signErr;
+  } catch (err) {
+    console.error("[cadastro] conta criada, mas o login automático falhou:", err);
+    return Response.json({ error: "Conta criada! Agora clique em Entrar com o mesmo e-mail e senha.", code: "created" }, { status: 409 });
+  }
   return Response.json({ ok: true });
 }
