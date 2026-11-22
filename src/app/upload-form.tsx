@@ -77,7 +77,6 @@ export default function UploadForm() {
     e.preventDefault();
     setError("");
     setDoneId("");
-    if (!product.trim()) return setError("Informe o nome do produto.");
     if (total === 0) return setError("Adicione pelo menos 1 gancho, 1 corpo e 1 CTA.");
     if (plan === "free" && whatsapp.replace(/\D/g, "").length < 10)
       return setError("Informe seu WhatsApp com DDD para fazer o teste grátis.");
@@ -184,8 +183,8 @@ export default function UploadForm() {
         <input
           value={product}
           onChange={(e) => setProduct(e.target.value)}
-          placeholder="Nome do produto"
-          aria-label="Nome do produto"
+          placeholder="Nome do produto (opcional)"
+          aria-label="Nome do produto (opcional)"
           className="rounded-lg bg-field border border-foreground/15 px-3 py-2 text-sm outline-none focus:border-brand"
         />
         <input

@@ -17,7 +17,11 @@ const files = (form: FormData, name: string) =>
 
 export async function POST(req: Request) {
   const form = await req.formData();
-  const product = String(form.get("product") || "").trim().slice(0, 120);
+  // Nome do produto é opcional (pedido do Andre): sem nome, o lote fica com a data e a hora em que foi gerado.
+  const typed = String(form.get("product") || "").trim().slice(0, 120);
+  const product =
+    typed ||
+    `Vídeos de ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }).replace(",", " às")}`;
   const details = String(form.get("details") || "").trim().slice(0, 1500);
   const hooks = files(form, "hooks");
   const bodies = files(form, "bodies");
@@ -26,7 +30,6 @@ export async function POST(req: Request) {
   const dm = String(form.get("duration") || "auto");
   const durationMode = (["auto", "15", "20", "25", "30"].includes(dm) ? dm : "auto") as Job["durationMode"];
 
-  if (!product) return Response.json({ error: "Informe o nome do produto." }, { status: 400 });
   if (!hooks.length || !bodies.length || !ctas.length)
     return Response.json({ error: "Envie pelo menos 1 gancho, 1 corpo e 1 CTA." }, { status: 400 });
   if ([hooks, bodies, ctas].some((l) => l.length > MAX_PER_BLOCK))
@@ -109,6 +112,7 @@ export async function POST(req: Request) {
     id,
     createdAt: new Date().toISOString(),
     product,
+    productGiven: Boolean(typed),
     details,
     inputs: [...blocks.hooks, ...blocks.bodies, ...blocks.ctas],
     blocks,

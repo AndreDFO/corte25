@@ -23,6 +23,7 @@ export interface Job {
   id: string;
   createdAt: string;
   product: string;
+  productGiven?: boolean; // false = sem nome (o "product" é só a data); os textos não citam o nome
   details: string;
   inputs: string[];
   blocks: { hooks: string[]; bodies: string[]; ctas: string[] };

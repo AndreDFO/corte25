@@ -321,7 +321,7 @@ async function processJob(id: string) {
   job.status = "writing";
   job.message = "Criando hooks e legendas…";
   await saveJob(job);
-  const { items, source } = await generateCopy(job.product, job.details, combos.length);
+  const { items, source } = await generateCopy(job.productGiven === false ? "" : job.product, job.details, combos.length);
 
   const maxDur = job.durationMode && job.durationMode !== "auto" ? Number(job.durationMode) : null;
   const recipes = combos.map((c, i) => buildRecipe(blocks, c, id, i, maxDur));

@@ -75,7 +75,7 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
       <ul className="divide-y divide-foreground/10 overflow-hidden rounded-xl bg-surface ring-1 ring-foreground/10">
         {leads.map((l) => {
           const msg =
-            `Oi! Aqui é do Corte25 😊 Vi que você testou com o produto "${l.product}". Curtiu os 2 vídeos?\n\n` +
+            `Oi! Aqui é do Corte25 😊 Vi que você ${l.product.startsWith("Vídeos de ") ? "fez o teste grátis" : `testou com o produto "${l.product}"`}. Curtiu os 2 vídeos?\n\n` +
             `No lote completo você recebe 25 vídeos prontos para o TikTok Shop, sem marca d'água, e ganha mais 2 totalmente grátis. ` +
             `É só gravar 3 ganchos, 3 corpos e 3 CTAs que o Corte25 monta tudo.\n\n` +
             `Para começar, o pacote Iniciante sai por só ${entry.price}: são ${paidVideos} vídeos + ${bonusVideos} grátis, sem marca d'água. Garanta o seu aqui: ${site}/conta?comprar=pacote-${entry.credits}`;

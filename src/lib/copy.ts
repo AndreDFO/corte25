@@ -54,7 +54,7 @@ export async function generateCopy(
         messages: [
           {
             role: "user",
-            content: `Produto: ${product}\nDetalhes do produto e da oferta: ${details || "(não informado)"}\n\nCrie exatamente ${count} itens, todos com ângulos e hooks diferentes entre si.`,
+            content: `Produto: ${product || "(sem nome: não invente nome, fale do produto de forma genérica)"}\nDetalhes do produto e da oferta: ${details || "(não informado)"}\n\nCrie exatamente ${count} itens, todos com ângulos e hooks diferentes entre si.`,
           },
         ],
       });
