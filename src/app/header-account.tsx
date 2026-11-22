@@ -3,7 +3,7 @@ import { currentUser, getProfile } from "@/lib/auth";
 import { balance } from "@/lib/credits";
 import LogoutButton from "./logout-button";
 
-const btn = "whitespace-nowrap rounded-lg bg-brand px-3 py-1.5 font-bold text-on-brand hover:bg-brand-dark";
+const btn = "whitespace-nowrap rounded-lg bg-brand px-2 py-1.5 min-[361px]:px-3 font-bold text-on-brand hover:bg-brand-dark";
 
 // Topo do site: sem login mostra "Entrar"; com login mostra "Olá, nome", o saldo em vídeos e "Sair".
 export async function HeaderAccount() {
