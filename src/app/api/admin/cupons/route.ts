@@ -14,12 +14,14 @@ async function guard() {
 type Fields = { kind: string; amount: number; max_uses: number | null; expires_at: string | null; note: string | null; features: string[] | null };
 function parseFields(b: Record<string, unknown>): { fields: Fields } | { error: string } {
   const kind = String(b.kind);
-  if (!["percent", "fixed", "videos", "vip"].includes(kind)) return { error: "Tipo inválido." };
+  if (!["percent", "fixed", "videos", "vip", "gratis"].includes(kind)) return { error: "Tipo inválido." };
   const amount = Number(String(b.amount ?? "").replace(",", "."));
   if (!(amount > 0)) return { error: "Informe um valor maior que zero." };
   if (kind === "percent" && amount > 90) return { error: "Percentual máximo: 90%." };
   if (kind === "videos" && (!Number.isInteger(amount) || amount > 1000))
     return { error: "Vídeos de bônus: número inteiro até 1.000." };
+  if (kind === "gratis" && (!Number.isInteger(amount) || amount > 1000))
+    return { error: "Vídeos grátis: número inteiro até 1.000." };
   if (kind === "vip" && (!Number.isInteger(amount) || amount > 365)) return { error: "Recursos VIP: número de dias inteiro, até 365." };
   let features: string[] | null = null;
   if (kind === "vip") {

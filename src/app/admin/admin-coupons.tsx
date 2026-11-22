@@ -8,13 +8,24 @@ import { VIP_FEATURE_LIST, describeVipFeatures } from "@/lib/pricing";
 const KINDS: { id: CouponKind; label: string; hint: string }[] = [
   { id: "percent", label: "% de desconto", hint: "Ex.: 20 = 20% off" },
   { id: "fixed", label: "R$ de desconto", hint: "Ex.: 5 = R$ 5,00 off" },
-  { id: "videos", label: "Vídeos de bônus", hint: "Ex.: 25 = +25 vídeos" },
+  { id: "videos", label: "Vídeos de bônus na compra", hint: "Ex.: 25 = +25 vídeos" },
+  { id: "gratis", label: "🎁 Vídeos grátis", hint: "Ex.: 10 = 10 vídeos" },
   { id: "vip", label: "⭐ Recursos VIP", hint: "Ex.: 30 = 30 dias" },
 ];
+// Cupons resgatados em Minha conta, sem compra (os outros só valem na hora de comprar).
+const REDEEM = new Set<CouponKind>(["gratis", "vip"]);
+function Badge({ kind }: { kind: CouponKind }) {
+  return REDEEM.has(kind) ? (
+    <span className="ml-1 rounded-full bg-brand/25 px-2 py-0.5 align-middle text-[11px] font-black">🎟 Resgate sem compra</span>
+  ) : (
+    <span className="ml-1 rounded-full bg-foreground/10 px-2 py-0.5 align-middle text-[11px] font-bold text-foreground/60">🛒 Na compra</span>
+  );
+}
 
 function describe(c: Coupon) {
   const n = Number(c.amount);
   if (c.kind === "vip") return `⭐ ${describeVipFeatures(c.features)} por ${n} dia${n === 1 ? "" : "s"}`;
+  if (c.kind === "gratis") return `🎁 ${n} vídeos grátis`;
   if (c.kind === "percent") return `${n}% de desconto`;
   if (c.kind === "fixed") return `R$ ${n.toFixed(2).replace(".", ",")} de desconto`;
   return `+${n} vídeos de bônus`;
@@ -173,25 +184,39 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
             vendas antigas e o relatório continuam com o valor da época. O código não muda.
           </p>
         )}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {KINDS.map((k) => (
-            <button
-              key={k.id}
-              type="button"
-              onClick={() => setKind(k.id)}
-              className={`rounded-xl border p-2.5 text-sm font-bold ${kind === k.id ? "border-brand bg-brand/15 ring-2 ring-brand/40" : "border-foreground/15"}`}
-            >
-              {k.label}
-            </button>
-          ))}
-        </div>
+        {[
+          { title: "🛒 Usado na compra (campo de cupom ao pagar)", kinds: KINDS.filter((k) => !REDEEM.has(k.id)), cols: "sm:grid-cols-3" },
+          { title: "🎟 Resgate sem compra (cliente digita em Minha conta → Tenho um cupom)", kinds: KINDS.filter((k) => REDEEM.has(k.id)), cols: "" },
+        ].map((g) => (
+          <div key={g.title} className="grid gap-1">
+            <p className="text-xs font-semibold text-foreground/60">{g.title}</p>
+            <div className={`grid grid-cols-2 gap-2 ${g.cols}`}>
+              {g.kinds.map((k) => (
+                <button
+                  key={k.id}
+                  type="button"
+                  onClick={() => setKind(k.id)}
+                  className={`rounded-xl border p-2.5 text-sm font-bold ${kind === k.id ? "border-brand bg-brand/15 ring-2 ring-brand/40" : "border-foreground/15"}`}
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        {kind === "gratis" && (
+          <p className="rounded-lg bg-brand/10 px-3 py-2 text-xs text-foreground/70">
+            O cliente entra na conta, digita o código em Minha conta → &quot;Tenho um cupom&quot; e os vídeos caem no saldo na hora, sem pagar nada.
+            Cada conta usa uma vez. Dica: coloque um limite de usos para o cupom não circular sem controle.
+          </p>
+        )}
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="grid gap-1 text-xs font-semibold text-foreground/60">
             Código do cupom
             <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Ex.: BLACK20" required readOnly={!!editing} className={`${field} ${editing ? "opacity-60" : ""}`} />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-foreground/60">
-            {kind === "vip" ? "Dias liberados (conta a partir do resgate)" : KINDS.find((k) => k.id === kind)!.label}
+            {kind === "vip" ? "Dias liberados (conta a partir do resgate)" : kind === "gratis" ? "Quantos vídeos grátis" : KINDS.find((k) => k.id === kind)!.label}
             <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={hint} required className={field} />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-foreground/60">
@@ -231,7 +256,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
               })}
             </div>
             <p className="text-[11px] text-foreground/50">
-              O cliente resgata em Minha conta, no quadro VIP. Os recursos valem em todos os vídeos durante os dias escolhidos. &quot;Todos&quot;
+              O cliente resgata em Minha conta, no quadro &quot;Tenho um cupom&quot;, sem compra. Os recursos valem em todos os vídeos durante os dias escolhidos. &quot;Todos&quot;
               também inclui recursos VIP que forem lançados depois.
             </p>
           </div>
@@ -242,7 +267,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
         </label>
         <p className="text-xs text-foreground/50">
           Cada pessoa usa um cupom uma vez. Desconto em % ou R$ não soma com os 10% da indicação: vale o que deixar mais barato. Vídeos de
-          bônus somam com tudo. Na assinatura, o desconto vale só na 1ª mensalidade. Cobrança mínima: R$ 5,00.
+          bônus na compra somam com tudo. Vídeos grátis e VIP não precisam de compra. Na assinatura, o desconto vale só na 1ª mensalidade. Cobrança mínima: R$ 5,00.
         </p>
         {msg && <p className={`text-sm font-semibold ${msg.ok ? "text-foreground" : "text-brand-ink"}`}>{msg.text}</p>}
         <button disabled={busy} className="rounded-xl bg-accent py-3 font-black text-white hover:bg-accent-dark disabled:opacity-50">
@@ -260,7 +285,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
               <li key={c.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-foreground/10 p-3 ${c.active && !expired ? "" : "opacity-60"}`}>
                 <div className="min-w-0">
                   <p className="font-black">
-                    {c.code} <CopyCode code={c.code} /> <span className="font-semibold text-foreground/70">· {describe(c)}</span>
+                    {c.code} <CopyCode code={c.code} /> <Badge kind={c.kind} /> <span className="font-semibold text-foreground/70">· {describe(c)}</span>
                   </p>
                   <p className="text-xs text-foreground/60">
                     {c.uses} uso{c.uses === 1 ? "" : "s"}

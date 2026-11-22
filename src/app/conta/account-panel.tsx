@@ -144,18 +144,25 @@ export default function AccountPanel(p: {
 
   const [vipCanceled, setVipCanceled] = useState(p.vip.canceled);
   const [vipMsg, setVipMsg] = useState("");
-  const [vipCode, setVipCode] = useState("");
-  const [vipBusy, setVipBusy] = useState(false);
-  async function redeemVip(e: React.FormEvent) {
+  // "Tenho um cupom": vídeos grátis ou VIP sem compra.
+  const [freeCode, setFreeCode] = useState("");
+  const [freeMsg, setFreeMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [freeBusy, setFreeBusy] = useState(false);
+  async function redeemFree(e: React.FormEvent) {
     e.preventDefault();
-    setVipBusy(true);
-    const res = await fetch("/api/conta/vip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: vipCode }) });
+    setFreeBusy(true);
+    setFreeMsg(null);
+    const res = await fetch("/api/conta/cupom", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: freeCode }) });
     const j = await res.json().catch(() => ({}));
-    setVipBusy(false);
-    if (!res.ok) return setVipMsg(j.error || "Não deu para resgatar.");
-    setVipMsg(`Cupom resgatado: ${describeVipFeatures(j.features)} até ${new Date(j.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}.`);
-    setVipCode("");
-    window.location.reload();
+    setFreeBusy(false);
+    if (!res.ok) return setFreeMsg({ ok: false, text: j.error || "Não deu para resgatar." });
+    setFreeCode("");
+    const until = j.until ? new Date(j.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "";
+    setFreeMsg({
+      ok: true,
+      text: j.kind === "gratis" ? `🎉 Pronto! ${j.videos} vídeos grátis entraram no seu saldo.` : `🎉 Pronto! ${describeVipFeatures(j.features)} liberado até ${until}.`,
+    });
+    setTimeout(() => window.location.reload(), 1800);
   }
   async function cancelVip() {
     const aviso = p.vip.combo
@@ -272,6 +279,26 @@ export default function AccountPanel(p: {
         </Link>
       </div>
 
+      <form id="cupom" onSubmit={redeemFree} className={`${card} grid scroll-mt-24 gap-2`}>
+        <h2 className="text-lg font-black">🎟 Tenho um cupom</h2>
+        <p className="text-sm text-foreground/60">Ganhou um cupom de vídeos grátis ou de VIP? Digite aqui: entra na hora, sem precisar comprar nada.</p>
+        <div className="flex max-w-md gap-2">
+          <input
+            value={freeCode}
+            onChange={(e) => setFreeCode(e.target.value.toUpperCase())}
+            placeholder="Código do cupom"
+            aria-label="Código do cupom"
+            autoComplete="off"
+            className="min-w-0 flex-1 rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm"
+          />
+          <button disabled={freeBusy || !freeCode.trim()} className="rounded-lg bg-brand px-4 font-bold text-on-brand hover:bg-brand-dark disabled:opacity-50">
+            {freeBusy ? "…" : "Resgatar"}
+          </button>
+        </div>
+        {freeMsg && <p className={`text-sm font-semibold ${freeMsg.ok ? "text-foreground" : "text-brand-ink"}`}>{freeMsg.text}</p>}
+        <p className="text-xs text-foreground/50">Cupom de desconto é usado na hora de comprar, no quadro &quot;Comprar vídeos&quot;.</p>
+      </form>
+
       <div id="vip" className={`${card} grid gap-2 scroll-mt-24 border-2 border-accent/40`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-black">⭐ VIP · {brl(VIP_PRICE)}/mês</h2>
@@ -313,18 +340,9 @@ export default function AccountPanel(p: {
           </button>
         )}
         {!p.vip.admin && (
-          <form onSubmit={redeemVip} className="flex max-w-sm gap-2">
-            <input
-              value={vipCode}
-              onChange={(e) => setVipCode(e.target.value.toUpperCase())}
-              placeholder="Tem um cupom VIP?"
-              aria-label="Cupom VIP"
-              className="min-w-0 flex-1 rounded-lg border border-foreground/15 bg-field px-3 py-1.5 text-sm"
-            />
-            <button disabled={vipBusy || !vipCode.trim()} className="rounded-lg border border-accent px-3 py-1.5 text-sm font-bold text-accent disabled:opacity-50">
-              {vipBusy ? "…" : "Resgatar"}
-            </button>
-          </form>
+          <a href="#cupom" className="justify-self-start text-xs text-foreground/60 underline">
+            Tem um cupom VIP? Resgate em &quot;Tenho um cupom&quot;
+          </a>
         )}
         {p.vip.active && !p.vip.admin && !p.vip.coupon && !vipCanceled && (
           <button type="button" onClick={cancelVip} className="justify-self-start text-xs text-foreground/60 underline">
