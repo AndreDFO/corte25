@@ -519,24 +519,37 @@ export default function AccountPanel(p: {
         )}
         <details className="rounded-lg border border-foreground/10 px-3 py-2 text-xs text-foreground/70">
           <summary className="cursor-pointer font-semibold text-foreground">Onde acho o Wallet ID?</summary>
-          <ol className="mt-2 list-decimal space-y-1 pl-4">
+          <p className="mt-2">
+            O aplicativo do Asaas não mostra o Wallet ID. Use o <b>site</b> do Asaas (pode ser no navegador do
+            celular):
+          </p>
+          <ol className="mt-1 list-decimal space-y-1 pl-4">
             <li>
               Ainda não tem conta? Crie grátis em{" "}
               <a href="https://www.asaas.com/" target="_blank" rel="noopener noreferrer" className="font-semibold underline">
                 asaas.com
-              </a>{" "}
-              (pelo site ou pelo app).
+              </a>
+              .
             </li>
-            <li>Entre na sua conta do Asaas.</li>
             <li>
-              Abra <b>Minha conta</b> (no menu do seu perfil) e toque em <b>Integrações</b>.
+              Entre em{" "}
+              <a href="https://www.asaas.com/login" target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                asaas.com/login
+              </a>{" "}
+              com seu e-mail e senha (no celular, se abrir o app, escolha continuar no navegador).
+            </li>
+            <li>
+              Toque no seu nome ou ícone de perfil, no alto, e abra <b>Minha conta</b> → <b>Integrações</b>.
             </li>
             <li>
               Procure <b>Wallet ID</b> e copie o código. Ele é parecido com{" "}
-              <span className="font-mono">a1b2c3d4-e5f6-7890-abcd-ef1234567890</span>.
+              <span className="font-mono break-all">a1b2c3d4-e5f6-7890-abcd-ef1234567890</span>.
             </li>
             <li>Volte aqui, cole no campo abaixo e toque em <b>Salvar</b>.</li>
           </ol>
+          <p className="mt-2">
+            Não achou? No app do Asaas, toque em <b>Fale com a gente</b> e peça o seu &quot;Wallet ID&quot;.
+          </p>
           <p className="mt-2">Atenção: o Wallet ID não é a chave Pix nem a chave de API.</p>
         </details>
         <div className="flex gap-2">
