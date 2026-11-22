@@ -27,6 +27,7 @@ export const SUBSCRIPTIONS = [
   { id: "assinatura", credits: 15, value: 39.9 }, // 375 vídeos
   { id: "assinatura-550", credits: 22, value: 54.9 }, // 550 vídeos
   { id: "assinatura-850", credits: 34, value: 79.9 }, // 850 vídeos
+  { id: "assinatura-1150", credits: 46, value: 99.9 }, // 1.150 vídeos (aprovado 22/11)
 ] as const;
 export const perVideo = (value: number, credits: number) =>
   `R$ ${(Math.round((value / (credits * 25)) * 100) / 100).toFixed(2).replace(".", ",")} por vídeo`;
@@ -67,5 +68,6 @@ export const CATALOG = {
   assinatura: { credits: 15, value: SUBSCRIPTIONS[0].value, label: "Assinatura mensal · 375 vídeos", recurring: true },
   "assinatura-550": { credits: 22, value: SUBSCRIPTIONS[1].value, label: "Assinatura mensal · 550 vídeos", recurring: true },
   "assinatura-850": { credits: 34, value: SUBSCRIPTIONS[2].value, label: "Assinatura mensal · 850 vídeos", recurring: true },
+  "assinatura-1150": { credits: 46, value: SUBSCRIPTIONS[3].value, label: "Assinatura mensal · 1.150 vídeos", recurring: true },
 } as const;
 export type ProductId = keyof typeof CATALOG;
