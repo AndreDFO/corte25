@@ -60,6 +60,9 @@ function CopyCode({ code }: { code: string }) {
   );
 }
 
+// Botões do topo: mesmo tamanho e formato, quebram linha no celular.
+const topBtn = "flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 text-center text-sm font-bold leading-tight";
+
 const field = "w-full min-w-0 rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm";
 
 export default function AdminCoupons({ initial, now, children }: { initial: Coupon[]; now: number; children?: React.ReactNode }) {
@@ -143,26 +146,26 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
   const hint = KINDS.find((k) => k.id === kind)!.hint;
   return (
     <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-4 overflow-x-hidden px-3 py-6 sm:px-5 sm:py-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Área do administrador</h1>
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-          <Link href="/contatos" className="underline">
-            Contatos do teste grátis
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Link href="/contatos" className={`${topBtn} border-accent/40 bg-accent/10 text-accent-ink hover:bg-accent/20`}>
+            👥 Contatos<span className="hidden sm:inline">&nbsp;do teste grátis</span>
           </Link>
           <button
             type="button"
-            className="underline"
+            className={`${topBtn} border-red-300 bg-red-50 text-red-700 hover:bg-red-100`}
             onClick={async (e) => {
               if (!window.confirm("Liberar o teste grátis de novo para todo mundo? Quem já usou poderá testar outra vez.")) return;
               const b = e.currentTarget;
               const res = await fetch("/api/admin/testes", { method: "POST" });
-              b.textContent = res.ok ? "Testes grátis liberados ✓" : "Falhou";
+              b.textContent = res.ok ? "✓ Testes liberados" : "Falhou";
             }}
           >
-            Zerar testes grátis
+            ↺ Zerar testes grátis
           </button>
-          <Link href="/conta" className="text-foreground/60 underline">
-            Voltar para a conta
+          <Link href="/conta" className={`${topBtn} col-span-2 border-foreground/15 bg-surface text-foreground/80 hover:bg-foreground/5 sm:col-span-1`}>
+            ← Voltar para a conta
           </Link>
         </div>
       </div>
