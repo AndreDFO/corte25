@@ -19,7 +19,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               Corte<span className="ml-0.5 rounded-md bg-brand px-1.5 text-on-brand">25</span>
             </Link>
             <nav className="flex items-center gap-2 sm:gap-4 text-sm">
-              <span className="hidden sm:inline text-foreground/60">25 vídeos + 2 grátis</span>
+              <span className="hidden lg:inline text-foreground/60">25 vídeos + 2 grátis</span>
               <Link href="/" className="hidden sm:inline-block rounded-lg px-2 py-1.5 font-semibold text-foreground/70 hover:bg-foreground/5 hover:text-foreground">
                 Início
               </Link>

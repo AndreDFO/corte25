@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
 import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
 
@@ -44,6 +44,14 @@ export default function UploadForm() {
   // Quantos vídeos gerar no lote completo (desconta só isso do saldo; com 25 ganha +2 grátis).
   const [videos, setVideos] = useState<number>(BATCH_VIDEOS);
   const bonus = bonusFor(videos);
+  // Saldo da conta (null = ainda carregando ou sem login ativo no site).
+  const [saldo, setSaldo] = useState<{ logged: boolean; videos: number } | null>(null);
+  useEffect(() => {
+    fetch("/api/conta/saldo", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => j && setSaldo(j))
+      .catch(() => {});
+  }, []);
   const [doneId, setDoneId] = useState("");
 
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
@@ -253,14 +261,30 @@ export default function UploadForm() {
 
       {plan === "full" && (
         <div className="grid gap-1">
-          <span className="text-xs font-medium text-foreground/60">Quantos vídeos gerar agora (desconta do seu saldo)</span>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-xs font-medium text-foreground/60">Quantos vídeos gerar agora</span>
+            {saldo?.logged ? (
+              <span className="text-sm font-bold">
+                Seu saldo: <span className="text-brand-ink">{saldo.videos} vídeos</span>
+                {saldo.videos < videos && (
+                  <a href="/conta#comprar" className="ml-2 text-xs font-semibold underline">
+                    comprar mais
+                  </a>
+                )}
+              </span>
+            ) : saldo ? (
+              <a href="/entrar?volta=/%23criar" className="text-xs font-semibold underline">
+                Entre na sua conta para ver seu saldo
+              </a>
+            ) : null}
+          </div>
           <div className="grid grid-cols-5 gap-1.5">
             {VIDEO_CHOICES.map((n) => (
               <button
                 key={n}
                 type="button"
                 onClick={() => setVideos(n)}
-                className={`rounded-lg border py-1.5 text-sm font-bold ${videos === n ? "border-brand bg-brand text-on-brand" : "border-foreground/15 hover:bg-foreground/5"}`}
+                className={`rounded-lg border py-1.5 text-sm font-bold ${videos === n ? "border-brand bg-brand text-on-brand" : "border-foreground/15 hover:bg-foreground/5"} ${saldo?.logged && saldo.videos < n ? "opacity-40" : ""}`}
               >
                 {n}
                 {bonusFor(n) > 0 && <span className="block text-[10px] font-semibold">+{bonusFor(n)} grátis</span>}
