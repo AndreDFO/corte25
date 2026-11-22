@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { HeaderAccount, HeaderAccountFallback } from "./header-account";
 import RefBanner from "./ref-banner";
 import HomeLink from "./home-link";
+import RelatarProblema from "./relatar-problema";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-foreground/10 py-6 text-center text-xs text-foreground/40">
           Corte25 · 25 vídeos + 2 grátis para o TikTok Shop
         </footer>
+        <RelatarProblema />
       </body>
     </html>
   );
