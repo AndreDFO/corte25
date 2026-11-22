@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import PlanPicker from "./plan-picker";
 import { useEffect, useRef, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
-import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount, MIX_RULE, mixOk } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, clipsToReach, comboCount, MIX_RULE, mixOk } from "@/lib/pricing";
 
 function clientId() {
   try {
@@ -29,6 +29,13 @@ const BLOCKS: { key: BlockKey; title: string; one: string; hint: string; color: 
   { key: "bodies", title: "Corpos", one: "Corpo", hint: "O produto em uso, benefícios, demonstração", color: "var(--color-muted)" },
   { key: "ctas", title: "CTAs", one: "CTA", hint: "O fechamento: chamada para o carrinho", color: "var(--color-accent-ink)" },
 ];
+
+// "1 gancho e 2 CTAs": quantos vídeos a mais subir em cada bloco.
+function describeAdd(add: [number, number, number]) {
+  const names = [["gancho", "ganchos"], ["corpo", "corpos"], ["CTA", "CTAs"]];
+  const parts = add.map((n, i) => (n ? `${n} ${names[i][n === 1 ? 0 : 1]}` : "")).filter(Boolean);
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} e ${parts[parts.length - 1]}` : parts[0];
+}
 
 export default function UploadForm() {
   const router = useRouter();
@@ -107,8 +114,8 @@ export default function UploadForm() {
   const [plan, setPlan] = useState<"free" | "full">("free");
   const [payOpen, setPayOpen] = useState(false);
   // Quantos vídeos gerar no lote completo (desconta só isso do saldo; com 25 ganha +2 grátis).
-  const [videos, setVideos] = useState<number>(BATCH_VIDEOS);
-  const bonus = bonusFor(videos);
+  // "wantVideos" é o que a pessoa escolheu; "videos" é o que dá para gerar sem repetir (ver abaixo, depois de "total").
+  const [wantVideos, setVideos] = useState<number>(BATCH_VIDEOS);
   // Saldo da conta (null = ainda carregando ou sem login ativo no site).
   const [saldo, setSaldo] = useState<{ logged: boolean; videos: number; vip?: boolean; vipFeatures?: string[]; vipQuota?: number | null } | null>(null);
   // Recursos VIP (música, textos no vídeo, cortar silêncio): bloqueados para quem não é VIP.
@@ -153,6 +160,17 @@ export default function UploadForm() {
   }
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
   const mixed = mixOk(clips.hooks.length, clips.bodies.length, clips.ctas.length);
+  // Nunca gerar vídeo repetido (pedido do Andre, 22/11): cada vídeo é uma combinação diferente.
+  // Só ficam liberadas as quantidades que cabem nas combinações; se a escolhida não cabe, usa a maior que cabe.
+  const fits = (VIDEO_CHOICES as readonly number[]).filter((n) => n <= total);
+  const videos = total === 0 ? wantVideos : ([...fits].reverse().find((n) => n <= wantVideos) ?? VIDEO_CHOICES[0]);
+  const bonus = bonusFor(videos, total);
+  const maxGen = fits.length ? fits[fits.length - 1] + bonusFor(fits[fits.length - 1], total) : 0;
+  const counts: [number, number, number] = [clips.hooks.length, clips.bodies.length, clips.ctas.length];
+  // O que falta subir: para a próxima quantidade travada e, gerando 25, para ganhar os +2 grátis.
+  const nextLocked = (VIDEO_CHOICES as readonly number[]).find((n) => n > total);
+  const needNext = nextLocked ? clipsToReach(counts, nextLocked, maxPer) : null;
+  const needBonus = plan === "full" && videos >= BATCH_VIDEOS && bonus < 2 ? clipsToReach(counts, videos + 2, maxPer) : null;
 
   function add(key: BlockKey, list: FileList | null) {
     if (!list) return;
@@ -169,6 +187,8 @@ export default function UploadForm() {
     setError("");
     setDoneId("");
     if (!mixed) return setError(MIX_RULE);
+    if ((plan === "full" ? videos : FREE_VIDEOS) > total)
+      return setError(`Seus vídeos dão só ${total} combinações diferentes. Suba mais vídeos ou escolha menos vídeos para não repetir.`);
     if (canMusic && track === "busca" && !picked) return setError("Escolha uma música da busca (botão Usar) ou mude para Sem música.");
     if (plan === "free" && whatsapp.replace(/\D/g, "").length < 10)
       return setError("Informe seu WhatsApp com DDD para fazer o teste grátis.");
@@ -362,9 +382,22 @@ export default function UploadForm() {
             Para gerar: pelo menos 2 vídeos em 2 blocos (gancho, corpo ou CTA) e 1 no outro. Assim os vídeos saem misturados, não iguais.
           </span>
         )}
-        {plan === "full" && total > 0 && total < videos + bonus && (
-          <span className="w-full text-center text-[11px] text-foreground/50">
-            Com menos de 3 clipes por bloco, algumas combinações se repetem com textos diferentes.
+        {mixed && (
+          <span className="w-full text-center text-[11px] text-foreground/60">
+            <b>{total} combinações diferentes</b>
+            {plan === "full" && fits.length > 0 && (
+              <> · dá para gerar até {maxGen} vídeo{maxGen === 1 ? "" : "s"} sem repetir</>
+            )}
+            {plan === "full" && needNext && nextLocked && (
+              <>
+                {" "}· suba mais {describeAdd(needNext)} para liberar {nextLocked}
+              </>
+            )}
+            {needBonus && (
+              <>
+                {" "}· suba mais {describeAdd(needBonus)} para ganhar os +2 grátis
+              </>
+            )}
           </span>
         )}
       </div>
@@ -394,10 +427,12 @@ export default function UploadForm() {
                 key={n}
                 type="button"
                 onClick={() => setVideos(n)}
-                className={`rounded-lg border py-1.5 text-sm font-bold ${videos === n ? "border-brand bg-brand text-on-brand" : "border-foreground/15 hover:bg-foreground/5"} ${saldo?.logged && saldo.videos < n ? "opacity-40" : ""}`}
+                disabled={total > 0 && n > total}
+                title={total > 0 && n > total ? `Seus vídeos dão ${total} combinações. Suba mais vídeos para gerar ${n} sem repetir.` : undefined}
+                className={`rounded-lg border py-1.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-30 ${videos === n ? "border-brand bg-brand text-on-brand" : "border-foreground/15 hover:bg-foreground/5"} ${saldo?.logged && saldo.videos < n ? "opacity-40" : ""}`}
               >
-                {n}
-                {bonusFor(n) > 0 && <span className="block text-[10px] font-semibold">+{bonusFor(n)} grátis</span>}
+                {total > 0 && n > total ? `🔒 ${n}` : n}
+                {bonusFor(n, total || Infinity) > 0 && <span className="block text-[10px] font-semibold">+{bonusFor(n, total || Infinity)} grátis</span>}
               </button>
             ))}
           </div>

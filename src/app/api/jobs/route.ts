@@ -6,7 +6,7 @@ import { startJob } from "@/lib/engine";
 import { downloadOnline, isOnlineId } from "@/lib/music-library";
 import { NoAudioError, extractAudio } from "@/lib/music-extract";
 import { spendVipQuota, vipAllowance } from "@/lib/vip";
-import { type VipFeature, MIX_RULE, mixOk, BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
+import { type VipFeature, MIX_RULE, mixOk, BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor, comboCount } from "@/lib/pricing";
 import { claimTrial, releaseTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 import { currentUser } from "@/lib/auth";
@@ -79,6 +79,19 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
   }
 
   const plan = form.get("plan") === "full" ? "full" : "free";
+  // Quantos vídeos gerar (lote completo): 5 a 25, desconta só isso do saldo. Com 25, ganha +2 grátis.
+  const asked = Number(form.get("videos") || BATCH_VIDEOS);
+  const videos = (VIDEO_CHOICES as readonly number[]).includes(asked) ? asked : BATCH_VIDEOS;
+  // Nunca gerar vídeo repetido: cada vídeo é uma combinação diferente de gancho × corpo × CTA.
+  // Confere antes de cobrar. O bônus (+2 ao gerar 25) só vem até onde houver combinações.
+  const combos = comboCount(hooks.length, bodies.length, ctas.length);
+  const wanted = plan === "full" ? videos : FREE_VIDEOS;
+  if (wanted > combos)
+    return Response.json(
+      { error: `Seus vídeos dão ${combos} combinações diferentes. Para gerar ${wanted} sem repetir, suba mais ganchos, corpos ou CTAs, ou escolha menos vídeos.`, code: "combos" },
+      { status: 400 },
+    );
+  const bonus = plan === "full" ? bonusFor(videos, combos) : 0;
   if (plan === "free" && [hooks, bodies, ctas].some((l) => l.length > FREE_MAX_PER_BLOCK))
     return Response.json({ error: `No teste grátis envie até ${FREE_MAX_PER_BLOCK} vídeos em cada bloco.` }, { status: 400 });
   // Com login ativo (Supabase configurado), o lote completo gasta 1 crédito da conta.
@@ -127,9 +140,6 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
       );
   }
 
-  // Quantos vídeos gerar (lote completo): 5 a 25, desconta só isso do saldo. Com 25, ganha +2 grátis.
-  const asked = Number(form.get("videos") || BATCH_VIDEOS);
-  const videos = (VIDEO_CHOICES as readonly number[]).includes(asked) ? asked : BATCH_VIDEOS;
   const id = newJobId();
   if (plan === "full" && user) {
     const ok = await consumeVideos(user.id, id, videos).catch((e) => {
@@ -179,9 +189,9 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
     blocks,
     music: musicName,
     plan,
-    count: plan === "full" ? videos + bonusFor(videos) : FREE_VIDEOS,
+    count: plan === "full" ? videos + bonus : FREE_VIDEOS,
     ...(plan === "full" && user ? { charged: videos } : {}),
-    ...(quotaVideos > 0 ? { vipLimit: Math.min(quotaVideos, videos + bonusFor(videos)), ...(vipKeep.length ? { vipKeep } : {}) } : {}),
+    ...(quotaVideos > 0 ? { vipLimit: Math.min(quotaVideos, videos + bonus), ...(vipKeep.length ? { vipKeep } : {}) } : {}),
     durationMode,
     status: "queued",
     message: "Na fila…",
