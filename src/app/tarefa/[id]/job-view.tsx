@@ -67,11 +67,11 @@ export default function JobView({ id }: { id: string }) {
   const finished = job.status === "done" || job.status === "error";
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-5 sm:px-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto max-w-6xl px-3 py-3 sm:px-5 sm:py-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-extrabold sm:text-2xl">{job.product}</h1>
-          <p className="text-xs text-foreground/60">
+          <h1 className="truncate text-base font-extrabold sm:text-2xl">{job.product}</h1>
+          <p className="text-[11px] text-foreground/60 sm:text-xs">
             {job.message}
             {job.expiresAt && now > 0 && (
               <span className="ml-1 font-bold text-accent-ink">· ⏱ disponível por mais {timeLeft(job.expiresAt, now)}</span>
@@ -85,7 +85,7 @@ export default function JobView({ id }: { id: string }) {
                 id={id}
                 files={job.variations.filter((v) => v.status === "done").map((v) => v.file)}
                 all
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-on-brand hover:bg-brand-dark disabled:opacity-60"
+                className="rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-on-brand hover:bg-brand-dark disabled:opacity-60"
               />
             ) : (
               <span className="rounded-lg bg-foreground/10 px-4 py-2 text-sm font-bold text-foreground/50">Baixar todos ao terminar</span>
@@ -97,30 +97,34 @@ export default function JobView({ id }: { id: string }) {
         )}
       </div>
       {finished && done > 0 && (
-        <p className="mt-2 text-xs text-foreground/55">
-          📱 No celular, toque em <b>Baixar todos</b> e depois em <b>Salvar vídeos</b> para mandar direto para a galeria
-          {done > SHARE_CHUNK ? ` (vão de ${SHARE_CHUNK} em ${SHARE_CHUNK})` : ""}. Ou marque só os que quiser.
+        <p className="mt-1 text-[11px] leading-snug text-foreground/55">
+          📱 Toque em <b>Baixar todos</b> e depois em <b>Salvar</b> para ir à galeria
+          {done > SHARE_CHUNK ? ` (de ${SHARE_CHUNK} em ${SHARE_CHUNK})` : ""}.
         </p>
       )}
 
-      <div className="mt-3 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-accent to-brand transition-all"
-          style={{ width: `${job.status === "writing" || job.status === "queued" ? 3 : pct}%` }}
-        />
-      </div>
-      <p className="mt-1 text-xs text-foreground/50">
-        {done} de {total} vídeos prontos
-      </p>
+      {!finished && (
+        <>
+          <div className="mt-2 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-accent to-brand transition-all"
+              style={{ width: `${job.status === "writing" || job.status === "queued" ? 3 : pct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-foreground/50">
+            {done} de {total} vídeos prontos
+          </p>
+        </>
+      )}
 
       {job.plan === "free" && finished && done > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand/40 bg-brand/10 px-4 py-3">
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-brand/40 bg-brand/10 px-3 py-2">
           <div>
-            <p className="text-sm font-bold">Gostou? Libere 25 vídeos + 2 de bônus, sem marca d&apos;água.</p>
+            <p className="text-xs font-bold sm:text-sm">Gostou? 25 vídeos + 2 grátis, sem marca d&apos;água.</p>
             <p className="hidden text-xs text-foreground/70 sm:block">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
           </div>
-          <Link href="/" className="rounded-lg bg-brand text-on-brand hover:bg-brand-dark px-4 py-2 text-sm font-bold">
-            Gerar o lote completo
+          <Link href="/" className="shrink-0 rounded-lg bg-brand text-on-brand hover:bg-brand-dark px-3 py-1.5 text-xs font-bold sm:text-sm">
+            Gerar lote completo
           </Link>
         </div>
       )}
@@ -129,7 +133,7 @@ export default function JobView({ id }: { id: string }) {
         <p className="mt-6 rounded-lg bg-brand/10 border border-brand/40 p-4 text-sm">{job.message}</p>
       )}
 
-      <div className="mt-4 grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-6">
+      <div className="mt-3 grid gap-2 sm:gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-6">
         {job.variations.map((v) => (
           <Card
             key={v.index}
@@ -276,17 +280,17 @@ function SelectionBar({
 }) {
   const n = files.length;
   return (
-    <div className="sticky bottom-3 z-20 mt-4 flex items-center gap-2 rounded-2xl bg-surface/95 px-3 py-2 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.35)] ring-1 ring-foreground/10 backdrop-blur">
-      <span className="whitespace-nowrap text-xs font-semibold">
+    <div className="sticky bottom-2 z-20 mt-3 ml-auto flex w-fit max-w-full items-center gap-2 rounded-full bg-surface/95 py-1 pl-3 pr-1 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.35)] ring-1 ring-foreground/10 backdrop-blur">
+      <span className="whitespace-nowrap text-[11px] font-semibold">
         {n}/{allCount} marcado{n === 1 ? "" : "s"}
       </span>
-      <button type="button" onClick={n === allCount ? onClear : onAll} className="whitespace-nowrap text-xs text-accent-ink underline">
+      <button type="button" onClick={n === allCount ? onClear : onAll} className="whitespace-nowrap text-[11px] text-accent-ink underline">
         {n === allCount ? "Limpar" : "Marcar todos"}
       </button>
       <SaveButton
         id={id}
         files={files}
-        className="ml-auto rounded-xl bg-brand px-3 py-2 text-xs font-black text-on-brand hover:bg-brand-dark disabled:opacity-50"
+        className="rounded-full bg-brand px-3 py-1.5 text-[11px] font-black text-on-brand hover:bg-brand-dark disabled:opacity-50"
       />
     </div>
   );
@@ -325,7 +329,9 @@ function Card({ id, v, selected, onToggle }: { id: string; v: Variation; selecte
         <p className="font-bold leading-snug line-clamp-2">
           #{v.index + 1} · <span className="text-accent-ink">{v.durationSec}s</span> · {v.hook}
         </p>
-        <p className="hidden text-foreground/55 line-clamp-2 sm:block">{fullCaption}</p>
+        <div className="hidden sm:block">
+          <p className="text-foreground/55 line-clamp-2">{fullCaption}</p>
+        </div>
         <div className="flex flex-col gap-1 mt-auto sm:flex-row sm:gap-1.5">
           <button
             onClick={() => {
