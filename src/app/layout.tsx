@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { HeaderAccount, HeaderAccountFallback } from "./header-account";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,15 +26,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/meus-videos" className="whitespace-nowrap rounded-lg bg-foreground/5 px-3 py-1.5 font-semibold hover:bg-foreground/10">
                 Meus vídeos
               </Link>
-              <Link href="/conta" className="rounded-lg bg-brand px-3 py-1.5 font-bold text-on-brand hover:bg-brand-dark">
-                Conta
-              </Link>
+              <Suspense fallback={<HeaderAccountFallback />}>
+                <HeaderAccount />
+              </Suspense>
             </nav>
           </div>
         </header>
         <main className="flex-1">{children}</main>
         <footer className="border-t border-foreground/10 py-6 text-center text-xs text-foreground/40">
-          Corte25 · versão de teste
+          Corte25 · 25 vídeos + 2 grátis para o TikTok Shop
         </footer>
       </body>
     </html>
