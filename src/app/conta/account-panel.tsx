@@ -228,8 +228,8 @@ export default function AccountPanel(p: {
           {p.vip.active && <span className="rounded-full bg-accent px-3 py-1 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : p.vip.coupon ? "VIP por cupom" : "VIP ativo"}</span>}
         </div>
         <p className="text-sm text-foreground/70">
-          Libera em todos os vídeos: <b>música</b>, <b>textos no vídeo</b>, <b>cortar partes sem som</b>, <b>narração</b> e <b>legenda automática</b>. É um
-          extra mensal, separado dos créditos de vídeos.
+          Libera em todos os vídeos: <b>música</b>, <b>textos no vídeo</b>, <b>cortar partes sem som</b>, <b>narração</b> e <b>legenda automática</b>. E ainda
+          inclui <b>25 vídeos + 2 grátis</b> no seu saldo a cada mês pago.
         </p>
         {p.vip.active && !p.vip.admin && p.vip.until && (
           <p className="text-sm">
@@ -323,7 +323,7 @@ export default function AccountPanel(p: {
             />
             <span>
               <b>+ ⭐ VIP</b> por mais {brl(VIP_PRICE)}/mês, na mesma mensalidade: música, textos no vídeo, cortar silêncio, narração e legenda
-              automática em todos os vídeos.
+              automática em todos os vídeos, e mais 25 vídeos por mês no saldo.
             </span>
           </label>
         )}
@@ -451,8 +451,8 @@ export default function AccountPanel(p: {
               </table>
             </div>
             <p className="text-[11px] text-foreground/50">
-              Exemplo: alguém assina o plano de 1.150 vídeos pelo seu link. Você recebe {brl(comm(99.9, p.affiliatePercent))} em cada uma das 3
-              primeiras mensalidades e {brl(comm(99.9, AFFILIATE_LATER_PERCENT))} todo mês depois disso. Na 1ª compra o indicado tem{" "}
+              Exemplo: alguém assina o plano de 1.150 vídeos pelo seu link. Você recebe {brl(comm(99.99, p.affiliatePercent))} em cada uma das 3
+              primeiras mensalidades e {brl(comm(99.99, AFFILIATE_LATER_PERCENT))} todo mês depois disso. Na 1ª compra o indicado tem{" "}
               {REFERRAL_DISCOUNT}% de desconto, e a comissão é sobre o valor pago.
             </p>
           </div>

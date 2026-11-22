@@ -10,10 +10,10 @@ export const VIDEO_CHOICES = [1, 5, 10, 15, 20, 25] as const;
 export const bonusFor = (n: number) => (n >= BATCH_VIDEOS ? 2 : 0);
 // Pacotes avulsos (aprovado pelo Andre em 22/11). Para mudar preço, troque só "value" aqui.
 const PACKAGE_LIST = [
-  { credits: 1, value: 7.9, tag: "para testar" }, // Iniciante: 25 vídeos (+2 grátis)
-  { credits: 3, value: 14.9 }, // 75 vídeos
-  { credits: 10, value: 29.9 }, // 250 vídeos
-  { credits: 40, value: 99.9, best: true }, // 1.000 vídeos
+  { credits: 1, value: 7.99, tag: "para testar" }, // Iniciante: 25 vídeos (+2 grátis)
+  { credits: 3, value: 14.99 }, // 75 vídeos
+  { credits: 10, value: 29.99 }, // 250 vídeos
+  { credits: 40, value: 99.99, best: true }, // 1.000 vídeos
 ] as const;
 const reais = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 export const PACKAGES: { credits: number; value: number; price: string; perBatch: string; best?: boolean; tag?: string }[] =
@@ -25,10 +25,10 @@ export const PACKAGES: { credits: number; value: number; price: string; perBatch
 // Assinaturas mensais (vídeos por mês = lotes × 25). Para mudar preço, troque só "value" aqui.
 // 550 e 850 vídeos: pedido do Andre (22/11); preços sugeridos, confirmar com ele.
 export const SUBSCRIPTIONS = [
-  { id: "assinatura", credits: 15, value: 39.9 }, // 375 vídeos
-  { id: "assinatura-550", credits: 22, value: 54.9 }, // 550 vídeos
-  { id: "assinatura-850", credits: 34, value: 79.9 }, // 850 vídeos
-  { id: "assinatura-1150", credits: 46, value: 99.9 }, // 1.150 vídeos (aprovado 22/11)
+  { id: "assinatura", credits: 15, value: 39.99 }, // 375 vídeos
+  { id: "assinatura-550", credits: 22, value: 54.99 }, // 550 vídeos
+  { id: "assinatura-850", credits: 34, value: 79.99 }, // 850 vídeos
+  { id: "assinatura-1150", credits: 46, value: 99.99 }, // 1.150 vídeos (aprovado 22/11)
 ] as const;
 export const perVideo = (value: number, credits: number) =>
   `R$ ${(Math.round((value / (credits * 25)) * 100) / 100).toFixed(2).replace(".", ",")} por vídeo`;
@@ -97,12 +97,12 @@ export const CATALOG = {
   "assinatura-550": { credits: 22, value: SUBSCRIPTIONS[1].value, label: "Assinatura mensal · 550 vídeos", recurring: true },
   "assinatura-850": { credits: 34, value: SUBSCRIPTIONS[2].value, label: "Assinatura mensal · 850 vídeos", recurring: true },
   "assinatura-1150": { credits: 46, value: SUBSCRIPTIONS[3].value, label: "Assinatura mensal · 1.150 vídeos", recurring: true },
-  vip: { credits: 0, value: 14.99, label: "VIP mensal", recurring: true },
-  // Assinatura mensal + VIP numa cobrança só (pedido do Andre, 22/11). Valor = plano + VIP.
-  "assinatura-vip": { credits: 15, value: 54.89, label: "Assinatura mensal · 375 vídeos + VIP", recurring: true },
-  "assinatura-550-vip": { credits: 22, value: 69.89, label: "Assinatura mensal · 550 vídeos + VIP", recurring: true },
-  "assinatura-850-vip": { credits: 34, value: 94.89, label: "Assinatura mensal · 850 vídeos + VIP", recurring: true },
-  "assinatura-1150-vip": { credits: 46, value: 114.89, label: "Assinatura mensal · 1.150 vídeos + VIP", recurring: true },
+  vip: { credits: 1, value: 14.99, label: "VIP mensal · 25 vídeos + 2 grátis", recurring: true }, // VIP inclui 25 vídeos (+2 grátis ao gerar 25) por mês (22/11)
+  // Assinatura mensal + VIP numa cobrança só (pedido do Andre, 22/11). Valor = plano + VIP; vídeos = plano + os 25 do VIP.
+  "assinatura-vip": { credits: 16, value: 54.98, label: "Assinatura mensal · 375 + 25 vídeos + VIP", recurring: true },
+  "assinatura-550-vip": { credits: 23, value: 69.98, label: "Assinatura mensal · 550 + 25 vídeos + VIP", recurring: true },
+  "assinatura-850-vip": { credits: 35, value: 94.98, label: "Assinatura mensal · 850 + 25 vídeos + VIP", recurring: true },
+  "assinatura-1150-vip": { credits: 47, value: 114.98, label: "Assinatura mensal · 1.150 + 25 vídeos + VIP", recurring: true },
 } as const;
 // Produtos que dão VIP: o VIP avulso e as assinaturas "+ VIP".
 export const VIP_PRODUCTS = ["vip", ...SUBSCRIPTIONS.map((s) => `${s.id}-vip`)] as string[];
