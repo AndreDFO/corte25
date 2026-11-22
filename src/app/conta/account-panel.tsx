@@ -505,7 +505,8 @@ export default function AccountPanel(p: {
         {!savedWallet && (
           <div className="mt-1 flex flex-wrap items-center gap-2 rounded-lg bg-accent/10 px-3 py-2">
             <p className="min-w-0 flex-1 text-xs text-foreground/70">
-              Para receber, você precisa de uma conta no Asaas (é grátis). Depois, cole aqui o seu Wallet ID.
+              Para receber, você precisa de uma conta no Asaas (é grátis). Depois, cole aqui o seu Wallet ID.{" "}
+              <b>O código só aparece no site do Asaas, pelo navegador. No app não aparece.</b>
             </p>
             <a
               href="https://www.asaas.com/"
@@ -519,10 +520,11 @@ export default function AccountPanel(p: {
         )}
         <details className="rounded-lg border border-foreground/10 px-3 py-2 text-xs text-foreground/70">
           <summary className="cursor-pointer font-semibold text-foreground">Onde acho o Wallet ID?</summary>
-          <p className="mt-2">
-            O aplicativo do Asaas não mostra o Wallet ID. Use o <b>site</b> do Asaas (pode ser no navegador do
-            celular):
+          <p className="mt-2 rounded-md border border-amber-400 bg-amber-100 px-2 py-1.5 font-bold text-amber-900">
+            ⚠ O Wallet ID NÃO aparece no aplicativo do Asaas. Ele só aparece no site: abra <u>asaas.com</u> no
+            navegador (Chrome, Safari...), mesmo no celular.
           </p>
+          <p className="mt-2">Passo a passo no navegador:</p>
           <ol className="mt-1 list-decimal space-y-1 pl-4">
             <li>
               Ainda não tem conta? Crie grátis em{" "}
@@ -536,7 +538,7 @@ export default function AccountPanel(p: {
               <a href="https://www.asaas.com/login" target="_blank" rel="noopener noreferrer" className="font-semibold underline">
                 asaas.com/login
               </a>{" "}
-              com seu e-mail e senha (no celular, se abrir o app, escolha continuar no navegador).
+              com seu e-mail e senha. No celular, se o app abrir sozinho, feche e use o navegador.
             </li>
             <li>
               Toque no seu nome ou ícone de perfil, no alto, e abra <b>Minha conta</b> → <b>Integrações</b>.
