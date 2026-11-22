@@ -145,7 +145,7 @@ export default function ReportView({ r }: { r: Report }) {
             {br(r.de)} a {br(r.ate)} · horário de Brasília
           </p>
         </div>
-        <Link href="/admin" className="text-sm underline">
+        <Link href="/admin" className="flex min-h-11 items-center justify-center rounded-xl border border-foreground/15 bg-surface px-4 py-2 text-sm font-bold text-foreground/80 hover:bg-foreground/5">
           ← Área do administrador
         </Link>
       </div>
