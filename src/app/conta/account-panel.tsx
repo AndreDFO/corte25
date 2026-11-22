@@ -268,15 +268,15 @@ export default function AccountPanel(p: {
         </div>
       )}
 
-      <div className={`${cardSm} grid gap-1`}>
+      <div className="grid gap-0.5 rounded-2xl bg-surface px-4 py-3 ring-1 ring-foreground/10">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-foreground/60">Seu saldo</p>
+          <p className="text-xs text-foreground/60">Seu saldo</p>
           {!freeOpen ? (
             <button
               id="cupom"
               type="button"
               onClick={() => setFreeOpen(true)}
-              className="scroll-mt-24 whitespace-nowrap rounded-lg border-2 border-accent bg-accent/10 px-3 py-1 text-sm font-bold text-accent hover:bg-accent/20"
+              className="scroll-mt-24 whitespace-nowrap rounded-lg border-2 border-accent bg-accent/10 px-2.5 py-0.5 text-sm font-bold text-accent hover:bg-accent/20"
             >
               🎟 Tenho um cupom
             </button>
@@ -298,14 +298,14 @@ export default function AccountPanel(p: {
           )}
         </div>
         {freeMsg && <p className={`text-sm font-semibold sm:text-right ${freeMsg.ok ? "text-foreground" : "text-brand-ink"}`}>{freeMsg.text}</p>}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-3xl font-black leading-tight">
-              {p.credits} <span className="text-lg font-bold text-foreground/60">vídeo{p.credits === 1 ? "" : "s"}</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-2xl font-black leading-none">
+              {p.credits} <span className="text-base font-bold text-foreground/60">vídeo{p.credits === 1 ? "" : "s"}</span>
             </p>
-            <p className="text-xs text-foreground/50">Cada lote = 25 vídeos. Gere quantos quiser por vez; gerando 25 de uma vez, ganha +2 grátis.</p>
+            <p className="mt-1 whitespace-nowrap text-[11px] leading-tight text-foreground/50">Gerando 25: +2 grátis</p>
           </div>
-          <Link href="/#criar" className="rounded-xl bg-brand px-5 py-2.5 font-black text-on-brand hover:bg-brand-dark">
+          <Link href="/#criar" className="shrink-0 rounded-xl bg-brand px-4 py-2 text-sm font-black text-on-brand hover:bg-brand-dark">
             Gerar vídeos
           </Link>
         </div>
