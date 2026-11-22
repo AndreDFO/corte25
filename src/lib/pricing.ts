@@ -75,6 +75,11 @@ export function describeVipFeatures(list: readonly string[] | null | undefined) 
 }
 export const FREE_TRIALS_PER_PERSON = 1;
 
+// Mistura mínima (pedido do Andre, 22/11): pelo menos 2 blocos com 2 vídeos ou mais (vale no grátis e no pago),
+// senão os vídeos saem quase iguais. Cada bloco continua precisando de pelo menos 1 vídeo.
+export const mixOk = (h: number, b: number, c: number) => h > 0 && b > 0 && c > 0 && [h, b, c].filter((n) => n >= 2).length >= 2;
+export const MIX_RULE = "Coloque pelo menos 1 vídeo em cada bloco e 2 vídeos ou mais em pelo menos 2 blocos (gancho, corpo ou CTA).";
+
 export function comboCount(h: number, b: number, c: number) {
   return h * b * c;
 }

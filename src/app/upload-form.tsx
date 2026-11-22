@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import PlanPicker from "./plan-picker";
 import { useEffect, useRef, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
-import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount, MIX_RULE, mixOk } from "@/lib/pricing";
 
 function clientId() {
   try {
@@ -122,6 +122,7 @@ export default function UploadForm() {
     if (next === "free") setClips((c) => ({ hooks: c.hooks.slice(0, FREE_MAX_PER_BLOCK), bodies: c.bodies.slice(0, FREE_MAX_PER_BLOCK), ctas: c.ctas.slice(0, FREE_MAX_PER_BLOCK) }));
   }
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
+  const mixed = mixOk(clips.hooks.length, clips.bodies.length, clips.ctas.length);
 
   function add(key: BlockKey, list: FileList | null) {
     if (!list) return;
@@ -137,7 +138,7 @@ export default function UploadForm() {
     e.preventDefault();
     setError("");
     setDoneId("");
-    if (total === 0) return setError("Adicione pelo menos 1 gancho, 1 corpo e 1 CTA.");
+    if (!mixed) return setError(MIX_RULE);
     if (plan === "free" && whatsapp.replace(/\D/g, "").length < 10)
       return setError("Informe seu WhatsApp com DDD para fazer o teste grátis.");
     const fd = new FormData();
@@ -324,9 +325,9 @@ export default function UploadForm() {
             </span>
           </>
         )}
-        {plan === "free" && (
-          <span className="w-full text-center text-[11px] font-semibold text-foreground/60">
-            Coloque 2 ou 3 vídeos em cada bloco para os 2 grátis saírem misturados. Com só 1 de cada, saem quase iguais.
+        {!mixed && (
+          <span className="w-full text-center text-[11px] font-semibold text-brand-ink">
+            Para gerar: pelo menos 2 vídeos em 2 blocos (gancho, corpo ou CTA) e 1 no outro. Assim os vídeos saem misturados, não iguais.
           </span>
         )}
         {plan === "full" && total > 0 && total < videos + bonus && (
@@ -514,7 +515,7 @@ export default function UploadForm() {
       )}
 
       <button
-        disabled={sending}
+        disabled={sending || !mixed}
         className={`rounded-xl disabled:opacity-60 font-black py-3 text-lg ${plan === "free" ? "bg-accent text-white hover:bg-accent-dark" : "bg-brand text-on-brand hover:bg-brand-dark"}`}
       >
         {sending

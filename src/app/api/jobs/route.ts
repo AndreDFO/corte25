@@ -5,7 +5,7 @@ import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
 import { trackPath } from "@/lib/music-library";
 import { spendVipQuota, vipAllowance } from "@/lib/vip";
-import { type VipFeature, BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
+import { type VipFeature, MIX_RULE, mixOk, BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 import { currentUser } from "@/lib/auth";
@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
   if (!hooks.length || !bodies.length || !ctas.length)
     return Response.json({ error: "Envie pelo menos 1 gancho, 1 corpo e 1 CTA." }, { status: 400 });
+  if (!mixOk(hooks.length, bodies.length, ctas.length)) return Response.json({ error: MIX_RULE }, { status: 400 });
   if ([hooks, bodies, ctas].some((l) => l.length > MAX_PER_BLOCK))
     return Response.json({ error: `Envie no máximo ${MAX_PER_BLOCK} clipes em cada bloco.` }, { status: 400 });
   const all = [...hooks, ...bodies, ...ctas, ...(music instanceof File && music.size > 0 ? [music] : [])];
