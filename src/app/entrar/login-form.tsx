@@ -83,7 +83,7 @@ export default function LoginForm() {
         />
         {mode === "recuperar" ? (
           <p className="text-xs text-foreground/60">
-            Digite o e-mail da sua conta. Vamos mandar um link para você criar uma senha nova.
+            Digite o e-mail da sua conta. Vamos mandar um link para você criar uma senha nova (confira também o spam).
           </p>
         ) : (
           <PasswordInput
@@ -112,9 +112,15 @@ export default function LoginForm() {
         )}
         {error && <p className="text-sm text-brand-ink">{error}</p>}
         {sent ? (
-          <p className="rounded-lg bg-brand/15 px-3 py-2 text-sm font-semibold">
-            Pronto! Se existir uma conta com esse e-mail, o link para criar a nova senha chega em alguns minutos. Confira também o spam.
-          </p>
+          <div className="grid gap-2">
+            <p className="rounded-lg bg-brand/15 px-3 py-2 text-sm font-semibold">
+              Pronto! Se existir uma conta com esse e-mail, o link para criar a nova senha chega em alguns minutos.
+            </p>
+            <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              📩 <b>Não achou o e-mail?</b> Olhe também na caixa de <b>spam</b> ou <b>lixo eletrônico</b> (no Gmail, veja
+              também a aba Promoções). Se estiver lá, marque como &quot;não é spam&quot;.
+            </p>
+          </div>
         ) : (
           <button disabled={busy} className="rounded-xl bg-accent py-3 font-black text-white hover:bg-accent-dark disabled:opacity-60">
             {busy ? "Aguarde…" : mode === "entrar" ? "Entrar" : mode === "cadastrar" ? "Criar conta" : "Enviar link de nova senha"}
