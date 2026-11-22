@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HeaderAccount, HeaderAccountFallback } from "./header-account";
 import RefBanner from "./ref-banner";
+import InAppBanner from "./in-app-banner";
 import HomeLink from "./home-link";
 import RelatarProblema from "./relatar-problema";
 import "./globals.css";
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" data-theme="claro" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
+        <InAppBanner />
         <RefBanner />
         <header className="border-b border-foreground/10 bg-surface/70 backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-3 py-2 sm:h-16 sm:flex-row sm:justify-between sm:gap-2 sm:px-5 sm:py-0">
