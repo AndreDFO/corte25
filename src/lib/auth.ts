@@ -20,6 +20,10 @@ export async function supabaseServer() {
 }
 
 export async function currentUser() {
+  // Lê os cookies ANTES de tudo: isso obriga o Next a montar a parte de login a cada visita.
+  // Sem isso, como o Railway faz o build sem as chaves do Supabase, o topo era "congelado"
+  // no build como deslogado ("Entrar") e a pessoa parecia deslogada ao atualizar a página.
+  await cookies();
   if (!supabaseConfigured()) return null;
   const sb = await supabaseServer();
   const { data } = await sb.auth.getUser();
