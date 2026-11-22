@@ -28,6 +28,28 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
   const [expires, setExpires] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<Coupon | null>(null);
+
+  function startEdit(c: Coupon) {
+    setEditing(c);
+    setCode(c.code);
+    setKind(c.kind);
+    setAmount(String(Number(c.amount)).replace(".", ","));
+    setMaxUses(c.max_uses ? String(c.max_uses) : "");
+    setExpires(c.expires_at ? new Date(c.expires_at).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }) : "");
+    setNote(c.note || "");
+    setMsg(null);
+    document.getElementById("form-cupom")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function clearForm() {
+    setEditing(null);
+    setCode("");
+    setAmount("");
+    setMaxUses("");
+    setExpires("");
+    setNote("");
+  }
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function create(e: React.FormEvent) {
@@ -35,20 +57,21 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
     setBusy(true);
     setMsg(null);
     const res = await fetch("/api/admin/cupons", {
-      method: "POST",
+      method: editing ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, kind, amount, max_uses: maxUses, expires, note }),
+      body: JSON.stringify({ id: editing?.id, code, kind, amount, max_uses: maxUses, expires, note }),
     });
     const j = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) return setMsg({ ok: false, text: j.error || "Não deu certo." });
-    setList([j.coupon, ...list]);
-    setMsg({ ok: true, text: `Cupom ${j.coupon.code} criado.` });
-    setCode("");
-    setAmount("");
-    setMaxUses("");
-    setExpires("");
-    setNote("");
+    if (editing) {
+      setList(list.map((x) => (x.id === j.coupon.id ? j.coupon : x)));
+      setMsg({ ok: true, text: `Cupom ${j.coupon.code} atualizado.` });
+    } else {
+      setList([j.coupon, ...list]);
+      setMsg({ ok: true, text: `Cupom ${j.coupon.code} criado.` });
+    }
+    clearForm();
   }
 
   async function toggle(c: Coupon) {
@@ -88,8 +111,21 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
 
       {children}
 
-      <form onSubmit={create} className="grid gap-3 rounded-2xl bg-surface p-5 ring-1 ring-foreground/10">
-        <h2 className="text-lg font-black">Criar cupom</h2>
+      <form id="form-cupom" onSubmit={create} className={`scroll-mt-20 grid gap-3 rounded-2xl bg-surface p-5 ring-1 ${editing ? "ring-2 ring-accent" : "ring-foreground/10"}`}>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-black">{editing ? `Editar cupom ${editing.code}` : "Criar cupom"}</h2>
+          {editing && (
+            <button type="button" onClick={clearForm} className="text-sm text-foreground/60 underline">
+              Cancelar edição
+            </button>
+          )}
+        </div>
+        {editing && editing.uses > 0 && (
+          <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-foreground/70">
+            Esse cupom já foi usado {editing.uses} vez{editing.uses === 1 ? "" : "es"}. A mudança vale só para as próximas compras; as
+            vendas antigas e o relatório continuam com o valor da época. O código não muda.
+          </p>
+        )}
         <div className="grid gap-2 sm:grid-cols-3">
           {KINDS.map((k) => (
             <button
@@ -105,7 +141,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="grid gap-1 text-xs font-semibold text-foreground/60">
             Código do cupom
-            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Ex.: BLACK20" required className={field} />
+            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Ex.: BLACK20" required readOnly={!!editing} className={`${field} ${editing ? "opacity-60" : ""}`} />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-foreground/60">
             {KINDS.find((k) => k.id === kind)!.label}
@@ -130,7 +166,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
         </p>
         {msg && <p className={`text-sm font-semibold ${msg.ok ? "text-foreground" : "text-brand-ink"}`}>{msg.text}</p>}
         <button disabled={busy} className="rounded-xl bg-accent py-3 font-black text-white hover:bg-accent-dark disabled:opacity-50">
-          {busy ? "Criando…" : "Criar cupom"}
+          {busy ? "Salvando…" : editing ? "Salvar alterações" : "Criar cupom"}
         </button>
       </form>
 
@@ -155,6 +191,9 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
                   </p>
                 </div>
                 <span className="flex gap-2">
+                  <button onClick={() => startEdit(c)} className="rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-bold">
+                    Editar
+                  </button>
                   <button onClick={() => toggle(c)} className="rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-bold">
                     {c.active ? "Desativar" : "Ativar"}
                   </button>

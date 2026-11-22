@@ -9,6 +9,24 @@ async function guard() {
   return (await isOwnerAdmin()) ? null : Response.json({ error: "Acesso negado." }, { status: 403 });
 }
 
+// Campos que podem ser criados e editados (o código não muda depois de criado).
+type Fields = { kind: string; amount: number; max_uses: number | null; expires_at: string | null; note: string | null };
+function parseFields(b: Record<string, unknown>): { fields: Fields } | { error: string } {
+  const kind = String(b.kind);
+  if (!["percent", "fixed", "videos"].includes(kind)) return { error: "Tipo inválido." };
+  const amount = Number(String(b.amount ?? "").replace(",", "."));
+  if (!(amount > 0)) return { error: "Informe um valor maior que zero." };
+  if (kind === "percent" && amount > 90) return { error: "Percentual máximo: 90%." };
+  if (kind === "videos" && (!Number.isInteger(amount) || amount > 1000))
+    return { error: "Vídeos de bônus: número inteiro até 1.000." };
+  const maxUses = b.max_uses ? Math.floor(Number(b.max_uses)) : null;
+  if (maxUses !== null && !(maxUses > 0)) return { error: "Limite de usos inválido." };
+  // Data no formato AAAA-MM-DD: vale até o fim do dia (horário de Brasília).
+  const expires = /^\d{4}-\d{2}-\d{2}$/.test(String(b.expires || "")) ? `${b.expires}T23:59:59-03:00` : null;
+  const note = String(b.note || "").trim().slice(0, 200) || null;
+  return { fields: { kind, amount, max_uses: maxUses, expires_at: expires, note } };
+}
+
 export async function GET() {
   const denied = await guard();
   if (denied) return denied;
@@ -24,21 +42,11 @@ export async function POST(req: Request) {
   const code = normalizeCode(String(b.code || ""));
   if (!/^[A-Z0-9_-]{3,30}$/.test(code))
     return Response.json({ error: "Código com 3 a 30 letras, números, - ou _ (sem espaço nem acento)." }, { status: 400 });
-  const kind = String(b.kind);
-  if (!["percent", "fixed", "videos"].includes(kind)) return Response.json({ error: "Tipo inválido." }, { status: 400 });
-  const amount = Number(String(b.amount ?? "").replace(",", "."));
-  if (!(amount > 0)) return Response.json({ error: "Informe um valor maior que zero." }, { status: 400 });
-  if (kind === "percent" && amount > 90) return Response.json({ error: "Percentual máximo: 90%." }, { status: 400 });
-  if (kind === "videos" && (!Number.isInteger(amount) || amount > 1000))
-    return Response.json({ error: "Vídeos de bônus: número inteiro até 1.000." }, { status: 400 });
-  const maxUses = b.max_uses ? Math.floor(Number(b.max_uses)) : null;
-  if (maxUses !== null && !(maxUses > 0)) return Response.json({ error: "Limite de usos inválido." }, { status: 400 });
-  // Data no formato AAAA-MM-DD: vale até o fim do dia (horário de Brasília).
-  const expires = /^\d{4}-\d{2}-\d{2}$/.test(String(b.expires || "")) ? `${b.expires}T23:59:59-03:00` : null;
-  const note = String(b.note || "").trim().slice(0, 200) || null;
+  const f = parseFields(b);
+  if ("error" in f) return Response.json({ error: f.error }, { status: 400 });
   const { data, error } = await supabaseAdmin()
     .from("coupons")
-    .insert({ code, kind, amount, max_uses: maxUses, expires_at: expires, note })
+    .insert({ code, ...f.fields })
     .select()
     .single();
   if (error)
@@ -77,4 +85,22 @@ export async function DELETE(req: Request) {
   const { error } = await db.from("coupons").update({ active: false, deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true, mode: "arquivado" });
+}
+
+// Edita um cupom (tipo, valor, limite, validade, anotação). Vendas antigas não mudam:
+// cada cobrança guarda o próprio valor e o bônus do momento da compra.
+export async function PUT(req: Request) {
+  const denied = await guard();
+  if (denied) return denied;
+  const b = await req.json().catch(() => ({}));
+  const f = parseFields(b);
+  if ("error" in f) return Response.json({ error: f.error }, { status: 400 });
+  const db = supabaseAdmin();
+  const { data: c } = await db.from("coupons").select("uses").eq("id", String(b.id)).maybeSingle();
+  if (!c) return Response.json({ error: "Cupom não encontrado." }, { status: 404 });
+  if (f.fields.max_uses !== null && f.fields.max_uses < c.uses)
+    return Response.json({ error: `Esse cupom já foi usado ${c.uses} vez(es). O limite não pode ser menor que isso.` }, { status: 400 });
+  const { data, error } = await db.from("coupons").update(f.fields).eq("id", String(b.id)).select().single();
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ coupon: data });
 }
