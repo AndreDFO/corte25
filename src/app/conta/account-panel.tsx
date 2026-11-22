@@ -73,8 +73,8 @@ export default function AccountPanel(p: {
   }
 
   const options: { id: ProductId; title: string; price: string; sub: string; accent?: boolean }[] = [
-    { id: "assinatura", title: "Assinatura mensal", price: `${SUBSCRIPTION.price}/mês`, sub: `${SUBSCRIPTION.credits} lotes por mês · ${SUBSCRIPTION.perBatch}`, accent: true },
-    ...PACKAGES.map((x) => ({ id: `pacote-${x.credits}` as ProductId, title: `${x.credits} lotes`, price: x.price, sub: x.perBatch })),
+    { id: "assinatura", title: "Assinatura mensal", price: `${SUBSCRIPTION.price}/mês`, sub: `${SUBSCRIPTION.credits} lotes (${SUBSCRIPTION.credits * 25} vídeos) por mês · ${SUBSCRIPTION.perBatch}`, accent: true },
+    ...PACKAGES.map((x) => ({ id: `pacote-${x.credits}` as ProductId, title: `${x.credits} lotes`, price: x.price, sub: `${x.credits * 25} vídeos · ${x.perBatch}` })),
   ];
   const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";
 
@@ -100,9 +100,9 @@ export default function AccountPanel(p: {
         <div>
           <p className="text-sm text-foreground/60">Seu saldo</p>
           <p className="text-4xl font-black">
-            {p.credits} <span className="text-lg font-bold text-foreground/60">lote{p.credits === 1 ? "" : "s"}</span>
+            {p.credits} <span className="text-lg font-bold text-foreground/60">vídeo{p.credits === 1 ? "" : "s"}</span>
           </p>
-          <p className="text-xs text-foreground/50">Cada lote = 25 vídeos + 2 de bônus</p>
+          <p className="text-xs text-foreground/50">Cada lote = 25 vídeos. Gere quantos quiser por vez; gerando 25 de uma vez, ganha +2 grátis.</p>
         </div>
         <Link href="/#criar" className="rounded-xl bg-brand px-5 py-3 font-black text-on-brand hover:bg-brand-dark">
           Gerar vídeos

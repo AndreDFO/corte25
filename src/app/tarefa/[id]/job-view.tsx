@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
-import { FULL_PRICE, ZIP_PART } from "@/lib/pricing";
+import { ZIP_PART } from "@/lib/pricing";
 import { rememberJob, timeLeft } from "@/lib/my-jobs";
 
 export default function JobView({ id }: { id: string }) {
@@ -124,7 +124,7 @@ export default function JobView({ id }: { id: string }) {
             <p className="text-sm text-foreground/70">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
           </div>
           <Link href="/" className="rounded-lg bg-brand text-on-brand hover:bg-brand-dark px-5 py-3 font-bold">
-            🔒 Lote completo · {FULL_PRICE}
+            Gerar o lote completo
           </Link>
         </div>
       )}

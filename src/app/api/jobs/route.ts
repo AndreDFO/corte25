@@ -3,11 +3,11 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
-import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 import { currentUser } from "@/lib/auth";
-import { consumeCredit } from "@/lib/credits";
+import { consumeVideos } from "@/lib/credits";
 import { supabaseConfigured } from "@/lib/supabase-admin";
 
 const MAX_FILE_MB = Number(process.env.MAX_FILE_MB || 300);
@@ -65,13 +65,20 @@ export async function POST(req: Request) {
       );
   }
 
+  // Quantos vídeos gerar (lote completo): 5 a 25, desconta só isso do saldo. Com 25, ganha +2 grátis.
+  const asked = Number(form.get("videos") || BATCH_VIDEOS);
+  const videos = (VIDEO_CHOICES as readonly number[]).includes(asked) ? asked : BATCH_VIDEOS;
   const id = newJobId();
   if (plan === "full" && user) {
-    const ok = await consumeCredit(user.id, id).catch((e) => {
-      console.error("[créditos]", e);
+    const ok = await consumeVideos(user.id, id, videos).catch((e) => {
+      console.error("[saldo]", e);
       return false;
     });
-    if (!ok) return Response.json({ error: "Você não tem créditos. Compre um pacote para gerar o lote.", code: "no_credits" }, { status: 402 });
+    if (!ok)
+      return Response.json(
+        { error: `Seu saldo não tem ${videos} vídeos. Compre um pacote ou escolha menos vídeos.`, code: "no_credits" },
+        { status: 402 },
+      );
   }
   const dir = jobDir(id);
   await fs.mkdir(path.join(dir, "inputs"), { recursive: true });
@@ -105,7 +112,7 @@ export async function POST(req: Request) {
     blocks,
     music: musicName,
     plan,
-    count: plan === "full" ? BATCH_VIDEOS + FREE_VIDEOS : FREE_VIDEOS,
+    count: plan === "full" ? videos + bonusFor(videos) : FREE_VIDEOS,
     durationMode,
     status: "queued",
     message: "Na fila…",

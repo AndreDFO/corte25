@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
-import { BATCH_VIDEOS, FREE_VIDEOS, FULL_PRICE, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION, comboCount } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
 
 function clientId() {
   try {
@@ -41,6 +41,9 @@ export default function UploadForm() {
   const [error, setError] = useState("");
   const [plan, setPlan] = useState<"free" | "full">("free");
   const [payOpen, setPayOpen] = useState(false);
+  // Quantos vídeos gerar no lote completo (desconta só isso do saldo; com 25 ganha +2 grátis).
+  const [videos, setVideos] = useState<number>(BATCH_VIDEOS);
+  const bonus = bonusFor(videos);
   const [doneId, setDoneId] = useState("");
 
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
@@ -68,6 +71,7 @@ export default function UploadForm() {
     fd.append("details", details);
     fd.append("duration", duration);
     fd.append("plan", plan);
+    if (plan === "full") fd.append("videos", String(videos));
     if (plan === "free") fd.append("whatsapp", whatsapp);
     fd.append("clientId", clientId());
     (Object.keys(clips) as BlockKey[]).forEach((k) => clips[k].forEach((f) => fd.append(k, f)));
@@ -156,7 +160,7 @@ export default function UploadForm() {
         >
           <span className="block text-sm font-bold">Lote completo</span>
           <span className="block text-xs text-foreground/60">
-            {BATCH_VIDEOS} + {FREE_VIDEOS} grátis · {FULL_PRICE}
+            Até {BATCH_VIDEOS} + {FREE_VIDEOS} grátis · usa seu saldo
           </span>
         </button>
       </div>
@@ -231,15 +235,40 @@ export default function UploadForm() {
         <span className="text-foreground/60">
           {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} →
         </span>
-        <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">{BATCH_VIDEOS} vídeos</span>
-        <span className="text-foreground/40">+</span>
-        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">{FREE_VIDEOS} grátis</span>
-        {total > 0 && total < FREE_VIDEOS + BATCH_VIDEOS && (
+        <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">
+          {plan === "full" ? videos : BATCH_VIDEOS} vídeos
+        </span>
+        {(plan === "free" || bonus > 0) && (
+          <>
+            <span className="text-foreground/40">+</span>
+            <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">{FREE_VIDEOS} grátis</span>
+          </>
+        )}
+        {total > 0 && total < (plan === "full" ? videos + bonus : FREE_VIDEOS + BATCH_VIDEOS) && (
           <span className="w-full text-center text-[11px] text-foreground/50">
             Com menos de 3 clipes por bloco, algumas combinações se repetem com textos diferentes.
           </span>
         )}
       </div>
+
+      {plan === "full" && (
+        <div className="grid gap-1">
+          <span className="text-xs font-medium text-foreground/60">Quantos vídeos gerar agora (desconta do seu saldo)</span>
+          <div className="grid grid-cols-5 gap-1.5">
+            {VIDEO_CHOICES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setVideos(n)}
+                className={`rounded-lg border py-1.5 text-sm font-bold ${videos === n ? "border-brand bg-brand text-on-brand" : "border-foreground/15 hover:bg-foreground/5"}`}
+              >
+                {n}
+                {bonusFor(n) > 0 && <span className="block text-[10px] font-semibold">+{bonusFor(n)} grátis</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 text-sm">
         <label className="grid gap-1">
@@ -302,7 +331,9 @@ export default function UploadForm() {
           ? `Enviando… ${progress}%`
           : plan === "free"
             ? `Gerar ${FREE_VIDEOS} vídeos grátis`
-            : `🔒 Gerar ${BATCH_VIDEOS} + ${FREE_VIDEOS} vídeos · ${FULL_PRICE}`}
+            : bonus
+              ? `Gerar ${videos} + ${bonus} vídeos grátis`
+              : `Gerar ${videos} vídeos`}
       </button>
       {plan === "free" && (
         <p className="-mt-2 text-center text-[11px] text-foreground/40">1 teste grátis por pessoa · sem cartão</p>
@@ -316,7 +347,7 @@ export default function UploadForm() {
           >
             <h3 className="text-xl font-bold">Compre créditos</h3>
             <p className="text-foreground/70 text-sm">
-              Cada crédito gera um lote de {BATCH_VIDEOS} vídeos + {FREE_VIDEOS} de bônus, combinando seus ganchos, corpos e CTAs, sem marca
+              Cada lote vale {VIDEOS_PER_LOT} vídeos de saldo. Você escolhe quantos gerar por vez e, gerando {BATCH_VIDEOS} de uma vez, ganha mais {FREE_VIDEOS} grátis. Tudo combinando seus ganchos, corpos e CTAs, sem marca
               d&apos;água, com legendas e download em ZIP.
             </p>
             <a href="/conta?comprar=assinatura" className="block rounded-xl border-2 border-accent bg-accent/10 p-4 text-left hover:bg-accent/15">

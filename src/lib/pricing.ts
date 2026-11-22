@@ -1,7 +1,12 @@
 // Preços e limites. Troque aqui para mudar o que aparece no site.
 export const MAX_PER_BLOCK = 5; // até 5 ganchos, 5 corpos e 5 CTAs
 export const BATCH_VIDEOS = 25; // vídeos por lote (1 crédito), sempre 25
-export const FULL_PRICE = "1 crédito"; // o que aparece no botão do lote completo
+export const FULL_PRICE = "1 crédito"; // (antigo) o que aparecia no botão do lote completo
+// Saldo em vídeos (22/11): cada lote comprado vira 25 vídeos de saldo. A pessoa escolhe quantos
+// gerar por vez; gerando 25 de uma vez, ganha mais 2 grátis.
+export const VIDEOS_PER_LOT = BATCH_VIDEOS;
+export const VIDEO_CHOICES = [5, 10, 15, 20, 25] as const;
+export const bonusFor = (n: number) => (n >= BATCH_VIDEOS ? 2 : 0);
 export const PACKAGES: { credits: number; price: string; perBatch: string; best?: boolean; tag?: string }[] = [
   { credits: 3, price: "R$ 14,90", perBatch: "R$ 4,97 por lote", tag: "para começar" },
   { credits: 10, price: "R$ 29,90", perBatch: "R$ 2,99 por lote" },

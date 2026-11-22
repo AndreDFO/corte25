@@ -1,4 +1,4 @@
-import { CATALOG, type ProductId } from "./pricing";
+import { CATALOG, VIDEOS_PER_LOT, type ProductId } from "./pricing";
 import { supabaseAdmin } from "./supabase-admin";
 import { asaasConfigured, getPayment, parseReference } from "./asaas";
 
@@ -19,7 +19,7 @@ export async function grantForPayment(p: { paymentId: string; userId: string; pr
   });
   const { error } = await db.from("credit_ledger").insert({
     user_id: p.userId,
-    delta: item.credits,
+    delta: item.credits * VIDEOS_PER_LOT, // o saldo conta vídeos: 1 lote = 25
     reason: item.recurring ? "assinatura" : "compra",
     payment_id: p.paymentId,
   });
@@ -33,18 +33,19 @@ export async function refundPayment(paymentId: string) {
   await db.from("payments").update({ status: "REFUNDED", updated_at: new Date().toISOString() }).eq("id", paymentId);
   const { error } = await db
     .from("credit_ledger")
-    .insert({ user_id: data.user_id, delta: -data.credits, reason: "estorno", payment_id: paymentId });
+    .insert({ user_id: data.user_id, delta: -data.credits * VIDEOS_PER_LOT, reason: "estorno", payment_id: paymentId });
   if (error && error.code !== "23505") throw error;
 }
 
+// Saldo da conta em vídeos (1 lote comprado = 25).
 export async function balance(userId: string): Promise<number> {
   const { data } = await supabaseAdmin().from("credit_balance").select("credits").eq("user_id", userId).maybeSingle();
   return data?.credits ?? 0;
 }
 
-// Gasta 1 crédito para um lote. false = sem saldo.
-export async function consumeCredit(userId: string, jobId: string): Promise<boolean> {
-  const { data, error } = await supabaseAdmin().rpc("consume_credit", { p_user: userId, p_job: jobId });
+// Gasta n vídeos do saldo. false = saldo insuficiente.
+export async function consumeVideos(userId: string, jobId: string, n: number): Promise<boolean> {
+  const { data, error } = await supabaseAdmin().rpc("consume_videos", { p_user: userId, p_job: jobId, p_n: n });
   if (error) throw error;
   return (data as number) >= 0;
 }
