@@ -8,7 +8,7 @@ import { claimTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 import { currentUser } from "@/lib/auth";
 import { consumeVideos } from "@/lib/credits";
-import { supabaseConfigured } from "@/lib/supabase-admin";
+import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase-admin";
 
 const MAX_FILE_MB = Number(process.env.MAX_FILE_MB || 300);
 
@@ -119,6 +119,9 @@ export async function POST(req: Request) {
     variations: [],
   };
   await saveJob(job);
+  // Liga o lote à conta (o lote pago já é ligado ao descontar o saldo): aparece em "Meus vídeos" em qualquer aparelho.
+  if (user && plan === "free")
+    await supabaseAdmin().from("job_owners").insert({ job_id: id, user_id: user.id }).then(() => {}, () => {});
   if (whatsapp) await saveLead({ whatsapp, product, jobId: id, createdAt: job.createdAt }).catch(() => {});
   startJob(id);
   return Response.json({ id });

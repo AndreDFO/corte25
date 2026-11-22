@@ -13,7 +13,13 @@ export default function MyVideos() {
 
   useEffect(() => {
     (async () => {
+      // Lotes deste navegador + lotes da conta (feitos em outro aparelho, com login).
       const mine = readMyJobs();
+      try {
+        const r = await fetch("/api/conta/videos", { cache: "no-store" });
+        const j = r.ok ? ((await r.json()) as { ids: string[] }) : { ids: [] };
+        for (const id of j.ids) if (!mine.some((m) => m.id === id)) mine.push({ id, product: "", createdAt: "" });
+      } catch {}
       const gone: string[] = [];
       const found: Row[] = [];
       for (const m of mine) {
@@ -24,6 +30,7 @@ export default function MyVideos() {
         } catch {}
       }
       if (gone.length) forgetJobs(gone);
+      found.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setRows(found);
     })();
     const first = setTimeout(() => setNow(Date.now()), 0);
