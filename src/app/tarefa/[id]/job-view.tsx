@@ -12,6 +12,42 @@ type JobInfo = Job & { expiresAt?: string; canNarrate?: boolean };
 const shownFile = (v: Variation, original: Set<number>) =>
   v.narrated && !original.has(v.index) ? v.file.replace(/\.mp4$/, "_narrado.mp4") : v.file;
 
+// Frases que alternam enquanto o lote é gerado (pedido do Andre: aviso maior e motivacional).
+const PHRASES = [
+  "Cada vídeo é uma nova chance de viralizar. 🚀",
+  "Quem posta todo dia vende todo dia. Seus vídeos estão saindo do forno! 🔥",
+  "Constância vence talento: com esse lote você tem conteúdo para a semana toda. 💪",
+  "O próximo vídeo pode ser o que bomba. Bora! ✨",
+  "Enquanto você espera, pense na legenda do primeiro post. 😉",
+  "Teste vários ganchos: o TikTok mostra qual funciona melhor. 📈",
+];
+
+function Generating({ message, done, total, pct }: { message?: string; done: number; total: number; pct: number }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((n) => (n + 1) % PHRASES.length), 6000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="mt-3 grid gap-2 rounded-2xl border border-brand/40 bg-brand/10 p-4 text-center sm:p-6">
+      <p className="text-2xl font-black sm:text-3xl">
+        <span className="mr-2 inline-block animate-spin">⏳</span>Gerando seus vídeos…
+      </p>
+      <p className="text-sm font-semibold text-foreground/70 sm:text-base">{message}</p>
+      <div className="mx-auto h-3 w-full max-w-xl overflow-hidden rounded-full bg-foreground/10">
+        <div className="h-full bg-gradient-to-r from-accent to-brand transition-all duration-700" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-sm font-bold">
+        {done} de {total} vídeos prontos
+      </p>
+      <p key={i} className="animate-pulse text-base font-bold text-accent-ink sm:text-lg">
+        {PHRASES[i]}
+      </p>
+      <p className="text-[11px] text-foreground/50">Pode deixar esta página aberta: os vídeos aparecem aqui embaixo assim que ficam prontos.</p>
+    </div>
+  );
+}
+
 export default function JobView({ id }: { id: string }) {
   const [job, setJob] = useState<JobInfo | null>(null);
   const [now, setNow] = useState(0);
@@ -81,7 +117,7 @@ export default function JobView({ id }: { id: string }) {
         <div className="min-w-0">
           <h1 className="truncate text-base font-extrabold sm:text-2xl">{job.product}</h1>
           <p className="text-[11px] text-foreground/60 sm:text-xs">
-            {job.message}
+            {finished && job.message}
             {job.expiresAt && now > 0 && (
               <span className="ml-1 font-bold text-accent-ink">· ⏱ disponível por mais {timeLeft(job.expiresAt, now)}</span>
             )}
@@ -112,19 +148,7 @@ export default function JobView({ id }: { id: string }) {
         </p>
       )}
 
-      {!finished && (
-        <>
-          <div className="mt-2 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-accent to-brand transition-all"
-              style={{ width: `${job.status === "writing" || job.status === "queued" ? 3 : pct}%` }}
-            />
-          </div>
-          <p className="mt-1 text-xs text-foreground/50">
-            {done} de {total} vídeos prontos
-          </p>
-        </>
-      )}
+      {!finished && <Generating message={job.message} done={done} total={total} pct={job.status === "writing" || job.status === "queued" ? 3 : Math.max(pct, 5)} />}
 
       {job.plan === "free" && finished && done > 0 && (
         <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-brand/40 bg-brand/10 px-3 py-2">

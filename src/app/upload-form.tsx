@@ -166,7 +166,7 @@ export default function UploadForm() {
     if (tab) {
       tab.document.title = "Corte25 · enviando…";
       tab.document.body.innerHTML =
-        '<p style="font:600 18px system-ui;text-align:center;margin-top:30vh;color:#16170f">Enviando seus clipes…<br><small style="font-weight:400;color:#777">Esta aba mostra os vídeos assim que o envio terminar.</small></p>';
+        '<div style="font-family:system-ui;text-align:center;margin-top:25vh;padding:0 20px;color:#16170f"><p style="font-size:30px;font-weight:900;margin:0">⏳ Enviando seus clipes…</p><p style="font-size:19px;font-weight:700;color:#5b4fd6;margin:18px 0">Seus próximos vídeos de sucesso estão a caminho! 🚀</p><p style="font-size:14px;color:#777">Esta aba mostra os vídeos assim que o envio terminar.</p></div>';
     }
     const closeTab = () => tab && !tab.closed && tab.close();
 
