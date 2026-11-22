@@ -52,8 +52,6 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
   // Preço por vídeo do pacote de entrada, contando só os 25 pagos de cada lote (os 2 de bônus ficam de fora).
   const paidVideos = entry.credits * BATCH_VIDEOS;
   const bonusVideos = entry.credits * (FULL_VIDEOS - BATCH_VIDEOS);
-  const priceNum = Number(entry.price.replace(/[^\d,]/g, "").replace(",", "."));
-  const perVideo = `R$ ${(Math.ceil((priceNum / paidVideos) * 100) / 100).toFixed(2).replace(".", ",")}`;
   // Um por número, o mais recente primeiro.
   const seen = new Set<string>();
   const leads = all
@@ -80,7 +78,7 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
             `Oi! Aqui é do Corte25 😊 Vi que você testou com o produto "${l.product}". Curtiu os 2 vídeos?\n\n` +
             `No lote completo você recebe 25 vídeos prontos para o TikTok Shop, sem marca d'água, e ganha mais 2 totalmente grátis. ` +
             `É só gravar 3 ganchos, 3 corpos e 3 CTAs que o Corte25 monta tudo.\n\n` +
-            `Para começar, o pacote de entrada tem ${entry.credits} lotes por ${entry.price}: são ${paidVideos} vídeos + ${bonusVideos} grátis, menos de ${perVideo} por vídeo. Garanta o seu aqui: ${site}/conta?comprar=pacote-${entry.credits}`;
+            `Para começar, o pacote Iniciante sai por só ${entry.price}: são ${paidVideos} vídeos + ${bonusVideos} grátis, sem marca d'água. Garanta o seu aqui: ${site}/conta?comprar=pacote-${entry.credits}`;
           return (
             <li key={l.whatsapp} className="flex items-center gap-2 px-3 py-1.5 text-sm">
               <div className="min-w-0 flex-1 leading-tight">

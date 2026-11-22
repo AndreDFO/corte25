@@ -131,7 +131,13 @@ export default function AccountPanel(p: {
     }),
     ...PACKAGES.map((x) => {
       const id = `pacote-${x.credits}` as ProductId;
-      return { id, title: `${x.credits * 25} vídeos`, full: priceOf(id).full, price: priceOf(id).now, sub: x.perBatch };
+      return {
+        id,
+        title: `${x.credits * 25} vídeos${x.credits === 1 ? " · Iniciante" : ""}`,
+        full: priceOf(id).full,
+        price: priceOf(id).now,
+        sub: `${x.perBatch}${x.tag ? ` · ${x.tag}` : ""}`,
+      };
     }),
   ];
   const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";

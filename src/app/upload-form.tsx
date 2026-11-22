@@ -415,12 +415,14 @@ export default function UploadForm() {
                 className={`block rounded-xl border px-4 py-2.5 text-left hover:bg-foreground/5 ${p.best ? "border-brand bg-brand/10" : "border-foreground/15"}`}
               >
                 <span className="flex items-baseline justify-between">
-                  <span className="font-bold">{p.credits * 25} vídeos</span>
+                  <span className="font-bold">
+                    {p.credits * 25} vídeos{p.credits === 1 ? " · Iniciante" : ""}
+                  </span>
                   <span className="text-lg font-extrabold">{p.price}</span>
                 </span>
                 <span className="block text-xs text-foreground/50">
                   {p.perBatch}
-                  {p.best ? " · mais econômico" : ""}
+                  {p.best ? " · mais econômico dos avulsos" : ""}
                   {p.tag ? ` · ${p.tag}` : ""}
                 </span>
               </a>

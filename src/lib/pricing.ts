@@ -7,11 +7,20 @@ export const FULL_PRICE = "1 crédito"; // (antigo) o que aparecia no botão do 
 export const VIDEOS_PER_LOT = BATCH_VIDEOS;
 export const VIDEO_CHOICES = [5, 10, 15, 20, 25] as const;
 export const bonusFor = (n: number) => (n >= BATCH_VIDEOS ? 2 : 0);
-export const PACKAGES: { credits: number; price: string; perBatch: string; best?: boolean; tag?: string }[] = [
-  { credits: 3, price: "R$ 14,90", perBatch: "R$ 0,20 por vídeo", tag: "para começar" },
-  { credits: 10, price: "R$ 29,90", perBatch: "R$ 0,12 por vídeo" },
-  { credits: 40, price: "R$ 89,99", perBatch: "R$ 0,09 por vídeo", best: true },
-];
+// Pacotes avulsos (aprovado pelo Andre em 22/11). Para mudar preço, troque só "value" aqui.
+const PACKAGE_LIST = [
+  { credits: 1, value: 7.9, tag: "para testar" }, // Iniciante: 25 vídeos (+2 grátis)
+  { credits: 3, value: 14.9 }, // 75 vídeos
+  { credits: 10, value: 29.9 }, // 250 vídeos
+  { credits: 40, value: 99.9, best: true }, // 1.000 vídeos
+] as const;
+const reais = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
+export const PACKAGES: { credits: number; value: number; price: string; perBatch: string; best?: boolean; tag?: string }[] =
+  PACKAGE_LIST.map((p) => ({
+    ...p,
+    price: reais(p.value),
+    perBatch: `R$ ${(Math.round((p.value / (p.credits * 25)) * 100) / 100).toFixed(2).replace(".", ",")} por vídeo`,
+  }));
 // Assinaturas mensais (vídeos por mês = lotes × 25). Para mudar preço, troque só "value" aqui.
 // 550 e 850 vídeos: pedido do Andre (22/11); preços sugeridos, confirmar com ele.
 export const SUBSCRIPTIONS = [
@@ -51,9 +60,10 @@ export const ZIP_PART = 9;
 
 // Catálogo para cobrança (valores em reais). O id vai no pagamento do Asaas (externalReference).
 export const CATALOG = {
-  "pacote-3": { credits: 3, value: 14.9, label: "75 vídeos (3 lotes)", recurring: false },
-  "pacote-10": { credits: 10, value: 29.9, label: "250 vídeos (10 lotes)", recurring: false },
-  "pacote-40": { credits: 40, value: 89.99, label: "1.000 vídeos (40 lotes)", recurring: false },
+  "pacote-1": { credits: 1, value: PACKAGE_LIST[0].value, label: "25 vídeos (Iniciante)", recurring: false },
+  "pacote-3": { credits: 3, value: PACKAGE_LIST[1].value, label: "75 vídeos (3 lotes)", recurring: false },
+  "pacote-10": { credits: 10, value: PACKAGE_LIST[2].value, label: "250 vídeos (10 lotes)", recurring: false },
+  "pacote-40": { credits: 40, value: PACKAGE_LIST[3].value, label: "1.000 vídeos (40 lotes)", recurring: false },
   assinatura: { credits: 15, value: SUBSCRIPTIONS[0].value, label: "Assinatura mensal · 375 vídeos", recurring: true },
   "assinatura-550": { credits: 22, value: SUBSCRIPTIONS[1].value, label: "Assinatura mensal · 550 vídeos", recurring: true },
   "assinatura-850": { credits: 34, value: SUBSCRIPTIONS[2].value, label: "Assinatura mensal · 850 vídeos", recurring: true },
