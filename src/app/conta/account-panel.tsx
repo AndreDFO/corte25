@@ -267,19 +267,20 @@ export default function AccountPanel(p: {
         </div>
       )}
 
-      <div className={`${card} flex flex-wrap items-center justify-between gap-3`}>
-        <div>
+      <div className={`${card} grid gap-2`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-foreground/60">Seu saldo</p>
-          <p className="text-4xl font-black">
-            {p.credits} <span className="text-lg font-bold text-foreground/60">vídeo{p.credits === 1 ? "" : "s"}</span>
-          </p>
-          <p className="text-xs text-foreground/50">Cada lote = 25 vídeos. Gere quantos quiser por vez; gerando 25 de uma vez, ganha +2 grátis.</p>
           {!freeOpen ? (
-            <button id="cupom" type="button" onClick={() => setFreeOpen(true)} className="mt-2 scroll-mt-24 rounded-lg border-2 border-accent bg-accent/10 px-3 py-1.5 text-sm font-bold text-accent hover:bg-accent/20">
+            <button
+              id="cupom"
+              type="button"
+              onClick={() => setFreeOpen(true)}
+              className="scroll-mt-24 whitespace-nowrap rounded-lg border-2 border-accent bg-accent/10 px-3 py-1 text-sm font-bold text-accent hover:bg-accent/20"
+            >
               🎟 Tenho um cupom
             </button>
           ) : (
-            <form id="cupom" onSubmit={redeemFree} className="mt-2 flex max-w-sm scroll-mt-24 gap-2">
+            <form id="cupom" onSubmit={redeemFree} className="flex w-full scroll-mt-24 gap-2 sm:w-80">
               <input
                 autoFocus
                 value={freeCode}
@@ -287,18 +288,26 @@ export default function AccountPanel(p: {
                 placeholder="Código do cupom"
                 aria-label="Código do cupom"
                 autoComplete="off"
-                className="min-w-0 flex-1 rounded-lg border-2 border-accent/60 bg-field px-3 py-1.5 text-sm"
+                className="min-w-0 flex-1 rounded-lg border-2 border-accent/60 bg-field px-3 py-1 text-sm"
               />
               <button disabled={freeBusy || !freeCode.trim()} className="rounded-lg bg-accent px-4 text-sm font-bold text-white hover:bg-accent-dark disabled:opacity-50">
                 {freeBusy ? "…" : "Resgatar"}
               </button>
             </form>
           )}
-          {freeMsg && <p className={`mt-1 text-sm font-semibold ${freeMsg.ok ? "text-foreground" : "text-brand-ink"}`}>{freeMsg.text}</p>}
         </div>
-        <Link href="/#criar" className="rounded-xl bg-brand px-5 py-3 font-black text-on-brand hover:bg-brand-dark">
-          Gerar vídeos
-        </Link>
+        {freeMsg && <p className={`text-sm font-semibold sm:text-right ${freeMsg.ok ? "text-foreground" : "text-brand-ink"}`}>{freeMsg.text}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-4xl font-black">
+              {p.credits} <span className="text-lg font-bold text-foreground/60">vídeo{p.credits === 1 ? "" : "s"}</span>
+            </p>
+            <p className="text-xs text-foreground/50">Cada lote = 25 vídeos. Gere quantos quiser por vez; gerando 25 de uma vez, ganha +2 grátis.</p>
+          </div>
+          <Link href="/#criar" className="rounded-xl bg-brand px-5 py-3 font-black text-on-brand hover:bg-brand-dark">
+            Gerar vídeos
+          </Link>
+        </div>
       </div>
 
 
