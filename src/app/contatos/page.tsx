@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { isAdmin } from "@/lib/admin";
 import { BATCH_VIDEOS, PACKAGES } from "@/lib/pricing";
@@ -59,6 +60,9 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
   return (
     <div className="mx-auto grid max-w-3xl gap-4 px-5 py-8">
       <div>
+        <Link href="/admin" className="mb-2 inline-block text-sm font-semibold underline">
+          ← Voltar para a área do administrador
+        </Link>
         <h1 className="text-3xl font-black tracking-tight">Contatos do teste grátis</h1>
         <p className="text-sm text-foreground/60">
           {leads.length} contato{leads.length === 1 ? "" : "s"}. O botão abre a conversa no WhatsApp Web com uma mensagem pronta, que você pode editar antes de enviar.
