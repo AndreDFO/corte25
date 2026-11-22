@@ -6,7 +6,7 @@ import { supabaseAdmin } from "./supabase-admin";
 
 export const MIN_CHARGE = 5; // o Asaas não cobra menos de R$ 5,00
 
-export type CouponKind = "percent" | "fixed" | "videos" | "vip";
+export type CouponKind = "percent" | "fixed" | "videos" | "vip" | "gratis";
 export interface Coupon {
   id: string;
   code: string;
@@ -25,6 +25,7 @@ export const normalizeCode = (c: string) => c.trim().toUpperCase().replace(/\s+/
 
 export function describe(c: Pick<Coupon, "kind" | "amount" | "features">) {
   if (c.kind === "vip") return `${describeVipFeatures(c.features)} por ${Number(c.amount)} dia${Number(c.amount) === 1 ? "" : "s"}`;
+  if (c.kind === "gratis") return `${Number(c.amount)} vídeos grátis`;
   if (c.kind === "percent") return `${Number(c.amount)}% de desconto`;
   if (c.kind === "fixed") return `${brl(Number(c.amount))} de desconto`;
   return `+${Number(c.amount)} vídeos de bônus`;
@@ -49,7 +50,8 @@ export async function checkCoupon(rawCode: string, userId: string, product: Prod
     .eq("coupon_id", c.id)
     .eq("user_id", userId);
   if ((count ?? 0) > 0) return { ok: false, error: "Você já usou esse cupom." };
-  if (c.kind === "vip") return { ok: false, error: "Esse cupom libera recursos VIP: resgate em Minha conta, no quadro VIP." };
+  if (c.kind === "vip" || c.kind === "gratis")
+    return { ok: false, error: "Esse cupom não precisa de compra: resgate em Minha conta, no quadro \"Tenho um cupom\"." };
 
   const base: number = CATALOG[product].value;
   let value: number = base;

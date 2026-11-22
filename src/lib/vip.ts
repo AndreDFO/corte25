@@ -1,6 +1,7 @@
 import { supabaseAdmin, supabaseConfigured } from "./supabase-admin";
 import { VIP_PRODUCTS, ALL_VIP_FEATURES, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTIONS, VIP_DAYS, type VipFeature } from "./pricing";
-import { normalizeCode, type Coupon } from "./coupons";
+import { normalizeCode } from "./coupons";
+import { redeemCoupon } from "./redeem";
 
 // Plano VIP (22/11/2026): assinatura extra de R$ 14,99/mês. Só VIP (e o admin) usa:
 // textos no vídeo, cortar partes sem som, música (biblioteca e envio), narração, legenda automática e transição suave.
@@ -125,22 +126,14 @@ export async function hasVipFeature(user: U, f: VipFeature): Promise<boolean> {
 }
 
 // Resgata um cupom de recursos VIP (tipo "vip": amount = dias, features = recursos ou ["todos"]).
+// Mesmo resgate do campo "Tenho um cupom" (src/lib/redeem.ts), só que aceita apenas cupom VIP.
 export async function redeemVipCoupon(userId: string, rawCode: string): Promise<{ ok: true; until: string; features: string[] } | { ok: false; error: string }> {
-  const code = normalizeCode(rawCode);
-  if (!code) return { ok: false, error: "Digite o código do cupom." };
-  const db = supabaseAdmin();
-  const { data: c } = await db.from("coupons").select("*").eq("code", code).maybeSingle<Coupon & { deleted_at?: string | null }>();
-  if (!c || !c.active || c.deleted_at) return { ok: false, error: "Cupom não encontrado." };
-  if (c.kind !== "vip") return { ok: false, error: "Esse cupom é de desconto: use na hora de comprar." };
-  if (c.expires_at && new Date(c.expires_at).getTime() < Date.now()) return { ok: false, error: "Esse cupom já venceu." };
-  if (c.max_uses !== null && c.uses >= c.max_uses) return { ok: false, error: "Esse cupom já atingiu o limite de usos." };
-  const { error: dup } = await db.from("coupon_redemptions").insert({ coupon_id: c.id, user_id: userId, payment_id: "cupom-vip" });
-  if (dup) return { ok: false, error: dup.code === "23505" ? "Você já usou esse cupom." : "Não deu para resgatar agora." };
-  await db.from("coupons").update({ uses: c.uses + 1 }).eq("id", c.id);
-  const features = c.features?.length ? c.features : ["todos"];
-  const until = new Date(Date.now() + Math.round(Number(c.amount)) * 24 * 3600_000).toISOString();
-  await db.from("vip_grants").insert({ user_id: userId, coupon_id: c.id, features, until });
-  return { ok: true, until, features };
+  const { data: c } = await supabaseAdmin().from("coupons").select("kind").eq("code", normalizeCode(rawCode)).maybeSingle();
+  if (c?.kind === "gratis") return { ok: false, error: "Esse cupom dá vídeos grátis: resgate no quadro \"Tenho um cupom\", logo abaixo do saldo." };
+  const r = await redeemCoupon(userId, rawCode);
+  if (!r.ok) return r;
+  if (r.kind !== "vip") return { ok: false, error: "Esse cupom não é VIP." };
+  return { ok: true, until: r.until, features: r.features };
 }
 
 // Registra os vídeos VIP gastos da cota do mês.
