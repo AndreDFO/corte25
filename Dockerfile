@@ -20,7 +20,9 @@ COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 COPY --from=build /app/assets ./assets
 COPY --from=build /app/next.config.ts ./
-# Pasta dos vídeos (24 h). No Railway, ligue um volume em /data.
-VOLUME /data
+# Pasta dos vídeos (24 h). No Railway, ligue um volume em /data pelo painel
+# (o Railway não aceita a instrução VOLUME no Dockerfile).
+RUN mkdir -p /data
 EXPOSE 3000
-CMD ["npx", "next", "start", "-p", "3000"]
+# O Railway informa a porta em $PORT.
+CMD ["sh", "-c", "npx next start -p ${PORT:-3000}"]
