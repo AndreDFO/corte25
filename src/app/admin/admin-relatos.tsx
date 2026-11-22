@@ -34,26 +34,26 @@ function Item({ r, onStatus }: { r: Relato; onStatus: (s: string) => void }) {
   const [print, setPrint] = useState<string | null>(null);
   const st = STATUS.find((s) => s.id === r.status) || STATUS[0];
   return (
-    <li className="rounded-xl border border-foreground/10 bg-surface p-3 text-sm">
+    <li className="min-w-0 rounded-xl border border-foreground/10 bg-surface p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${st.cls}`}>{st.label}</span>
-        <button type="button" onClick={() => setOpen(!open)} className="flex-1 text-left font-semibold hover:underline">
+        <button type="button" onClick={() => setOpen(!open)} className="min-w-0 flex-1 break-words text-left font-semibold hover:underline">
           {r.summary}
         </button>
         <span className="text-xs text-foreground/50">{when(r.created_at)}</span>
       </div>
-      <p className="mt-1 text-xs text-foreground/60">
+      <p className="mt-1 break-all text-xs text-foreground/60">
         {r.email || r.contact || "sem contato"} · {r.page || "página ?"} {r.has_print && "· 📎 print"}
       </p>
       {open && (
-        <div className="mt-2 grid gap-2">
-          {r.details && <p className="whitespace-pre-wrap">{r.details}</p>}
-          {r.contact && r.email && <p className="text-xs">Contato: {r.contact}</p>}
+        <div className="mt-2 grid min-w-0 grid-cols-1 gap-2">
+          {r.details && <p className="whitespace-pre-wrap break-words">{r.details}</p>}
+          {r.contact && r.email && <p className="break-all text-xs">Contato: {r.contact}</p>}
           <details className="text-xs">
             <summary className="cursor-pointer text-foreground/60">Conversa ({r.transcript?.length || 0} mensagens)</summary>
             <div className="mt-1 grid gap-1">
               {(r.transcript || []).map((m, i) => (
-                <p key={i}>
+                <p key={i} className="whitespace-pre-wrap break-words">
                   <b>{m.role === "user" ? "Cliente" : "IA"}:</b> {m.content}
                 </p>
               ))}
@@ -64,7 +64,7 @@ function Item({ r, onStatus }: { r: Relato; onStatus: (s: string) => void }) {
             {r.browser?.erros?.length ? ` · erros: ${r.browser.erros.join(" | ")}` : ""}
           </p>
           {r.fix_note && (
-            <p className="rounded-lg bg-brand/15 px-2 py-1 text-xs">
+            <p className="break-words rounded-lg bg-brand/15 px-2 py-1 text-xs">
               Correção: {r.fix_note}{" "}
               {r.fix_pr && (
                 <a href={r.fix_pr} target="_blank" rel="noreferrer" className="underline">
@@ -76,7 +76,7 @@ function Item({ r, onStatus }: { r: Relato; onStatus: (s: string) => void }) {
           {r.has_print &&
             (print ? (
               // eslint-disable-next-line @next/next/no-img-element -- print enviado pelo cliente
-              <img src={print} alt="Print do cliente" className="max-h-96 w-auto rounded-lg border border-foreground/10" />
+              <img src={print} alt="Print do cliente" className="max-h-96 w-auto max-w-full rounded-lg border border-foreground/10" />
             ) : (
               <button
                 type="button"
@@ -124,7 +124,7 @@ export default function AdminRelatos({ initial }: { initial: Relato[] }) {
   }
 
   return (
-    <section className="grid gap-2 rounded-2xl border border-foreground/10 bg-surface/60 p-4">
+    <section className="grid min-w-0 grid-cols-1 gap-2 rounded-2xl border border-foreground/10 bg-surface/60 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-black">🐞 Problemas relatados {novos > 0 && <span className="text-accent-ink">({novos} novos)</span>}</h2>
         <select value={filtro} onChange={(e) => setFiltro(e.target.value)} className="rounded-lg border border-foreground/15 bg-field px-2 py-1 text-sm" aria-label="Filtrar relatos">
@@ -138,7 +138,7 @@ export default function AdminRelatos({ initial }: { initial: Relato[] }) {
         </select>
       </div>
       {shown.length ? (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-1 gap-2">
           {shown.map((r) => (
             <Item key={r.id} r={r} onStatus={(s) => setStatus(r.id, s)} />
           ))}
