@@ -6,10 +6,10 @@ import type { Report } from "@/lib/report";
 
 const brl = (v: number) => `R$ ${v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 const br = (d: string) => d.split("-").reverse().join("/");
-const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";
+const card = "min-w-0 rounded-2xl bg-surface p-4 ring-1 ring-foreground/10 sm:p-5";
 const th = "px-2 py-1.5 text-left text-xs font-semibold text-foreground/60";
 const td = "px-2 py-1.5";
-const field = "rounded-lg border border-foreground/15 bg-field px-2 py-1.5 text-sm";
+const field = "w-full min-w-0 rounded-lg border border-foreground/15 bg-field px-2 py-1.5 text-sm";
 
 // Atalhos de período (horário de Brasília).
 function preset(kind: "hoje" | "7" | "30" | "mes" | "ano") {
@@ -23,33 +23,51 @@ function preset(kind: "hoje" | "7" | "30" | "mes" | "ano") {
   return [`${today.slice(0, 4)}-01-01`, today];
 }
 
+// No PC: tabela. No celular: cada linha vira um cartão (primeira coluna em destaque, o resto em "rótulo: valor").
 function Table({ head, rows, empty }: { head: string[]; rows: (string | number)[][]; empty?: string }) {
   if (!rows.length) return <p className="text-sm text-foreground/60">{empty || "Nada no período."}</p>;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-foreground/10">
-            {head.map((h) => (
-              <th key={h} className={th}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i} className="border-b border-foreground/5">
-              {r.map((c, j) => (
-                <td key={j} className={`${td} ${j ? "whitespace-nowrap" : ""}`}>
-                  {c}
-                </td>
+    <>
+      <ul className="grid grid-cols-1 gap-2 sm:hidden">
+        {rows.map((r, i) => (
+          <li key={i} className="min-w-0 rounded-xl bg-foreground/5 px-3 py-2 text-sm">
+            <p className="break-words font-bold">{r[0]}</p>
+            <dl className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-xs">
+              {r.slice(1).map((c, j) => (
+                <div key={j} className="contents">
+                  <dt className="text-foreground/60">{head[j + 1]}</dt>
+                  <dd className="break-words text-right font-semibold">{c}</dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-foreground/10">
+              {head.map((h) => (
+                <th key={h} className={th}>
+                  {h}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className="border-b border-foreground/5">
+                {r.map((c, j) => (
+                  <td key={j} className={`${td} ${j ? "whitespace-nowrap" : ""}`}>
+                    {c}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -119,10 +137,10 @@ export default function ReportView({ r }: { r: Report }) {
   }
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-4 px-5 py-8">
+    <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-4 overflow-x-hidden px-3 py-6 sm:px-5 sm:py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Relatório de vendas</h1>
+          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Relatório de vendas</h1>
           <p className="text-sm text-foreground/60">
             {br(r.de)} a {br(r.ate)} · horário de Brasília
           </p>
@@ -132,17 +150,17 @@ export default function ReportView({ r }: { r: Report }) {
         </Link>
       </div>
 
-      <div className={`${card} grid gap-3`}>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="grid gap-1 text-xs font-semibold text-foreground/60">
+      <div className={`${card} grid grid-cols-1 gap-3`}>
+        <div className="grid grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap">
+          <label className="grid min-w-0 gap-1 text-xs font-semibold text-foreground/60">
             De
             <input type="date" value={de} max={ate} onChange={(e) => setDe(e.target.value)} className={field} />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-foreground/60">
+          <label className="grid min-w-0 gap-1 text-xs font-semibold text-foreground/60">
             Até
             <input type="date" value={ate} min={de} onChange={(e) => setAte(e.target.value)} className={field} />
           </label>
-          <button onClick={() => go(de, ate)} className="rounded-lg bg-brand px-4 py-2 text-sm font-black text-on-brand hover:bg-brand-dark">
+          <button onClick={() => go(de, ate)} className="col-span-2 rounded-lg bg-brand px-4 py-2 text-sm font-black text-on-brand hover:bg-brand-dark">
             Filtrar
           </button>
         </div>
@@ -161,10 +179,10 @@ export default function ReportView({ r }: { r: Report }) {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           <a
             href={`/api/admin/relatorio?de=${r.de}&ate=${r.ate}&formato=csv`}
-            className="rounded-xl bg-foreground px-4 py-2 text-sm font-bold text-background"
+            className="rounded-xl bg-foreground px-4 py-2 text-center text-sm font-bold text-background"
           >
             ⬇ Baixar planilha (Excel)
           </a>
@@ -176,32 +194,32 @@ export default function ReportView({ r }: { r: Report }) {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {summary.map(([k, v]) => (
-          <div key={k} className="rounded-xl bg-surface p-3 ring-1 ring-foreground/10">
+          <div key={k} className="min-w-0 rounded-xl bg-surface p-3 ring-1 ring-foreground/10">
             <p className="text-[11px] font-semibold text-foreground/60">{k}</p>
-            <p className="text-lg font-black">{v}</p>
+            <p className="break-words text-base font-black sm:text-lg">{v}</p>
           </div>
         ))}
       </div>
 
-      <div className={`${card} grid gap-2`}>
+      <div className={`${card} grid grid-cols-1 gap-2`}>
         <h2 className="font-black">Por dia</h2>
         <Table head={["Data", "Vendas", "Faturamento", "Testes grátis", "Contas"]} rows={dailyRows} />
       </div>
-      <div className={`${card} grid gap-2`}>
+      <div className={`${card} grid grid-cols-1 gap-2`}>
         <h2 className="font-black">Por pacote</h2>
         <Table head={["Pacote", "Vendas", "Faturamento"]} rows={productRows} />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className={`${card} grid gap-2`}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={`${card} grid grid-cols-1 gap-2`}>
           <h2 className="font-black">Cupons usados</h2>
           <Table head={["Cupom", "Vendas", "Faturamento"]} rows={couponRows} empty="Nenhum cupom usado no período." />
         </div>
-        <div className={`${card} grid gap-2`}>
+        <div className={`${card} grid grid-cols-1 gap-2`}>
           <h2 className="font-black">Afiliados</h2>
           <Table head={["Código", "Vendas", "Faturamento", "Comissão"]} rows={affRows} empty="Nenhuma venda por afiliado no período." />
         </div>
       </div>
-      <div className={`${card} grid gap-2`}>
+      <div className={`${card} grid grid-cols-1 gap-2`}>
         <h2 className="font-black">Vendas</h2>
         <Table head={["Data", "Pacote", "Valor", "Cliente", "Cupom", "Afiliado"]} rows={saleRows} />
       </div>

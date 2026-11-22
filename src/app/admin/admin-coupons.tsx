@@ -16,9 +16,9 @@ const KINDS: { id: CouponKind; label: string; hint: string }[] = [
 const REDEEM = new Set<CouponKind>(["gratis", "vip"]);
 function Badge({ kind }: { kind: CouponKind }) {
   return REDEEM.has(kind) ? (
-    <span className="ml-1 rounded-full bg-brand/25 px-2 py-0.5 align-middle text-[11px] font-black">🎟 Resgate sem compra</span>
+    <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-brand/25 px-2 py-0.5 align-middle text-[11px] font-black">🎟 Resgate sem compra</span>
   ) : (
-    <span className="ml-1 rounded-full bg-foreground/10 px-2 py-0.5 align-middle text-[11px] font-bold text-foreground/60">🛒 Na compra</span>
+    <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-foreground/10 px-2 py-0.5 align-middle text-[11px] font-bold text-foreground/60">🛒 Na compra</span>
   );
 }
 
@@ -53,14 +53,14 @@ function CopyCode({ code }: { code: string }) {
         setOk(true);
         setTimeout(() => setOk(false), 1500);
       }}
-      className={`ml-1 inline-flex items-center rounded-md border px-1.5 py-0.5 align-middle text-[11px] font-bold ${ok ? "border-brand bg-brand/20" : "border-foreground/15 text-foreground/60 hover:bg-foreground/5"}`}
+      className={`ml-1 inline-flex items-center whitespace-nowrap rounded-md border px-1.5 py-0.5 align-middle text-[11px] font-bold ${ok ? "border-brand bg-brand/20" : "border-foreground/15 text-foreground/60 hover:bg-foreground/5"}`}
     >
       {ok ? "✓ Copiado" : "📋 Copiar"}
     </button>
   );
 }
 
-const field = "rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm";
+const field = "w-full min-w-0 rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm";
 
 export default function AdminCoupons({ initial, now, children }: { initial: Coupon[]; now: number; children?: React.ReactNode }) {
   const [list, setList] = useState(initial);
@@ -142,10 +142,10 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
 
   const hint = KINDS.find((k) => k.id === kind)!.hint;
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 px-5 py-8">
+    <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-4 overflow-x-hidden px-3 py-6 sm:px-5 sm:py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-3xl font-black tracking-tight">Área do administrador</h1>
-        <div className="flex gap-4 text-sm">
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Área do administrador</h1>
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
           <Link href="/contatos" className="underline">
             Contatos do teste grátis
           </Link>
@@ -169,9 +169,9 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
 
       {children}
 
-      <form id="form-cupom" onSubmit={create} className={`scroll-mt-20 grid gap-3 rounded-2xl bg-surface p-5 ring-1 ${editing ? "ring-2 ring-accent" : "ring-foreground/10"}`}>
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-black">{editing ? `Editar cupom ${editing.code}` : "Criar cupom"}</h2>
+      <form id="form-cupom" onSubmit={create} className={`scroll-mt-20 grid min-w-0 grid-cols-1 gap-3 rounded-2xl bg-surface p-4 ring-1 sm:p-5 ${editing ? "ring-2 ring-accent" : "ring-foreground/10"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="min-w-0 break-words text-lg font-black">{editing ? `Editar cupom ${editing.code}` : "Criar cupom"}</h2>
           {editing && (
             <button type="button" onClick={clearForm} className="text-sm text-foreground/60 underline">
               Cancelar edição
@@ -196,7 +196,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
                   key={k.id}
                   type="button"
                   onClick={() => setKind(k.id)}
-                  className={`rounded-xl border p-2.5 text-sm font-bold ${kind === k.id ? "border-brand bg-brand/15 ring-2 ring-brand/40" : "border-foreground/15"}`}
+                  className={`min-w-0 break-words rounded-xl border p-2.5 text-sm font-bold ${kind === k.id ? "border-brand bg-brand/15 ring-2 ring-brand/40" : "border-foreground/15"}`}
                 >
                   {k.label}
                 </button>
@@ -210,20 +210,20 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
             Cada conta usa uma vez. Dica: coloque um limite de usos para o cupom não circular sem controle.
           </p>
         )}
-        <div className="grid gap-2 sm:grid-cols-2">
-          <label className="grid gap-1 text-xs font-semibold text-foreground/60">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="grid min-w-0 gap-1 text-xs font-semibold text-foreground/60">
             Código do cupom
             <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Ex.: BLACK20" required readOnly={!!editing} className={`${field} ${editing ? "opacity-60" : ""}`} />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-foreground/60">
+          <label className="grid min-w-0 gap-1 text-xs font-semibold text-foreground/60">
             {kind === "vip" ? "Dias liberados (conta a partir do resgate)" : kind === "gratis" ? "Quantos vídeos grátis" : KINDS.find((k) => k.id === kind)!.label}
             <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={hint} required className={field} />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-foreground/60">
+          <label className="grid min-w-0 gap-1 text-xs font-semibold text-foreground/60">
             Limite de usos (vazio = sem limite)
             <input value={maxUses} onChange={(e) => setMaxUses(e.target.value)} inputMode="numeric" placeholder="Ex.: 50" className={field} />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-foreground/60">
+          <label className="grid min-w-0 gap-1 text-xs font-semibold text-foreground/60">
             Válido até (vazio = sem validade)
             <input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} className={field} />
           </label>
@@ -261,7 +261,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
             </p>
           </div>
         )}
-        <label className="grid gap-1 text-xs font-semibold text-foreground/60">
+        <label className="grid min-w-0 gap-1 text-xs font-semibold text-foreground/60">
           Anotação (só você vê)
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: parceria com fulano" className={field} />
         </label>
@@ -275,19 +275,19 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
         </button>
       </form>
 
-      <div className="grid gap-2 rounded-2xl bg-surface p-5 ring-1 ring-foreground/10">
+      <div className="grid min-w-0 grid-cols-1 gap-2 rounded-2xl bg-surface p-4 ring-1 ring-foreground/10 sm:p-5">
         <h2 className="text-lg font-black">Cupons ({list.length})</h2>
         {list.length === 0 && <p className="text-sm text-foreground/60">Nenhum cupom criado ainda.</p>}
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-1 gap-2">
           {list.map((c) => {
             const expired = c.expires_at && new Date(c.expires_at).getTime() < now;
             return (
               <li key={c.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-foreground/10 p-3 ${c.active && !expired ? "" : "opacity-60"}`}>
                 <div className="min-w-0">
-                  <p className="font-black">
+                  <p className="break-words font-black">
                     {c.code} <CopyCode code={c.code} /> <Badge kind={c.kind} /> <span className="font-semibold text-foreground/70">· {describe(c)}</span>
                   </p>
-                  <p className="text-xs text-foreground/60">
+                  <p className="break-words text-xs text-foreground/60">
                     {c.uses} uso{c.uses === 1 ? "" : "s"}
                     {c.max_uses ? ` de ${c.max_uses}` : ""}
                     {c.expires_at ? ` · até ${new Date(c.expires_at).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}
@@ -295,7 +295,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
                     {c.note ? ` · ${c.note}` : ""}
                   </p>
                 </div>
-                <span className="flex gap-2">
+                <span className="flex flex-wrap gap-2">
                   <button onClick={() => startEdit(c)} className="rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-bold">
                     Editar
                   </button>
