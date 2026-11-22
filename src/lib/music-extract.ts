@@ -27,12 +27,12 @@ function run(args: string[]): Promise<void> {
 }
 
 // Devolve o som do arquivo como .m4a. NoAudioError = o vídeo não tem som (ou não é mídia).
-export async function extractAudio(file: File): Promise<Buffer> {
+export async function extractAudio(file: File | Buffer): Promise<Buffer> {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "corte25-som-"));
   const input = path.join(tmp, "entrada_" + crypto.randomBytes(4).toString("hex"));
   const output = path.join(tmp, "som.m4a");
   try {
-    await fs.writeFile(input, Buffer.from(await file.arrayBuffer()));
+    await fs.writeFile(input, Buffer.isBuffer(file) ? file : Buffer.from(await file.arrayBuffer()));
     try {
       await run(["-hide_banner", "-loglevel", "error", "-y", "-i", input, "-map", "0:a:0", "-vn", "-sn", "-dn", "-t", String(MAX_SECONDS), "-ac", "2", "-ar", "44100", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", output]);
     } catch (e) {
