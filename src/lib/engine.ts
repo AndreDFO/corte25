@@ -174,7 +174,8 @@ export function buildRecipe(
   const cta = blocks.ctas[combo.cta];
   // Gancho e CTA entram inteiros (até 8 s cada). O corpo é cortado para caber na duração máxima.
   const hDur = Math.min(hook.duration, 8);
-  const cDur = Math.min(cta.duration, 8);
+  // O CTA fecha o vídeo: até 12 s para não cortar a fala no fim (com duração máxima, só o que couber, no mínimo 8 s).
+  const cDur = Math.min(cta.duration, maxDur ? Math.max(8, Math.min(12, maxDur - hDur - 2)) : 12);
   // Com transição, cada emenda sobrepõe "fade" segundos; o corpo ganha esse tempo para manter a duração escolhida.
   // Clipes muito curtos usam uma transição menor (no máximo 1/3 do clipe).
   const fade = transition ? Math.round(Math.min(TRANSITION_SEC, hDur / 3, body.duration / 3, cDur / 3) * 100) / 100 : 0;
@@ -347,15 +348,17 @@ async function renderVariation(
 // Corte das partes sem som (opcional, chave na tela de geração): acha onde o som começa e termina
 // em cada clipe pelo volume (silencedetect do FFmpeg) e deixa uma folga para não comer a fala.
 // Devolve null quando não há o que cortar (clipe sem áudio, com música o tempo todo, ou corte pequeno).
-const TRIM_BEFORE = 0.2;
-const TRIM_AFTER = 0.35;
+// 22/11: o fim cortava em cima da fala (Andre). Folga maior no fim e limite de silêncio mais baixo,
+// para o final mais baixo de uma palavra não ser tratado como silêncio.
+const TRIM_BEFORE = 0.25;
+const TRIM_AFTER = 0.7;
 async function soundBounds(c: ClipInfo): Promise<{ start: number; end: number } | null> {
   if (!c.hasAudio) return null;
   const dur = c.duration;
   const log = await new Promise<string>((resolve) => {
     const p = spawn(
       FFMPEG,
-      ["-hide_banner", "-nostats", "-i", c.file, "-vn", "-af", "silencedetect=noise=-38dB:d=0.25", "-f", "null", "-"],
+      ["-hide_banner", "-nostats", "-i", c.file, "-vn", "-af", "silencedetect=noise=-45dB:d=0.3", "-f", "null", "-"],
       { windowsHide: true },
     );
     let err = "";
