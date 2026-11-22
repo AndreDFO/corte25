@@ -54,6 +54,8 @@ export default function UploadForm() {
       .catch(() => {});
   }, []);
   const [doneId, setDoneId] = useState("");
+  // Textos gravados no vídeo (gancho e chamada final): opcional, pedido do Andre.
+  const [captions, setCaptions] = useState(true);
 
   // Teste grátis: 1 gancho, 1 corpo e 1 CTA (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
   const maxPer = plan === "free" ? 1 : MAX_PER_BLOCK;
@@ -84,6 +86,7 @@ export default function UploadForm() {
     fd.append("product", product);
     fd.append("details", details);
     fd.append("duration", duration);
+    fd.append("captions", captions ? "1" : "0");
     fd.append("plan", plan);
     if (plan === "full") fd.append("videos", String(videos));
     if (plan === "free") fd.append("whatsapp", whatsapp);
@@ -331,6 +334,17 @@ export default function UploadForm() {
           </span>
         </label>
       </div>
+
+      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm">
+        <span className="min-w-0">
+          <span className="block font-semibold">Textos no vídeo</span>
+          <span className="block text-[11px] text-foreground/55">
+            {captions ? "Gancho no início e chamada no fim, escritos no vídeo" : "Vídeo limpo, sem nenhum texto escrito"}
+          </span>
+        </span>
+        <input type="checkbox" checked={captions} onChange={(e) => setCaptions(e.target.checked)} className="peer sr-only" />
+        <span className="relative h-6 w-11 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5" />
+      </label>
 
       {plan === "free" && (
         <label className="grid gap-1">

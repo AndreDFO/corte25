@@ -113,6 +113,7 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
     product,
     productGiven: Boolean(typed),
+    captions: form.get("captions") !== "0",
     details,
     inputs: [...blocks.hooks, ...blocks.bodies, ...blocks.ctas],
     blocks,

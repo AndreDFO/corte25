@@ -23,6 +23,7 @@ export interface Job {
   id: string;
   createdAt: string;
   product: string;
+  captions?: boolean; // false = vídeo sem textos gravados (gancho e chamada); a legenda para postar continua
   productGiven?: boolean; // false = sem nome (o "product" é só a data); os textos não citam o nome
   details: string;
   inputs: string[];

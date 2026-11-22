@@ -236,13 +236,18 @@ async function renderVariation(
     rc.hookStyle === 1
       ? ":box=1:boxcolor=white@0.95:boxborderw=28:fontcolor=black"
       : ":fontcolor=white:borderw=9:bordercolor=black";
+  // Textos gravados no vídeo (gancho no início e chamada no fim). Opcional: job.captions === false tira os dois.
+  const texts =
+    job.captions === false
+      ? ""
+      : `,drawtext=fontfile=font.otf:textfile=${hookFile}:fontsize=78:line_spacing=14:text_align=C` +
+        `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,${esc(Math.min(3.2, rc.segments[0].dur))})',` +
+        `drawtext=fontfile=font.otf:textfile=${ctaFile}:fontsize=64:line_spacing=10:text_align=C` +
+        `:fontcolor=${VIDEO_CTA_TEXT}:box=1:boxcolor=${VIDEO_CTA_BG}@0.95:boxborderw=26` +
+        `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - Math.min(2.8, rc.segments[2].dur)))})'`;
   f.push(
-    `[vc]eq=saturation=${esc(rc.saturation)}:contrast=${esc(rc.contrast)}:brightness=${esc(rc.brightness)},` +
-      `drawtext=fontfile=font.otf:textfile=${hookFile}:fontsize=78:line_spacing=14:text_align=C` +
-      `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,${esc(Math.min(3.2, rc.segments[0].dur))})',` +
-      `drawtext=fontfile=font.otf:textfile=${ctaFile}:fontsize=64:line_spacing=10:text_align=C` +
-      `:fontcolor=${VIDEO_CTA_TEXT}:box=1:boxcolor=${VIDEO_CTA_BG}@0.95:boxborderw=26` +
-      `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - Math.min(2.8, rc.segments[2].dur)))})'` +
+    `[vc]eq=saturation=${esc(rc.saturation)}:contrast=${esc(rc.contrast)}:brightness=${esc(rc.brightness)}` +
+      texts +
       (job.plan === "free"
         ? `,drawtext=fontfile=font.otf:textfile=marca.txt:fontsize=46:fontcolor=white@0.55` +
           `:borderw=3:bordercolor=black@0.4:x=(w-text_w)/2:y=h*0.58`
