@@ -95,6 +95,13 @@ export async function createCheckout(opts: {
   return { id: pay.id, url: pay.invoiceUrl };
 }
 
+export async function getPayment(id: string) {
+  return call<{ id: string; status: string; value: number; externalReference?: string | null; subscription?: string | null }>(
+    "GET",
+    `/payments/${encodeURIComponent(id)}`,
+  );
+}
+
 export async function cancelSubscription(id: string) {
   return call("DELETE", `/subscriptions/${id}`);
 }

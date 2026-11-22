@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { currentUser, getProfile } from "@/lib/auth";
 import { asaasConfigured } from "@/lib/asaas";
-import { balance } from "@/lib/credits";
+import { balance, syncPendingPayments } from "@/lib/credits";
 import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase-admin";
 import { AFFILIATE_PERCENT, CATALOG } from "@/lib/pricing";
 import AccountPanel from "./account-panel";
@@ -16,6 +16,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
     return <p className="p-10 text-center text-foreground/60">O login ainda não está ativo nesta versão de teste.</p>;
   const user = await currentUser();
   if (!user) redirect(`/entrar?volta=${encodeURIComponent(buy ? `/conta?comprar=${buy}` : "/conta")}`);
+  await syncPendingPayments(user.id);
   const [profile, credits, payments] = await Promise.all([
     getProfile(user.id),
     balance(user.id),

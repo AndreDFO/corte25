@@ -1,5 +1,6 @@
 import { CATALOG, type ProductId } from "./pricing";
 import { supabaseAdmin } from "./supabase-admin";
+import { asaasConfigured, getPayment, parseReference } from "./asaas";
 
 // Credita os lotes de um pagamento confirmado. Repetir o mesmo pagamento não credita de novo
 // (índice único em payment_id + reason).
@@ -46,4 +47,32 @@ export async function consumeCredit(userId: string, jobId: string): Promise<bool
   const { data, error } = await supabaseAdmin().rpc("consume_credit", { p_user: userId, p_job: jobId });
   if (error) throw error;
   return (data as number) >= 0;
+}
+
+// Reserva para quando o aviso (webhook) do Asaas atrasa ou falha: ao abrir a conta, consulta no
+// Asaas as cobranças ainda pendentes desta pessoa e credita as que já foram pagas.
+const PAID = new Set(["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"]);
+export async function syncPendingPayments(userId: string) {
+  if (!asaasConfigured()) return 0;
+  const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const { data } = await supabaseAdmin()
+    .from("payments")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "PENDING")
+    .gte("created_at", since)
+    .limit(5);
+  let granted = 0;
+  for (const row of data ?? []) {
+    try {
+      const p = await getPayment(row.id);
+      const ref = parseReference(p.externalReference);
+      if (!PAID.has(p.status) || !ref || ref.userId !== userId) continue;
+      await grantForPayment({ paymentId: p.id, userId, product: ref.product, value: p.value, subscription: p.subscription });
+      granted++;
+    } catch (err) {
+      console.warn("[creditos] não deu para consultar a cobrança", row.id, (err as Error).message);
+    }
+  }
+  return granted;
 }
