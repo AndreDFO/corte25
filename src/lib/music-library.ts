@@ -7,6 +7,9 @@ import { TRACKS } from "./music";
 // Fonte: API pública do Openverse (WordPress), só com licenças que liberam uso comercial
 // SEM exigir crédito: CC0 e Public Domain Mark. O servidor atualiza sozinho 1x por semana.
 // Se a busca falhar, continua valendo a biblioteca anterior (ou as 8 faixas próprias).
+// 22/11: o filtro category=music devolvia ZERO faixas CC0 (só sobravam as 8 próprias, que o
+// Andre achou infantis). Agora busca beats atuais (trap, house, lo-fi, reggaeton…) feitos por
+// produtores no Freesound, com 30 s a 2 min, e descarta efeitos sonoros e músicas infantis.
 
 export interface LibTrack {
   id: string; // "ov_<id do openverse>" ou o slug das faixas próprias
@@ -22,21 +25,24 @@ export interface LibTrack {
 const DIR = path.join(DATA_DIR, "musicas");
 const INDEX = path.join(DIR, "biblioteca.json");
 const WEEK = 7 * 24 * 3600_000;
-const PER_STYLE = 4;
-const MIN_S = 15;
+const PER_STYLE = 5;
+const MIN_S = 28;
 const MAX_S = 240;
 const MAX_BYTES = 12 * 1024 * 1024;
 
-export const STYLES: { style: string; q: string }[] = [
-  { style: "Animada", q: "upbeat" },
-  { style: "Pop", q: "pop" },
-  { style: "Eletrônica", q: "electronic" },
-  { style: "Funk", q: "funk" },
-  { style: "Hip-hop / Trap", q: "hip hop" },
-  { style: "Lo-fi / Calma", q: "lofi" },
-  { style: "Latina / Tropical", q: "latin" },
-  { style: "Rock", q: "rock" },
+export const STYLES: { style: string; q: string[] }[] = [
+  { style: "Trap / Hip-hop", q: ["trap beat", "hip hop beat"] },
+  { style: "Eletrônica / House", q: ["deep house", "edm"] },
+  { style: "Lo-fi / Chill", q: ["lofi beat", "chill beat"] },
+  { style: "Funk / Disco", q: ["funk groove", "disco funk"] },
+  { style: "Pop / Dance", q: ["dance pop", "synth pop"] },
+  { style: "Latina / Tropical", q: ["reggaeton", "tropical house", "latin beat"] },
+  { style: "Cinematográfica", q: ["cinematic", "epic music"] },
 ];
+
+// Palavras que indicam efeito sonoro, pedaço solto de bateria ou música infantil: fica de fora.
+const BLOCK =
+  /\b(kids?|child|children|nursery|lullaby|cartoon|toy|baby|christmas|xmas|8[- ]?bit|chiptune|ukulele|whistl\w*|circus|sfx|fx|foley|riser|siren|kick|snare|hi-?hat|clap|one[- ]?shot|drums?|percussion|rumble|blade|bass ?only|pronunciation|fire|crackl\w*|fan|rain|wind|ambien\w*|noise|field recording|sound effect|notification|alarm|test|tone|horror|scary|creepy|preview)\b/i
 
 const OWN: LibTrack[] = TRACKS.map((t) => ({ id: t.slug, title: t.title, style: "Corte25 (próprias)", seconds: 0, license: "proprio" }));
 
@@ -50,10 +56,11 @@ async function readIndex(): Promise<Index | null> {
   }
 }
 
-// Lista mostrada no formulário: as do Openverse (se houver) e sempre as 8 próprias no fim.
+// Lista mostrada no formulário: as do Openverse. As 8 próprias só aparecem se a busca ainda não
+// trouxe nada (Andre achou infantis). Elas continuam funcionando em lotes antigos (trackPath).
 export async function listLibrary(): Promise<LibTrack[]> {
   const idx = await readIndex();
-  return [...(idx?.tracks ?? []), ...OWN];
+  return idx?.tracks.length ? idx.tracks : OWN;
 }
 
 // Caminho do arquivo de uma faixa (para prévia e para montar o vídeo). null = não existe.
@@ -77,14 +84,16 @@ interface OvAudio {
   duration?: number | null; // ms
   filetype?: string | null;
   filesize?: number | null;
+  source?: string;
+  tags?: { name?: string }[] | null;
 }
 
 async function search(q: string): Promise<OvAudio[]> {
   const u = new URL("https://api.openverse.org/v1/audio/");
   u.searchParams.set("q", q);
   u.searchParams.set("license", "cc0,pdm");
-  u.searchParams.set("category", "music");
-  u.searchParams.set("page_size", "20");
+  u.searchParams.set("length", "short"); // 30 s a 2 min
+  u.searchParams.set("page_size", "40");
   const res = await fetch(u, { headers: { "User-Agent": "Corte25/1.0 (biblioteca de musicas)" }, signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error(`Openverse ${res.status}`);
   const j = (await res.json()) as { results?: OvAudio[] };
@@ -102,6 +111,8 @@ function good(a: OvAudio) {
     s >= MIN_S &&
     s <= MAX_S &&
     ["mp3", "ogg", "wav", "flac", "m4a"].includes(type) &&
+    !BLOCK.test(a.title || "") &&
+    !(a.tags || []).some((t) => BLOCK.test(t.name || "")) &&
     (!a.filesize || a.filesize <= MAX_BYTES)
   );
 }
@@ -127,14 +138,17 @@ async function doRefresh(): Promise<number> {
   const old = await readIndex();
   const tracks: LibTrack[] = [];
   const seen = new Set<string>();
-  for (const { style, q } of STYLES) {
-    let found: OvAudio[] = [];
-    try {
-      found = (await search(q)).filter(good);
-    } catch (e) {
-      console.log(`[músicas] busca "${q}" falhou:`, (e as Error).message);
-      continue;
+  for (const { style, q: queries } of STYLES) {
+    const found: OvAudio[] = [];
+    for (const q of queries) {
+      try {
+        found.push(...(await search(q)).filter(good));
+      } catch (e) {
+        console.log(`[músicas] busca "${q}" falhou:`, (e as Error).message);
+      }
+      await new Promise((r) => setTimeout(r, 2000)); // sem pressa: o Openverse limita buscas seguidas
     }
+    if (!found.length) continue;
     // Varia a escolha a cada semana para a playlist mudar.
     found.sort(() => Math.random() - 0.5);
     let n = 0;
