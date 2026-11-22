@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
 import { rememberJob, timeLeft } from "@/lib/my-jobs";
 import Narrator from "./narrator";
+import BigPlayer from "./big-player";
 
 type JobInfo = Job & { expiresAt?: string; canNarrate?: boolean };
 
@@ -357,28 +358,6 @@ function SelectionBar({
   );
 }
 
-// Tela cheia: no iPhone só o player do próprio vídeo abre em tela cheia (webkitEnterFullscreen).
-function bigScreen(video: HTMLVideoElement | null) {
-  if (!video) return;
-  const el = video as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
-  // Em tela cheia mostra os controles do aparelho (lá tem espaço); ao sair, voltam os controles do card.
-  el.controls = true;
-  const off = () => {
-    if (document.fullscreenElement) return;
-    el.controls = false;
-    document.removeEventListener("fullscreenchange", off);
-  };
-  el.addEventListener("webkitendfullscreen", () => (el.controls = false), { once: true });
-  if (el.requestFullscreen)
-    el.requestFullscreen()
-      .then(() => {
-        document.addEventListener("fullscreenchange", off);
-        el.play().catch(() => {});
-      })
-      .catch(() => el.webkitEnterFullscreen?.());
-  else el.webkitEnterFullscreen?.();
-}
-
 function Card({
   id,
   v,
@@ -401,6 +380,7 @@ function Card({
   const [copied, setCopied] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [paused, setPaused] = useState(true);
+  const [big, setBig] = useState<{ at: number } | null>(null);
   const [progress, setProgress] = useState(0);
   const isNarr = shown !== v.file;
   // ?n= muda a cada nova narração, para o navegador não mostrar a gravação anterior.
@@ -432,7 +412,11 @@ function Card({
         {v.status === "done" && (
           <button
             type="button"
-            onClick={() => bigScreen(videoRef.current)}
+            onClick={() => {
+              const el = videoRef.current;
+              setBig({ at: el?.currentTime ?? 0 });
+              el?.pause();
+            }}
             aria-label={`Ver o vídeo ${v.index + 1} em tela cheia`}
             title="Tela cheia"
             className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-lg border-2 border-white bg-black/40 text-white shadow"
@@ -539,6 +523,7 @@ function Card({
           )}
         </div>
       </div>
+      {big && <BigPlayer src={src} title={`#${v.index + 1} · ${v.hook}`} startAt={big.at} onClose={() => setBig(null)} />}
     </div>
   );
 }
