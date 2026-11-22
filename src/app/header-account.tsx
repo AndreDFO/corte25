@@ -26,14 +26,14 @@ export async function HeaderAccount() {
         Olá, <b className="text-foreground">{first}</b>
       </span>
       <span className="contents sm:flex sm:items-center sm:gap-1">
-        <Link href="/conta" className={btn} title="Minha conta e saldo">
-          {credits === null ? "Minha conta" : `${credits} crédito${credits === 1 ? "" : "s"}`}
-        </Link>
         <Link
           href="/conta#comprar"
           className={`${size} bg-accent text-white hover:bg-accent-dark`}
         >
           + Comprar
+        </Link>
+        <Link href="/conta" className={btn} title="Minha conta e saldo">
+          {credits === null ? "Minha conta" : `${credits} crédito${credits === 1 ? "" : "s"}`}
         </Link>
       </span>
       <LogoutButton className="hidden text-xs text-foreground/50 underline hover:text-foreground sm:inline" />
