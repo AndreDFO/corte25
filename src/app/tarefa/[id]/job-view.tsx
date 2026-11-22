@@ -23,7 +23,7 @@ const PHRASES = [
   "Teste vários ganchos: o TikTok mostra qual funciona melhor. 📈",
 ];
 
-function Generating({ message, done, total, pct }: { message?: string; done: number; total: number; pct: number }) {
+function Generating({ message, done, total, pct, slow }: { message?: string; done: number; total: number; pct: number; slow?: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setI((n) => (n + 1) % PHRASES.length), 6000);
@@ -41,6 +41,7 @@ function Generating({ message, done, total, pct }: { message?: string; done: num
       <p className="text-sm font-bold">
         {done} de {total} vídeos prontos
       </p>
+      {slow && <p className="text-xs font-semibold text-foreground/60">⏱️ Com {slow}, os vídeos demoram mais para ficar prontos. Pode deixar esta aba aberta.</p>}
       <p key={i} className="animate-pulse text-base font-bold text-accent-ink sm:text-lg">
         {PHRASES[i]}
       </p>
@@ -149,7 +150,15 @@ export default function JobView({ id }: { id: string }) {
         </p>
       )}
 
-      {!finished && <Generating message={job.message} done={done} total={total} pct={job.status === "writing" || job.status === "queued" ? 3 : Math.max(pct, 5)} />}
+      {!finished && (
+        <Generating
+          message={job.message}
+          done={done}
+          total={total}
+          pct={job.status === "writing" || job.status === "queued" ? 3 : Math.max(pct, 5)}
+          slow={[job.autoCaptions && "legenda automática", job.music && !job.music.startsWith("musica_ov_") && "som do seu vídeo"].filter(Boolean).join(" e ")}
+        />
+      )}
 
       {job.plan === "free" && finished && done > 0 && (
         <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-brand/40 bg-brand/10 px-3 py-2">

@@ -525,7 +525,7 @@ export default function UploadForm() {
       )}
       {track === "arquivo" && (
         <p className="-mt-1 text-[11px] text-foreground/55">
-          ⚠️ Use só som que você pode usar (sua voz, seu jingle ou música liberada). Música famosa pode ser silenciada ou bloqueada pelo TikTok.
+          ⏱️ Usar o som de um vídeo demora mais para gerar. ⚠️ Use só som que você pode usar (sua voz, seu jingle ou música liberada). Música famosa pode ser silenciada ou bloqueada pelo TikTok.
         </p>
       )}
 
@@ -551,7 +551,7 @@ export default function UploadForm() {
         <span className="relative h-4 w-7 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-3" />
         <span>
           {!canAuto && "🔒 "}Legenda automática{" "}
-          <span className="text-foreground/45">({autoCaptions ? "a fala aparece palavra por palavra" : "desligada"})</span>
+          <span className="text-foreground/45">({autoCaptions ? "a fala aparece palavra por palavra · ⏱️ demora mais para gerar" : "desligada"})</span>
         </span>
       </label>
 
