@@ -200,15 +200,15 @@ export default function UploadForm() {
         {BLOCKS.map((b) => (
           <div
             key={b.key}
-            className="min-w-0 rounded-xl border p-2 grid grid-cols-[minmax(0,1fr)] gap-1.5 content-start"
+            className="min-w-0 rounded-xl border p-2 max-[380px]:px-1.5 grid grid-cols-[minmax(0,1fr)] gap-1.5 content-start"
             style={{
               borderColor: `color-mix(in srgb, ${b.color} 45%, transparent)`,
               background: `color-mix(in srgb, ${b.color} 8%, transparent)`,
             }}
             title={b.hint}
           >
-            <span className="text-sm font-bold" style={{ color: b.color }}>
-              {b.title} <span className="text-foreground/50 font-normal">{clips[b.key].length}/{maxPer}</span>
+            <span className="whitespace-nowrap text-[13px] font-bold tracking-tight max-[380px]:text-xs sm:text-sm" style={{ color: b.color }}>
+              {b.title} <span className="text-[11px] font-normal text-foreground/50 sm:text-xs">{clips[b.key].length}/{maxPer}</span>
             </span>
             <a href={`#${TIP_ID[b.key]}`} className="-mt-1 text-[10px] font-semibold text-foreground/50 underline hover:text-foreground">
               ver dicas ↓
