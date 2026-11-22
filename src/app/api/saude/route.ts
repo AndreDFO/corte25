@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { asaasConfigured } from "@/lib/asaas";
-import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "@/lib/supabase-admin";
+import { ANON_FROM_ENV, SERVICE_KEY_OK, SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "@/lib/supabase-admin";
 
 // Diagnóstico sem segredos: qual versão está no ar e quais configurações o site enxerga.
 export async function GET() {
@@ -28,6 +28,8 @@ export async function GET() {
         configurado: supabaseConfigured(),
         url: SUPABASE_URL || null,
         chave_anon_do_projeto: anonRef,
+        chave_anon_da_variavel: ANON_FROM_ENV ? "ok" : "inválida (usando a chave pública padrão)",
+        chave_service_role: SERVICE_KEY_OK ? "ok" : "inválida",
         login: supabaseAuth,
       },
       asaas: asaasConfigured(),

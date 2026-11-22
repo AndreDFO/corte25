@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase-admin";
 
-const URL_ = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/[\s"'“”‘’]+/g, "").replace(/\/+$/, "");
-const ANON = (process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").replace(/[\s"'“”‘’]+/g, "");
+const URL_ = SUPABASE_URL;
+const ANON = SUPABASE_ANON_KEY;
 
 // 1) Guarda o código de afiliado (?ref=) por 30 dias. 2) Renova a sessão de login.
 export async function proxy(req: NextRequest) {
