@@ -191,14 +191,24 @@ export default function AccountPanel(p: {
       </div>
 
       <div className={`${card} grid gap-2`}>
-        <h2 className="text-lg font-black">Indique e ganhe {p.affiliatePercent}%</h2>
+        <h2 className="text-lg font-black">
+          Indique: eles ganham {REFERRAL_DISCOUNT}%, você ganha {p.affiliatePercent}%
+        </h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl bg-accent px-4 py-3 text-white">
+            <p className="text-2xl font-black">🎁 {REFERRAL_DISCOUNT}% OFF</p>
+            <p className="text-sm font-semibold">para quem você indicar, na primeira compra</p>
+          </div>
+          <div className="rounded-xl bg-brand px-4 py-3 text-on-brand">
+            <p className="text-2xl font-black">💰 {p.affiliatePercent}% para você</p>
+            <p className="text-sm font-semibold">nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada indicado</p>
+          </div>
+        </div>
         <p className="text-sm text-foreground/70">
-          Quem criar conta pelo seu link vira sua indicação e ganha {REFERRAL_DISCOUNT}% de desconto na primeira compra. Você recebe{" "}
-          {p.affiliatePercent}% do valor pago nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada indicado, direto na sua conta do
-          Asaas, sem pedir saque.
-          <span className="mt-1 block text-xs text-foreground/60">
-            Sugestão para divulgar: &quot;Use meu link e ganhe {REFERRAL_DISCOUNT}% de desconto na primeira compra do Corte25.&quot;
-          </span>
+          Quem criar conta pelo seu link vira sua indicação. A comissão cai direto na sua conta do Asaas, sem pedir saque.
+        </p>
+        <p className="rounded-lg border border-dashed border-accent/60 bg-accent/10 px-3 py-2 text-sm">
+          <b>Texto para divulgar:</b> &quot;Use meu link e ganhe {REFERRAL_DISCOUNT}% de desconto na primeira compra do Corte25 👉 {refLink}&quot;
         </p>
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
