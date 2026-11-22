@@ -6,6 +6,9 @@ import { startJob } from "@/lib/engine";
 import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
+import { currentUser } from "@/lib/auth";
+import { consumeCredit } from "@/lib/credits";
+import { supabaseConfigured } from "@/lib/supabase-admin";
 
 const MAX_FILE_MB = Number(process.env.MAX_FILE_MB || 300);
 
@@ -35,7 +38,13 @@ export async function POST(req: Request) {
   }
 
   const plan = form.get("plan") === "full" ? "full" : "free";
-  if (plan === "full" && process.env.UNLOCK_FULL !== "true") {
+  // Com login ativo (Supabase configurado), o lote completo gasta 1 crédito da conta.
+  // Sem login (PC de teste), vale a trava antiga: só libera com UNLOCK_FULL=true.
+  const online = supabaseConfigured();
+  const user = online ? await currentUser() : null;
+  if (plan === "full" && online && !user)
+    return Response.json({ error: "Entre na sua conta para gerar o lote completo.", code: "login" }, { status: 401 });
+  if (plan === "full" && !online && process.env.UNLOCK_FULL !== "true") {
     return Response.json(
       { error: "O pagamento ainda não está disponível. Use o teste grátis por enquanto." },
       { status: 402 },
@@ -47,6 +56,7 @@ export async function POST(req: Request) {
   if (plan === "free") {
     // 1 teste por pessoa: conta por rede, por navegador e por número de WhatsApp.
     const keys = [...trialKeys(req, String(form.get("clientId") || "") || null), "wa:" + crypto.createHash("sha256").update(whatsapp!).digest("hex").slice(0, 24)];
+    if (user) keys.push("user:" + user.id);
     const ok = await claimTrial(keys);
     if (!ok)
       return Response.json(
@@ -56,6 +66,13 @@ export async function POST(req: Request) {
   }
 
   const id = newJobId();
+  if (plan === "full" && user) {
+    const ok = await consumeCredit(user.id, id).catch((e) => {
+      console.error("[créditos]", e);
+      return false;
+    });
+    if (!ok) return Response.json({ error: "Você não tem créditos. Compre um pacote para gerar o lote.", code: "no_credits" }, { status: 402 });
+  }
   const dir = jobDir(id);
   await fs.mkdir(path.join(dir, "inputs"), { recursive: true });
 

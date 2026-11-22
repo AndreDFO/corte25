@@ -21,6 +21,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/meus-videos" className="rounded-lg bg-foreground/5 px-3 py-1.5 font-semibold hover:bg-foreground/10">
                 Meus vídeos
               </Link>
+              <Link href="/conta" className="rounded-lg bg-brand px-3 py-1.5 font-bold text-on-brand hover:bg-brand-dark">
+                Conta
+              </Link>
             </nav>
           </div>
         </header>

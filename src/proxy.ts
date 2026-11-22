@@ -1,0 +1,35 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+
+const URL_ = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const ANON = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+// 1) Guarda o código de afiliado (?ref=) por 30 dias. 2) Renova a sessão de login.
+export async function proxy(req: NextRequest) {
+  let res = NextResponse.next({ request: req });
+  const ref = req.nextUrl.searchParams.get("ref");
+  const setRef = (r: NextResponse) => {
+    if (ref && /^[a-z0-9_-]{3,32}$/i.test(ref) && !req.cookies.get("corte25_ref"))
+      r.cookies.set("corte25_ref", ref.toLowerCase(), { maxAge: 30 * 864e2, path: "/", sameSite: "lax" });
+    return r;
+  };
+  if (!URL_ || !ANON) return setRef(res);
+
+  const sb = createServerClient(URL_, ANON, {
+    cookies: {
+      getAll: () => req.cookies.getAll(),
+      setAll: (list) => {
+        for (const { name, value } of list) req.cookies.set(name, value);
+        res = NextResponse.next({ request: req });
+        for (const { name, value, options } of list) res.cookies.set(name, value, options);
+      },
+    },
+  });
+  await sb.auth.getUser();
+  return setRef(res);
+}
+
+export const config = {
+  // Páginas e APIs de conta; arquivos estáticos e vídeos ficam de fora.
+  matcher: ["/((?!_next/|favicon.ico|api/jobs/.*/files|api/asaas).*)"],
+};

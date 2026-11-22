@@ -88,6 +88,11 @@ export default function UploadForm() {
     xhr.onload = () => {
       try {
         const res = JSON.parse(xhr.responseText);
+        if (xhr.status === 401) {
+          closeTab();
+          window.location.href = "/entrar?volta=/%23criar";
+          return;
+        }
         if (xhr.status === 402) {
           closeTab();
           setProgress(null);
@@ -306,11 +311,7 @@ export default function UploadForm() {
               Cada crédito gera um lote de {BATCH_VIDEOS} vídeos + {FREE_VIDEOS} de bônus, combinando seus ganchos, corpos e CTAs, sem marca
               d&apos;água, com legendas e download em ZIP.
             </p>
-            <button
-              type="button"
-              disabled
-              className="rounded-xl border-2 border-accent bg-accent/10 p-4 text-left opacity-90"
-            >
+            <a href="/conta?comprar=assinatura" className="block rounded-xl border-2 border-accent bg-accent/10 p-4 text-left hover:bg-accent/15">
               <span className="flex items-baseline justify-between">
                 <span className="font-bold">
                   Assinatura mensal{" "}
@@ -324,14 +325,13 @@ export default function UploadForm() {
               <span className="block text-xs text-foreground/60">
                 {SUBSCRIPTION.credits} lotes por mês · {SUBSCRIPTION.perBatch}
               </span>
-            </button>
+            </a>
             <p className="-mb-2 text-xs font-semibold text-foreground/50">Ou pacotes avulsos, sem mensalidade:</p>
             {PACKAGES.map((p) => (
-              <button
+              <a
                 key={p.credits}
-                type="button"
-                disabled
-                className={`rounded-xl border px-4 py-2.5 text-left opacity-80 ${p.best ? "border-brand bg-brand/10" : "border-foreground/15"}`}
+                href={`/conta?comprar=pacote-${p.credits}`}
+                className={`block rounded-xl border px-4 py-2.5 text-left hover:bg-foreground/5 ${p.best ? "border-brand bg-brand/10" : "border-foreground/15"}`}
               >
                 <span className="flex items-baseline justify-between">
                   <span className="font-bold">{p.credits} lotes</span>
@@ -342,10 +342,10 @@ export default function UploadForm() {
                   {p.best ? " · mais econômico" : ""}
                   {p.tag ? ` · ${p.tag}` : ""}
                 </span>
-              </button>
+              </a>
             ))}
             <p className="text-xs text-foreground/40">
-              O pagamento ainda está sendo configurado. Enquanto isso, você pode usar o teste grátis.
+              Pagamento por Pix, cartão ou boleto, pelo Asaas. Os créditos entram na sua conta assim que o pagamento é confirmado.
             </p>
             <button type="button" onClick={() => setPayOpen(false)} className="text-sm text-foreground/60 hover:text-foreground">
               Fechar

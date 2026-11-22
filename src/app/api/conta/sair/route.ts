@@ -1,0 +1,7 @@
+import { supabaseServer } from "@/lib/auth";
+import { supabaseConfigured } from "@/lib/supabase-admin";
+
+export async function POST() {
+  if (supabaseConfigured()) await (await supabaseServer()).auth.signOut();
+  return Response.json({ ok: true });
+}

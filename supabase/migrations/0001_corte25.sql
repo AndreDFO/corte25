@@ -44,11 +44,15 @@ create table if not exists public.payments (
 );
 
 -- Liga cada lote (pasta no servidor) à conta que gerou.
+create index if not exists payments_user on public.payments (user_id);
+
 create table if not exists public.job_owners (
   job_id text primary key,
   user_id uuid not null references public.profiles (id) on delete cascade,
   created_at timestamptz not null default now()
 );
+
+create index if not exists job_owners_user on public.job_owners (user_id);
 
 -- Gasta 1 crédito de forma atômica. Devolve o saldo restante, ou -1 se não havia saldo.
 create or replace function public.consume_credit(p_user uuid, p_job text)
@@ -73,6 +77,7 @@ begin
   on conflict (id) do nothing;
   return new;
 end $$;
+revoke all on function public.handle_new_user() from public, anon, authenticated;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -83,10 +88,10 @@ alter table public.payments enable row level security;
 alter table public.job_owners enable row level security;
 
 drop policy if exists "ler o próprio perfil" on public.profiles;
-create policy "ler o próprio perfil" on public.profiles for select using (auth.uid() = id);
+create policy "ler o próprio perfil" on public.profiles for select using ((select auth.uid()) = id);
 drop policy if exists "ler o próprio extrato" on public.credit_ledger;
-create policy "ler o próprio extrato" on public.credit_ledger for select using (auth.uid() = user_id);
+create policy "ler o próprio extrato" on public.credit_ledger for select using ((select auth.uid()) = user_id);
 drop policy if exists "ler os próprios pagamentos" on public.payments;
-create policy "ler os próprios pagamentos" on public.payments for select using (auth.uid() = user_id);
+create policy "ler os próprios pagamentos" on public.payments for select using ((select auth.uid()) = user_id);
 drop policy if exists "ler os próprios lotes" on public.job_owners;
-create policy "ler os próprios lotes" on public.job_owners for select using (auth.uid() = user_id);
+create policy "ler os próprios lotes" on public.job_owners for select using ((select auth.uid()) = user_id);
