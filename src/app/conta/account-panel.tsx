@@ -190,7 +190,6 @@ export default function AccountPanel(p: {
     return p.discount ? { full: brl(full), now: brl(discounted(full, p.discount)) } : { full: "", now: brl(full) };
   };
   const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";
-  const cardSm = "rounded-2xl bg-surface p-4 ring-1 ring-foreground/10"; // saldo e VIP: um pouco mais compactos
   const [savedName, setSavedName] = useState(p.name);
   const [nameMsg, setNameMsg] = useState("");
   async function saveName(e: React.FormEvent) {
@@ -312,35 +311,31 @@ export default function AccountPanel(p: {
       </div>
 
 
-      <div id="vip" className={`${cardSm} grid gap-1.5 scroll-mt-24 border-2 border-accent/40`}>
+      <div id="vip" className="grid scroll-mt-24 gap-0.5 rounded-2xl border-2 border-accent/40 bg-surface px-4 py-3 ring-1 ring-foreground/10">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-black">⭐ VIP · {brl(VIP_PRICE)}/mês</h2>
-          {p.vip.active && <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : p.vip.coupon ? "VIP por cupom" : "VIP ativo"}</span>}
+          <p className="text-xs text-foreground/60">⭐ Plano VIP</p>
+          {p.vip.active ? (
+            <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : p.vip.coupon ? "VIP por cupom" : "VIP ativo"}</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setFreeOpen(true);
+                document.getElementById("cupom")?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              className="whitespace-nowrap text-xs font-semibold text-accent underline"
+            >
+              Tem cupom VIP?
+            </button>
+          )}
         </div>
-        <p className="text-[13px] leading-snug text-foreground/70">
-          Libera em todos os vídeos: <b>música</b>, <b>textos no vídeo</b>, <b>cortar partes sem som</b>, <b>narração</b>, <b>legenda automática</b> e <b>transição suave</b>. E ainda
-          inclui <b>25 vídeos + 2 grátis</b> no seu saldo a cada mês pago.
-        </p>
-        {p.vip.active && !p.vip.admin && p.vip.until && (
-          <p className="text-sm">
-            {p.vip.coupon ? "Liberado pelo cupom até " : vipCanceled ? "Cancelado: continua VIP até " : "Próxima renovação por volta de "}
-            <b>{new Date(p.vip.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</b>.
-          </p>
-        )}
-        {!p.vip.active && p.vip.subscriber && p.vip.quota !== null && (
-          <p className="text-sm text-foreground/70">
-            Como assinante mensal, você tem <b>{p.vip.quota} de {SUBSCRIBER_VIP_VIDEOS} vídeos VIP</b> este mês (renova todo dia 1º).
-          </p>
-        )}
-        {!p.vip.active &&
-          p.vip.grants.map((g, i) => (
-            <p key={i} className="text-sm">
-              🎟 Cupom: <b>{describeVipFeatures(g.features)}</b> liberado até{" "}
-              <b>{new Date(g.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</b>.
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-2xl font-black leading-none">
+              {brl(VIP_PRICE)} <span className="text-base font-bold text-foreground/60">/mês</span>
             </p>
-          ))}
-        {vipMsg && <p className="text-sm text-brand-ink">{vipMsg}</p>}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <p className="mt-1 text-[11px] leading-tight text-foreground/50">Música, legenda e +25 vídeos/mês</p>
+          </div>
           {!p.vip.admin && (!p.vip.active || vipCanceled || p.vip.coupon) && (
             <button
               type="button"
@@ -348,26 +343,33 @@ export default function AccountPanel(p: {
                 choose("vip");
                 document.getElementById("comprar")?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-black text-white hover:bg-accent-dark"
+              className="shrink-0 rounded-xl bg-accent px-4 py-2 text-sm font-black text-white hover:bg-accent-dark"
             >
-              {p.vip.active && !p.vip.coupon ? "Assinar VIP de novo" : `Quero ser VIP · ${brl(VIP_PRICE)}/mês`}
-            </button>
-          )}
-          {!p.vip.admin && (
-            <button
-              type="button"
-              onClick={() => {
-                setFreeOpen(true);
-                document.getElementById("cupom")?.scrollIntoView({ behavior: "smooth", block: "center" });
-              }}
-              className="text-xs text-foreground/60 underline"
-            >
-              Tem um cupom VIP? Resgate aqui
+              {p.vip.active && !p.vip.coupon ? "Assinar de novo" : "Quero ser VIP"}
             </button>
           )}
         </div>
+        {p.vip.active && !p.vip.admin && p.vip.until && (
+          <p className="mt-1 text-xs">
+            {p.vip.coupon ? "Liberado pelo cupom até " : vipCanceled ? "Cancelado: continua VIP até " : "Próxima renovação por volta de "}
+            <b>{new Date(p.vip.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</b>.
+          </p>
+        )}
+        {!p.vip.active && p.vip.subscriber && p.vip.quota !== null && (
+          <p className="mt-1 text-xs text-foreground/70">
+            Como assinante, você tem <b>{p.vip.quota} de {SUBSCRIBER_VIP_VIDEOS} vídeos VIP</b> este mês (renova todo dia 1º).
+          </p>
+        )}
+        {!p.vip.active &&
+          p.vip.grants.map((g, i) => (
+            <p key={i} className="mt-1 text-xs">
+              🎟 Cupom: <b>{describeVipFeatures(g.features)}</b> até{" "}
+              <b>{new Date(g.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</b>.
+            </p>
+          ))}
+        {vipMsg && <p className="mt-1 text-xs text-brand-ink">{vipMsg}</p>}
         {p.vip.active && !p.vip.admin && !p.vip.coupon && !vipCanceled && (
-          <button type="button" onClick={cancelVip} className="justify-self-start text-xs text-foreground/60 underline">
+          <button type="button" onClick={cancelVip} className="mt-1 justify-self-start text-xs text-foreground/60 underline">
             {p.vip.combo ? "Cancelar assinatura (vídeos + VIP)" : "Cancelar VIP"}
           </button>
         )}
