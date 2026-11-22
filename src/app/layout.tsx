@@ -17,8 +17,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <RefBanner />
         <header className="border-b border-foreground/10 bg-surface/70 backdrop-blur">
           <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
-            <Link href="/" className="font-extrabold text-xl tracking-tight">
-              Corte<span className="ml-0.5 rounded-md bg-brand px-1.5 text-on-brand">25</span>
+            <Link href="/" aria-label="Corte25, página inicial" className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element -- SVG pequeno, não precisa de otimização */}
+              <img src="/logo-corte25.svg" alt="Corte25" width={143} height={40} className="h-8 w-auto sm:h-9" />
             </Link>
             <nav className="flex items-center gap-2 sm:gap-4 text-sm">
               <span className="hidden lg:inline text-foreground/60">25 vídeos + 2 grátis</span>
