@@ -19,12 +19,20 @@ export async function HeaderAccount() {
     );
   }
   const [credits, profile] = await Promise.all([balance(user.id).catch(() => null), getProfile(user.id).catch(() => null)]);
-  const first = (profile?.name || user.email || "").split(/[\s@]/)[0];
+  const first = (profile?.name || "").trim().split(/\s/)[0];
+  // No celular o "Olá, nome" fica numa linha só dele, acima dos botões, para a pessoa ver que está logada.
+  const hello = "order-first basis-full truncate text-center text-xs text-foreground/70 sm:order-none sm:basis-auto sm:max-w-32 sm:text-sm";
   return (
     <>
-      <span className="hidden max-w-32 truncate text-foreground/70 md:inline" title={user.email || ""}>
-        Olá, <b className="text-foreground">{first}</b>
-      </span>
+      {first ? (
+        <span className={hello} title={user.email || ""}>
+          Olá, <b className="text-foreground">{first}</b> 👋
+        </span>
+      ) : (
+        <Link href="/conta#nome" className={`${hello} underline`}>
+          Olá! Toque aqui e coloque seu nome
+        </Link>
+      )}
       <span className="contents sm:flex sm:items-center sm:gap-1">
         <Link
           href="/conta#comprar"

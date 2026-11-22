@@ -68,3 +68,16 @@ export function releaseTrial(keys: string[]): Promise<void> {
   );
   return run;
 }
+
+// Botão do admin: zera todos os bloqueios do teste grátis (rede, navegador, WhatsApp e conta).
+export function resetTrials(): Promise<void> {
+  const run = lock.then(async () => {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.writeFile(FILE, "{}");
+  });
+  lock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}

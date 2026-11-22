@@ -151,6 +151,18 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
           >
             Atualizar músicas
           </button>
+          <button
+            type="button"
+            className="underline"
+            onClick={async (e) => {
+              if (!window.confirm("Liberar o teste grátis de novo para todo mundo? Quem já usou poderá testar outra vez.")) return;
+              const b = e.currentTarget;
+              const res = await fetch("/api/admin/testes", { method: "POST" });
+              b.textContent = res.ok ? "Testes grátis liberados ✓" : "Falhou";
+            }}
+          >
+            Zerar testes grátis
+          </button>
           <Link href="/conta" className="text-foreground/60 underline">
             Voltar para a conta
           </Link>

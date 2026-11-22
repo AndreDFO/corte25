@@ -24,7 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <img src="/logo-corte25.svg" alt="Corte25" width={143} height={40} className="h-11 w-auto sm:h-11" />
             </Link>
             {/* Celular: logo em cima e botões embaixo, todos do mesmo tamanho e centralizados (pedido do Andre). */}
-            <nav className="flex w-full items-center justify-center gap-1.5 text-sm sm:w-auto sm:gap-4">
+            <nav className="flex w-full flex-wrap items-center justify-center gap-1.5 text-sm sm:w-auto sm:flex-nowrap sm:gap-4">
               <span className="hidden lg:inline text-foreground/60">25 vídeos + 2 grátis</span>
               <Suspense fallback={null}>
                 <HomeLink />

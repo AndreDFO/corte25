@@ -154,12 +154,22 @@ export default function AccountPanel(p: {
     return p.discount ? { full: brl(full), now: brl(discounted(full, p.discount)) } : { full: "", now: brl(full) };
   };
   const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";
+  const [savedName, setSavedName] = useState(p.name);
+  const [nameMsg, setNameMsg] = useState("");
+  async function saveName(e: React.FormEvent) {
+    e.preventDefault();
+    const res = await fetch("/api/conta/nome", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) return setNameMsg(j.error || "Não deu para salvar.");
+    setSavedName(j.name);
+    window.location.reload();
+  }
 
   return (
     <div className="mx-auto grid max-w-3xl gap-4 px-5 py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Minha conta</h1>
+          <h1 className="text-3xl font-black tracking-tight">{savedName ? `Olá, ${savedName.split(" ")[0]}!` : "Minha conta"}</h1>
           <p className="text-sm text-foreground/60">{p.email}</p>
         </div>
         <div className="flex items-center gap-4">
@@ -173,6 +183,25 @@ export default function AccountPanel(p: {
           </button>
         </div>
       </div>
+
+      {!savedName && (
+        <form id="nome" onSubmit={saveName} className={`${card} grid scroll-mt-24 gap-2 border-2 border-brand`}>
+          <h2 className="text-lg font-black">Como podemos te chamar?</h2>
+          <p className="text-sm text-foreground/60">Seu nome aparece no topo do site para você saber que está na sua conta.</p>
+          <div className="flex gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Seu nome"
+              aria-label="Seu nome"
+              autoComplete="name"
+              className="min-w-0 flex-1 rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm"
+            />
+            <button className="rounded-lg bg-brand px-4 font-bold text-on-brand hover:bg-brand-dark">Salvar</button>
+          </div>
+          {nameMsg && <p className="text-sm text-brand-ink">{nameMsg}</p>}
+        </form>
+      )}
 
       {p.paid && (
         <div className="rounded-2xl bg-brand/20 p-4 text-sm font-semibold ring-1 ring-brand">

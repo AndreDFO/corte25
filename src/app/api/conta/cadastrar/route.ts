@@ -11,6 +11,7 @@ export async function POST(req: Request) {
   const password = String(b.password || "");
   const name = String(b.name || "").trim().slice(0, 80);
   const whatsapp = b.whatsapp ? normalizeWhatsapp(String(b.whatsapp)) : null;
+  if (name.length < 2) return Response.json({ error: "Informe seu nome: ele aparece no topo do site quando você entra." }, { status: 400 });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return Response.json({ error: "E-mail inválido." }, { status: 400 });
   if (password.length < 8) return Response.json({ error: "A senha precisa ter pelo menos 8 caracteres." }, { status: 400 });
 
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     const { data: owner } = await supabaseAdmin().from("profiles").select("id").eq("ref_code", ref).maybeSingle();
     if (owner && owner.id !== data.user.id) referredBy = ref;
   }
-  await updateProfile(data.user.id, { name: name || null, whatsapp, referred_by: referredBy }).catch(() => {});
+  await updateProfile(data.user.id, { name, whatsapp, referred_by: referredBy }).catch(() => {});
 
   // A conta já existe neste ponto: se o login automático falhar, a pessoa só precisa usar "Entrar".
   try {

@@ -69,7 +69,7 @@ export default function LoginForm() {
           ))}
         </div>
         {mode === "cadastrar" && (
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" aria-label="Nome" className={field} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome (aparece no topo do site)" aria-label="Nome" required autoComplete="name" className={field} />
         )}
         <input
           value={email}
