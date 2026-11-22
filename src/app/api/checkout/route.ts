@@ -1,6 +1,6 @@
 import { asaasConfigured, createCheckout, createCustomer } from "@/lib/asaas";
 import { currentUser, getProfile, updateProfile } from "@/lib/auth";
-import { CATALOG, type ProductId } from "@/lib/pricing";
+import { CATALOG, includesVip, type ProductId } from "@/lib/pricing";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { affiliatePercentFor, referralDiscount } from "@/lib/credits";
 import { checkCoupon } from "@/lib/coupons";
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const product = String(b.product || "") as ProductId;
   if (!(product in CATALOG)) return Response.json({ error: "Produto inválido." }, { status: 400 });
 
-  if (product === "vip") {
+  if (includesVip(product)) {
     const st = await vipStatus(user);
     if (st.admin) return Response.json({ error: "Sua conta de administrador já é VIP." }, { status: 400 });
     if (st.active && !st.canceled && !st.coupon) return Response.json({ error: "Você já é VIP." }, { status: 400 });

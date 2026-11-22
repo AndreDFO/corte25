@@ -1,5 +1,5 @@
 import { supabaseAdmin, supabaseConfigured } from "./supabase-admin";
-import { ALL_VIP_FEATURES, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTIONS, VIP_DAYS, type VipFeature } from "./pricing";
+import { VIP_PRODUCTS, ALL_VIP_FEATURES, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTIONS, VIP_DAYS, type VipFeature } from "./pricing";
 import { normalizeCode, type Coupon } from "./coupons";
 
 // Plano VIP (22/11/2026): assinatura extra de R$ 14,99/mês. Só VIP (e o admin) usa:
@@ -21,6 +21,7 @@ export interface VipStatus {
   subscriptionId: string | null;
   admin: boolean;
   coupon?: boolean; // VIP completo vindo de cupom (sem assinatura)
+  combo?: boolean; // VIP junto com a assinatura de vídeos (cancelar cancela os dois)
 }
 
 export interface VipGrant {
@@ -48,9 +49,9 @@ export async function vipStatus(user: U): Promise<VipStatus> {
   const db = supabaseAdmin();
   const { data: pay } = await db
     .from("payments")
-    .select("subscription_id, updated_at, created_at")
+    .select("product, subscription_id, updated_at, created_at")
     .eq("user_id", user.id)
-    .eq("product", "vip")
+    .in("product", VIP_PRODUCTS)
     .in("status", ["CONFIRMED", "RECEIVED"])
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -72,6 +73,7 @@ export async function vipStatus(user: U): Promise<VipStatus> {
     canceled: Boolean(prof?.vip_canceled_at),
     subscriptionId: pay.subscription_id ?? null,
     admin: false,
+    combo: pay.product !== "vip",
   };
 }
 

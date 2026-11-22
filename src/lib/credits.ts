@@ -1,4 +1,4 @@
-import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, AFFILIATE_PERCENT, CATALOG, REFERRAL_DISCOUNT, VIDEOS_PER_LOT, type ProductId } from "./pricing";
+import { includesVip, AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, AFFILIATE_PERCENT, CATALOG, REFERRAL_DISCOUNT, VIDEOS_PER_LOT, type ProductId } from "./pricing";
 import { supabaseAdmin } from "./supabase-admin";
 import { asaasConfigured, getPayment, parseReference, setSubscriptionSplit } from "./asaas";
 
@@ -31,7 +31,7 @@ export async function grantForPayment(p: { paymentId: string; userId: string; pr
     ...(affiliate ?? {}),
   });
   // VIP pago de novo: tira a marca de "cancelado".
-  if (p.product === "vip") await db.from("profiles").update({ vip_canceled_at: null }).eq("id", p.userId);
+  if (includesVip(p.product)) await db.from("profiles").update({ vip_canceled_at: null }).eq("id", p.userId);
   // VIP não dá vídeos (credits 0): só libera recursos; nada a lançar no saldo.
   if (item.credits > 0) {
     const { error } = await db.from("credit_ledger").insert({

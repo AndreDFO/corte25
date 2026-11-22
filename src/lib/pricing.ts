@@ -93,5 +93,13 @@ export const CATALOG = {
   "assinatura-850": { credits: 34, value: SUBSCRIPTIONS[2].value, label: "Assinatura mensal · 850 vídeos", recurring: true },
   "assinatura-1150": { credits: 46, value: SUBSCRIPTIONS[3].value, label: "Assinatura mensal · 1.150 vídeos", recurring: true },
   vip: { credits: 0, value: 14.99, label: "VIP mensal", recurring: true },
+  // Assinatura mensal + VIP numa cobrança só (pedido do Andre, 22/11). Valor = plano + VIP.
+  "assinatura-vip": { credits: 15, value: 54.89, label: "Assinatura mensal · 375 vídeos + VIP", recurring: true },
+  "assinatura-550-vip": { credits: 22, value: 69.89, label: "Assinatura mensal · 550 vídeos + VIP", recurring: true },
+  "assinatura-850-vip": { credits: 34, value: 94.89, label: "Assinatura mensal · 850 vídeos + VIP", recurring: true },
+  "assinatura-1150-vip": { credits: 46, value: 114.89, label: "Assinatura mensal · 1.150 vídeos + VIP", recurring: true },
 } as const;
+// Produtos que dão VIP: o VIP avulso e as assinaturas "+ VIP".
+export const VIP_PRODUCTS = ["vip", ...SUBSCRIPTIONS.map((s) => `${s.id}-vip`)] as string[];
+export const includesVip = (product: string) => VIP_PRODUCTS.includes(product);
 export type ProductId = keyof typeof CATALOG;

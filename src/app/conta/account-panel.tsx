@@ -3,7 +3,7 @@
 import Link from "next/link";
 import PlanPicker from "../plan-picker";
 import { useState } from "react";
-import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTION_OPTIONS, VIP_PRICE, brl, describeVipFeatures, discounted, type ProductId } from "@/lib/pricing";
+import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTION_OPTIONS, VIP_PRICE, brl, describeVipFeatures, includesVip, discounted, type ProductId } from "@/lib/pricing";
 
 type Payment = { id: string; product: string; value: number; status: string; created_at: string };
 
@@ -31,7 +31,7 @@ export default function AccountPanel(p: {
   payments: Payment[];
   siteUrl: string;
   admin?: boolean; // só a conta do dono (ADMIN_EMAILS), conferido no servidor
-  vip: { active: boolean; until: string | null; canceled: boolean; admin: boolean; coupon?: boolean; quota: number | null; subscriber: boolean; grants: { features: string[]; until: string }[] };
+  vip: { active: boolean; until: string | null; canceled: boolean; admin: boolean; coupon?: boolean; combo?: boolean; quota: number | null; subscriber: boolean; grants: { features: string[]; until: string }[] };
 }) {
   const [chosen, setChosen] = useState<ProductId | null>((p.buy as ProductId) || null);
   const [name, setName] = useState(p.name);
@@ -130,7 +130,10 @@ export default function AccountPanel(p: {
     window.location.reload();
   }
   async function cancelVip() {
-    if (!window.confirm("Cancelar o VIP? Você continua VIP até o fim do mês já pago e não será cobrado de novo.")) return;
+    const aviso = p.vip.combo
+      ? "Seu VIP está junto com a assinatura de vídeos. Cancelar encerra a assinatura inteira (vídeos + VIP): você não será cobrado de novo, continua VIP até o fim do mês já pago e o saldo de vídeos que já tem fica na conta. Cancelar?"
+      : "Cancelar o VIP? Você continua VIP até o fim do mês já pago e não será cobrado de novo.";
+    if (!window.confirm(aviso)) return;
     const res = await fetch("/api/conta/vip", { method: "DELETE" });
     const j = await res.json().catch(() => ({}));
     if (res.ok) setVipCanceled(true);
@@ -246,7 +249,7 @@ export default function AccountPanel(p: {
         )}
         {p.vip.active && !p.vip.admin && !p.vip.coupon && !vipCanceled && (
           <button type="button" onClick={cancelVip} className="justify-self-start text-xs text-foreground/60 underline">
-            Cancelar VIP
+            {p.vip.combo ? "Cancelar assinatura (vídeos + VIP)" : "Cancelar VIP"}
           </button>
         )}
       </div>
@@ -262,7 +265,7 @@ export default function AccountPanel(p: {
           </div>
         )}
         <PlanPicker
-          chosen={chosen}
+          chosen={chosen?.replace(/-vip$/, "")}
           onChoose={(id) => choose(id as ProductId)}
           avulsos={PACKAGES.map((x) => {
             const id = `pacote-${x.credits}` as ProductId;
@@ -281,6 +284,20 @@ export default function AccountPanel(p: {
             };
           })}
         />
+        {chosen?.startsWith("assinatura") && !(p.vip.admin || (p.vip.active && !p.vip.coupon && !vipCanceled)) && (
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              checked={includesVip(chosen)}
+              onChange={(e) => choose((chosen.replace(/-vip$/, "") + (e.target.checked ? "-vip" : "")) as ProductId)}
+              className="h-4 w-4 shrink-0 accent-accent"
+            />
+            <span>
+              <b>+ ⭐ VIP</b> por mais {brl(VIP_PRICE)}/mês, na mesma mensalidade: música, textos no vídeo, cortar silêncio, narração e legenda
+              automática em todos os vídeos.
+            </span>
+          </label>
+        )}
         {chosen && !p.hasCustomer && (
           <div className="grid gap-2 sm:grid-cols-2">
             <input
