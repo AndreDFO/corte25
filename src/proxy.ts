@@ -26,7 +26,8 @@ export async function proxy(req: NextRequest) {
       },
     },
   });
-  await sb.auth.getUser();
+  // Renova o login a cada visita (o cookie dura 400 dias; a sessão só acaba ao clicar em Sair).
+  await sb.auth.getUser().catch(() => null);
   return setRef(res);
 }
 

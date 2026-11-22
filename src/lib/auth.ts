@@ -26,8 +26,15 @@ export async function currentUser() {
   await cookies();
   if (!supabaseConfigured()) return null;
   const sb = await supabaseServer();
-  const { data } = await sb.auth.getUser();
-  return data.user ?? null;
+  // Falha de rede passageira com o Supabase não pode parecer "deslogado": tenta de novo e,
+  // se ainda falhar, usa a sessão guardada no cookie (a conta continua logada até clicar em Sair).
+  for (let i = 0; i < 2; i++) {
+    const { data, error } = await sb.auth.getUser();
+    if (data.user) return data.user;
+    if (!error || error.name !== "AuthRetryableFetchError") return null;
+  }
+  const { data: s } = await sb.auth.getSession();
+  return s.session?.user ?? null;
 }
 
 export interface Profile {
