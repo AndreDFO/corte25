@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import PlanPicker from "../plan-picker";
 import { useState } from "react";
 import { AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION_OPTIONS, brl, discounted, type ProductId } from "@/lib/pricing";
 
@@ -117,29 +118,6 @@ export default function AccountPanel(p: {
     const full = CATALOG[id].value;
     return p.discount ? { full: brl(full), now: brl(discounted(full, p.discount)) } : { full: "", now: brl(full) };
   };
-  const options: { id: ProductId; title: string; full: string; price: string; sub: string; accent?: boolean }[] = [
-    ...SUBSCRIPTION_OPTIONS.map((x, i) => {
-      const id = x.id as ProductId;
-      return {
-        id,
-        title: `${x.credits * 25} vídeos/mês`,
-        full: priceOf(id).full,
-        price: `${priceOf(id).now}/mês`,
-        sub: `${x.perBatch}${p.discount ? " · desconto no 1º mês" : ""}`,
-        accent: i === 0,
-      };
-    }),
-    ...PACKAGES.map((x) => {
-      const id = `pacote-${x.credits}` as ProductId;
-      return {
-        id,
-        title: `${x.credits * 25} vídeos${x.credits === 1 ? " · Iniciante" : ""}`,
-        full: priceOf(id).full,
-        price: priceOf(id).now,
-        sub: `${x.perBatch}${x.tag ? ` · ${x.tag}` : ""}`,
-      };
-    }),
-  ];
   const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";
 
   return (
@@ -190,37 +168,26 @@ export default function AccountPanel(p: {
             </p>
           </div>
         )}
-        {/* Duas partes: assinaturas mensais e pacotes avulsos (pedido do Andre). */}
-        {(
-          [
-            ["Assinaturas mensais", "Vídeos novos todo mês, pelo menor preço por vídeo.", options.filter((o) => o.id.startsWith("assinatura"))],
-            ["Pacotes avulsos", "Pague uma vez, sem mensalidade.", options.filter((o) => !o.id.startsWith("assinatura"))],
-          ] as const
-        ).map(([title, hint, list]) => (
-          <div key={title} className="grid gap-2">
-            <div>
-              <h3 className="text-sm font-black">{title}</h3>
-              <p className="text-xs text-foreground/50">{hint}</p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {list.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => choose(o.id)}
-                  className={`rounded-xl border p-3 text-left ${chosen === o.id ? "border-brand bg-brand/15 ring-2 ring-brand/40" : o.accent ? "border-accent bg-accent/10" : "border-foreground/15"}`}
-                >
-                  <span className="block font-bold">{o.title}</span>
-                  <span className="block whitespace-nowrap text-lg font-extrabold">
-                    {o.full && <s className="mr-1 text-xs font-semibold text-foreground/40">{o.full}</s>}
-                    {o.price}
-                  </span>
-                  <span className="block text-xs text-foreground/60">{o.sub}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+        <PlanPicker
+          chosen={chosen}
+          onChoose={(id) => choose(id as ProductId)}
+          avulsos={PACKAGES.map((x) => {
+            const id = `pacote-${x.credits}` as ProductId;
+            return { id, videos: x.credits * 25, price: priceOf(id).now, full: priceOf(id).full, per: x.perBatch, tag: x.tag || (x.best ? "economia" : undefined) };
+          })}
+          mensais={SUBSCRIPTION_OPTIONS.map((x, i) => {
+            const id = x.id as ProductId;
+            return {
+              id,
+              videos: x.credits * 25,
+              price: priceOf(id).now,
+              full: priceOf(id).full,
+              per: `${x.perBatch}${p.discount ? " · desconto no 1º mês" : ""}`,
+              highlight: i === 0,
+              tag: i === 0 ? "popular" : undefined,
+            };
+          })}
+        />
         {chosen && !p.hasCustomer && (
           <div className="grid gap-2 sm:grid-cols-2">
             <input

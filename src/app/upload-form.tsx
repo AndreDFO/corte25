@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import PlanPicker from "./plan-picker";
 import { useEffect, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
 import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
@@ -387,46 +388,23 @@ export default function UploadForm() {
               Cada lote vale {VIDEOS_PER_LOT} vídeos de saldo. Você escolhe quantos gerar por vez e, gerando {BATCH_VIDEOS} de uma vez, ganha mais {FREE_VIDEOS} grátis. Tudo combinando seus ganchos, corpos e CTAs, sem marca
               d&apos;água, com legendas e download em ZIP.
             </p>
-            <p className="-mb-2 text-xs font-black text-foreground/70">Assinaturas mensais</p>
-            {SUBSCRIPTION_OPTIONS.map((x, i) => (
-              <a
-                key={x.id}
-                href={`/conta?comprar=${x.id}`}
-                className={`block rounded-xl p-3 text-left hover:bg-accent/15 ${i === 0 ? "border-2 border-accent bg-accent/10" : "border border-accent/50"}`}
-              >
-                <span className="flex items-baseline justify-between">
-                  <span className="font-bold">
-                    {x.credits * 25} vídeos/mês{" "}
-                    {i === 0 && <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-black uppercase text-white">recomendado</span>}
-                  </span>
-                  <span className="whitespace-nowrap text-lg font-extrabold">
-                    {x.price}
-                    <span className="text-xs font-semibold text-foreground/60">/mês</span>
-                  </span>
-                </span>
-                <span className="block text-xs text-foreground/60">{x.perBatch}</span>
-              </a>
-            ))}
-            <p className="-mb-2 text-xs font-black text-foreground/70">Pacotes avulsos <span className="font-semibold text-foreground/50">· sem mensalidade</span></p>
-            {PACKAGES.map((p) => (
-              <a
-                key={p.credits}
-                href={`/conta?comprar=pacote-${p.credits}`}
-                className={`block rounded-xl border px-4 py-2.5 text-left hover:bg-foreground/5 ${p.best ? "border-brand bg-brand/10" : "border-foreground/15"}`}
-              >
-                <span className="flex items-baseline justify-between">
-                  <span className="font-bold">
-                    {p.credits * 25} vídeos{p.credits === 1 ? " · Iniciante" : ""}
-                  </span>
-                  <span className="text-lg font-extrabold">{p.price}</span>
-                </span>
-                <span className="block text-xs text-foreground/50">
-                  {p.perBatch}
-                  {p.best ? " · mais econômico dos avulsos" : ""}
-                  {p.tag ? ` · ${p.tag}` : ""}
-                </span>
-              </a>
-            ))}
+            <PlanPicker
+              avulsos={PACKAGES.map((x) => ({
+                id: `pacote-${x.credits}`,
+                videos: x.credits * 25,
+                price: x.price,
+                per: x.perBatch,
+                tag: x.tag || (x.best ? "economia" : undefined),
+              }))}
+              mensais={SUBSCRIPTION_OPTIONS.map((x, i) => ({
+                id: x.id,
+                videos: x.credits * 25,
+                price: x.price,
+                per: x.perBatch,
+                highlight: i === 0,
+                tag: i === 0 ? "popular" : undefined,
+              }))}
+            />
             <p className="text-xs text-foreground/40">
               Pagamento por Pix, cartão ou boleto, pelo Asaas. Os créditos entram na sua conta assim que o pagamento é confirmado.
             </p>
