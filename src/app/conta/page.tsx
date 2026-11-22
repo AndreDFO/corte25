@@ -7,6 +7,19 @@ import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase-admin";
 import { AFFILIATE_PERCENT, CATALOG } from "@/lib/pricing";
 import AccountPanel from "./account-panel";
 
+// Indicações de quem está logado: quantas contas vieram pelo link, compras pagas e comissão.
+async function affiliateStats(userId: string) {
+  const db = supabaseAdmin();
+  const { data: me } = await db.from("profiles").select("ref_code").eq("id", userId).maybeSingle();
+  if (!me?.ref_code) return { referrals: 0, sales: 0, commission: 0 };
+  const [{ count }, { data: paid }] = await Promise.all([
+    db.from("profiles").select("id", { count: "exact", head: true }).eq("referred_by", me.ref_code),
+    db.from("payments").select("value").eq("affiliate_code", me.ref_code).in("status", ["CONFIRMED", "RECEIVED"]),
+  ]);
+  const total = (paid ?? []).reduce((a, r) => a + Number(r.value), 0);
+  return { referrals: count ?? 0, sales: paid?.length ?? 0, commission: Math.round(total * AFFILIATE_PERCENT) / 100 };
+}
+
 export const metadata = { title: "Minha conta · Corte25" };
 
 async function Account({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -17,7 +30,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
   const user = await currentUser();
   if (!user) redirect(`/entrar?volta=${encodeURIComponent(buy ? `/conta?comprar=${buy}` : "/conta")}`);
   await syncPendingPayments(user.id);
-  const [profile, credits, payments] = await Promise.all([
+  const [profile, credits, payments, affiliate] = await Promise.all([
     getProfile(user.id),
     balance(user.id),
     supabaseAdmin()
@@ -27,6 +40,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       .order("created_at", { ascending: false })
       .limit(10)
       .then((r) => r.data ?? []),
+    affiliateStats(user.id),
   ]);
   return (
     <AccountPanel
@@ -40,6 +54,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       buy={buy}
       paid={sp.pago === "1"}
       affiliatePercent={AFFILIATE_PERCENT}
+      affiliate={affiliate}
       payments={payments}
       siteUrl={process.env.SITE_URL || "https://corte25.com.br"}
     />

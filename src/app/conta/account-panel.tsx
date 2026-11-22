@@ -24,6 +24,7 @@ export default function AccountPanel(p: {
   buy: string | null;
   paid?: boolean;
   affiliatePercent: number;
+  affiliate: { referrals: number; sales: number; commission: number };
   payments: Payment[];
   siteUrl: string;
 }) {
@@ -168,6 +169,18 @@ export default function AccountPanel(p: {
           Quem criar conta pelo seu link vira sua indicação. Você recebe {p.affiliatePercent}% de tudo que essa pessoa pagar,
           direto na sua conta do Asaas, sem pedir saque.
         </p>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            ["Indicações", String(p.affiliate.referrals)],
+            ["Compras", String(p.affiliate.sales)],
+            ["Comissão", `R$ ${p.affiliate.commission.toFixed(2).replace(".", ",")}`],
+          ].map(([k, v]) => (
+            <div key={k} className="rounded-xl bg-foreground/5 py-2">
+              <p className="text-lg font-black">{v}</p>
+              <p className="text-[11px] text-foreground/60">{k}</p>
+            </div>
+          ))}
+        </div>
         <div className="flex gap-2">
           <input readOnly value={refLink} aria-label="Seu link de indicação" className="min-w-0 flex-1 rounded-lg bg-field border border-foreground/15 px-3 py-2 text-sm" />
           <button

@@ -47,7 +47,17 @@ export async function POST(req: Request) {
   }
 
   try {
-    const out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: wallet });
+    let out;
+    try {
+      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: wallet });
+    } catch (err) {
+      if (!wallet) throw err;
+      // Carteira do afiliado recusada (ID errado ou a própria conta): a venda não pode travar.
+      // Cobra sem o split; a indicação fica registrada em payments.affiliate_code para pagar à mão.
+      console.warn("[checkout] split recusado, cobrando sem ele:", (err as Error).message);
+      wallet = null;
+      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: null });
+    }
     await supabaseAdmin().from("payments").upsert({
       id: out.id,
       user_id: user.id,
@@ -55,7 +65,7 @@ export async function POST(req: Request) {
       credits: CATALOG[product].credits,
       value: CATALOG[product].value,
       status: "PENDING",
-      affiliate_code: wallet ? profile.referred_by : null,
+      affiliate_code: profile.referred_by || null,
       subscription_id: out.subscription || null,
     });
     return Response.json({ url: out.url });
