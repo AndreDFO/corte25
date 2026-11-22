@@ -264,7 +264,10 @@ async function renderVariation(
     f.push(
       `[${k}:v]setpts=(PTS-STARTPTS)/${s.speed},fps=${FPS},` +
         `scale=${zw}:${zh}:force_original_aspect_ratio=increase,crop=${W}:${H},tpad=stop_mode=clone:stop_duration=0.5,` +
-        `trim=duration=${esc(s.dur)},setpts=PTS-STARTPTS,setsar=1,format=yuv420p[v${k}]`,
+        `trim=duration=${esc(s.dur)},setpts=PTS-STARTPTS,setsar=1,format=yuv420p` +
+        // xfade (transição) exige taxa de quadros constante declarada; no FFmpeg 7 o setpts a deixa "1/0".
+        (rc.fade > 0 ? `,settb=1/${FPS},fps=${FPS}` : "") +
+        `[v${k}]`,
     );
     const aSrc = s.clip.hasAudio ? `[${k}:a]` : `[${silentInputs[k]}:a]`;
     const tempo = s.clip.hasAudio && s.speed !== 1 ? `atempo=${s.speed},` : "";
@@ -626,6 +629,27 @@ async function processJob(id: string) {
         );
         await queueUpdate(i, { status: "done" });
       } catch (err) {
+        // Falhou com a transição suave: refaz na hora com corte seco (o vídeo sai e o crédito dele volta).
+        if (recipes[i].fade > 0 && !cancelled.has(id)) {
+          console.error(`[job ${id}] vídeo ${i + 1} falhou com transição, refazendo sem:`, err);
+          await reportJobError(job, `vídeo ${i + 1} com transição (refeito sem)`, err).catch(() => {});
+          const f = recipes[i].fade;
+          recipes[i] = { ...recipes[i], fade: 0, total: Math.round((recipes[i].total + 2 * f) * 10) / 10 };
+          try {
+            await renderVariation(
+              { ...job, captions: keep("textos", i) && job.captions, autoCaptions: keep("legenda", i) && job.autoCaptions },
+              dir,
+              v,
+              recipes[i],
+              keep("musica", i) ? music : undefined,
+              keep("legenda", i) ? speech : null,
+            );
+            await queueUpdate(i, { status: "done", noTransition: true, durationSec: recipes[i].total });
+            continue;
+          } catch (err2) {
+            err = err2;
+          }
+        }
         // Falhou com a legenda automática: refaz na hora sem ela (o vídeo sai e o crédito dele volta).
         if (keep("legenda", i) && job.autoCaptions && speech && !cancelled.has(id)) {
           console.error(`[job ${id}] vídeo ${i + 1} falhou com legenda, refazendo sem:`, err);
@@ -672,12 +696,15 @@ async function processJob(id: string) {
   for (const v of noCaption) v.noCaption = true;
   if (noCaption.length)
     final.message += ` ${noCaption.length === 1 ? "1 vídeo saiu" : `${noCaption.length} vídeos saíram`} sem a legenda automática.`;
+  const noTransition = final.variations.filter((v) => v.status === "done" && v.noTransition && !v.noCaption);
+  if (noTransition.length)
+    final.message += ` ${noTransition.length === 1 ? "1 vídeo saiu" : `${noTransition.length} vídeos saíram`} sem a transição suave.`;
   // Vídeo pago que falhou ou saiu sem a legenda: devolve ao saldo (até o total descontado).
-  const back = await refundFailed(final, final.variations.length - ok + noCaption.length);
+  const back = await refundFailed(final, final.variations.length - ok + noCaption.length + noTransition.length);
   if (back > 0) final.message += ` Devolvemos ${back} vídeo${back === 1 ? "" : "s"} ao seu saldo.`;
   // Cota VIP do assinante: devolve os vídeos da cota que falharam ou ficaram sem legenda.
   if (final.vipLimit && final.ownerId) {
-    const lost = final.variations.filter((v, i) => i < final.vipLimit! && (v.status !== "done" || v.noCaption)).length;
+    const lost = final.variations.filter((v, i) => i < final.vipLimit! && (v.status !== "done" || v.noCaption || v.noTransition)).length;
     if (lost > 0) {
       await refundVipQuota(final.ownerId, id, lost).catch((e) => console.error(`[job ${id}] cota VIP:`, e));
       final.message += ` ${lost === 1 ? "1 vídeo VIP voltou" : `${lost} vídeos VIP voltaram`} para a sua cota do mês.`;
