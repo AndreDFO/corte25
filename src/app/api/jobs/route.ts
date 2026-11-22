@@ -4,6 +4,7 @@ import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
 import { trackPath } from "@/lib/music-library";
+import { spendVipQuota, vipAllowance } from "@/lib/vip";
 import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
@@ -56,6 +57,14 @@ export async function POST(req: Request) {
       { status: 402 },
     );
   }
+  // Recursos VIP (textos, cortar silêncio, música, narração, legenda automática): só para VIP.
+  // A trava é aqui no servidor; a tela só mostra o cadeado.
+  // Assinante mensal sem VIP: os primeiros vídeos da cota do mês (3) saem com os recursos VIP.
+  const allowance = await vipAllowance(user);
+  const wantsVip =
+    form.get("captions") === "1" || form.get("trimSilence") === "1" || Boolean(form.get("track")) || (music instanceof File && music.size > 0);
+  const quotaVideos = !allowance.vip && plan === "full" && wantsVip ? allowance.quota : 0;
+  const vip = allowance.vip || quotaVideos > 0;
   const whatsapp = plan === "free" ? normalizeWhatsapp(String(form.get("whatsapp") || "")) : null;
   if (plan === "free" && !whatsapp)
     return Response.json({ error: "Informe um WhatsApp válido com DDD para fazer o teste grátis." }, { status: 400 });
@@ -105,12 +114,12 @@ export async function POST(req: Request) {
   };
   let musicName: string | undefined;
   const track = String(form.get("track") || "");
-  const trackFile = track && track !== "arquivo" ? await trackPath(track) : null;
+  const trackFile = vip && track && track !== "arquivo" ? await trackPath(track) : null;
   if (trackFile) {
     // Música da biblioteca (Openverse CC0/domínio público ou as faixas próprias).
     musicName = `musica_${track}${path.extname(trackFile)}`;
     await fs.copyFile(trackFile, path.join(dir, "inputs", musicName));
-  } else if (music instanceof File && music.size > 0) {
+  } else if (vip && music instanceof File && music.size > 0) {
     musicName = `musica_${safeName(music.name)}`;
     await fs.writeFile(path.join(dir, "inputs", musicName), Buffer.from(await music.arrayBuffer()));
   }
@@ -120,14 +129,15 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
     product,
     productGiven: Boolean(typed),
-    captions: form.get("captions") !== "0",
-    ...(form.get("trimSilence") === "1" ? { trimSilence: true } : {}),
+    captions: vip && form.get("captions") === "1",
+    ...(vip && form.get("trimSilence") === "1" ? { trimSilence: true } : {}),
     details,
     inputs: [...blocks.hooks, ...blocks.bodies, ...blocks.ctas],
     blocks,
     music: musicName,
     plan,
     count: plan === "full" ? videos + bonusFor(videos) : FREE_VIDEOS,
+    ...(quotaVideos > 0 ? { vipLimit: Math.min(quotaVideos, videos + bonusFor(videos)) } : {}),
     durationMode,
     status: "queued",
     message: "Na fila…",
@@ -135,6 +145,7 @@ export async function POST(req: Request) {
     ownerId: user?.id ?? null,
   };
   await saveJob(job);
+  if (user && job.vipLimit) await spendVipQuota(user.id, id, job.vipLimit).catch((e) => console.warn("[vip] cota", e));
   // Liga o lote à conta (o lote pago já é ligado ao descontar o saldo): aparece em "Meus vídeos" em qualquer aparelho.
   if (user && plan === "free")
     await supabaseAdmin().from("job_owners").insert({ job_id: id, user_id: user.id }).then(() => {}, () => {});

@@ -30,13 +30,18 @@ export async function grantForPayment(p: { paymentId: string; userId: string; pr
     updated_at: new Date().toISOString(),
     ...(affiliate ?? {}),
   });
-  const { error } = await db.from("credit_ledger").insert({
-    user_id: p.userId,
-    delta: item.credits * VIDEOS_PER_LOT, // o saldo conta vídeos: 1 lote = 25
-    reason: item.recurring ? "assinatura" : "compra",
-    payment_id: p.paymentId,
-  });
-  if (error && error.code !== "23505") throw error; // 23505 = já creditado antes
+  // VIP pago de novo: tira a marca de "cancelado".
+  if (p.product === "vip") await db.from("profiles").update({ vip_canceled_at: null }).eq("id", p.userId);
+  // VIP não dá vídeos (credits 0): só libera recursos; nada a lançar no saldo.
+  if (item.credits > 0) {
+    const { error } = await db.from("credit_ledger").insert({
+      user_id: p.userId,
+      delta: item.credits * VIDEOS_PER_LOT, // o saldo conta vídeos: 1 lote = 25
+      reason: item.recurring ? "assinatura" : "compra",
+      payment_id: p.paymentId,
+    });
+    if (error && error.code !== "23505") throw error; // 23505 = já creditado antes
+  }
 
   // Cupom: registra o uso e credita os vídeos de bônus (uma vez só por pagamento).
   const { data: bonus } = await db.rpc("redeem_coupon", { p_payment: p.paymentId });
@@ -62,6 +67,7 @@ export async function refundPayment(paymentId: string) {
   const { data } = await db.from("payments").select("user_id, credits").eq("id", paymentId).maybeSingle();
   if (!data?.user_id) return;
   await db.from("payments").update({ status: "REFUNDED", updated_at: new Date().toISOString() }).eq("id", paymentId);
+  if (!data.credits) return; // VIP: não há vídeos para tirar
   const { error } = await db
     .from("credit_ledger")
     .insert({ user_id: data.user_id, delta: -data.credits * VIDEOS_PER_LOT, reason: "estorno", payment_id: paymentId });

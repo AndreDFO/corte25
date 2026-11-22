@@ -3,7 +3,7 @@
 import Link from "next/link";
 import PlanPicker from "../plan-picker";
 import { useState } from "react";
-import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION_OPTIONS, brl, discounted, type ProductId } from "@/lib/pricing";
+import { AFFILIATE_LATER_PERCENT, AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTION_OPTIONS, VIP_PRICE, brl, discounted, type ProductId } from "@/lib/pricing";
 
 type Payment = { id: string; product: string; value: number; status: string; created_at: string };
 
@@ -31,6 +31,7 @@ export default function AccountPanel(p: {
   payments: Payment[];
   siteUrl: string;
   admin?: boolean; // só a conta do dono (ADMIN_EMAILS), conferido no servidor
+  vip: { active: boolean; until: string | null; canceled: boolean; admin: boolean; quota: number | null; subscriber: boolean };
 }) {
   const [chosen, setChosen] = useState<ProductId | null>((p.buy as ProductId) || null);
   const [name, setName] = useState(p.name);
@@ -113,6 +114,16 @@ export default function AccountPanel(p: {
     setWalletMsg(res.ok ? "" : j.error);
   }
 
+  const [vipCanceled, setVipCanceled] = useState(p.vip.canceled);
+  const [vipMsg, setVipMsg] = useState("");
+  async function cancelVip() {
+    if (!window.confirm("Cancelar o VIP? Você continua VIP até o fim do mês já pago e não será cobrado de novo.")) return;
+    const res = await fetch("/api/conta/vip", { method: "DELETE" });
+    const j = await res.json().catch(() => ({}));
+    if (res.ok) setVipCanceled(true);
+    setVipMsg(res.ok ? "VIP cancelado. Você não será cobrado de novo." : j.error || "Não deu para cancelar.");
+  }
+
   async function logout() {
     await fetch("/api/conta/sair", { method: "POST" });
     try {
@@ -164,6 +175,46 @@ export default function AccountPanel(p: {
         <Link href="/#criar" className="rounded-xl bg-brand px-5 py-3 font-black text-on-brand hover:bg-brand-dark">
           Gerar vídeos
         </Link>
+      </div>
+
+      <div id="vip" className={`${card} grid gap-2 scroll-mt-24 border-2 border-accent/40`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-black">⭐ VIP · {brl(VIP_PRICE)}/mês</h2>
+          {p.vip.active && <span className="rounded-full bg-accent px-3 py-1 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : "VIP ativo"}</span>}
+        </div>
+        <p className="text-sm text-foreground/70">
+          Libera em todos os vídeos: <b>música</b>, <b>textos no vídeo</b>, <b>cortar partes sem som</b>, <b>narração</b> e <b>legenda automática</b>. É um
+          extra mensal, separado dos créditos de vídeos.
+        </p>
+        {p.vip.active && !p.vip.admin && p.vip.until && (
+          <p className="text-sm">
+            {vipCanceled ? "Cancelado: continua VIP até " : "Próxima renovação por volta de "}
+            <b>{new Date(p.vip.until).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</b>.
+          </p>
+        )}
+        {!p.vip.active && p.vip.subscriber && p.vip.quota !== null && (
+          <p className="text-sm text-foreground/70">
+            Como assinante mensal, você tem <b>{p.vip.quota} de {SUBSCRIBER_VIP_VIDEOS} vídeos VIP</b> este mês (renova todo dia 1º).
+          </p>
+        )}
+        {vipMsg && <p className="text-sm text-brand-ink">{vipMsg}</p>}
+        {!p.vip.admin && (!p.vip.active || vipCanceled) && (
+          <button
+            type="button"
+            onClick={() => {
+              choose("vip");
+              document.getElementById("comprar")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="justify-self-start rounded-xl bg-accent px-5 py-2.5 font-black text-white hover:bg-accent-dark"
+          >
+            {p.vip.active ? "Assinar VIP de novo" : `Quero ser VIP · ${brl(VIP_PRICE)}/mês`}
+          </button>
+        )}
+        {p.vip.active && !p.vip.admin && !vipCanceled && (
+          <button type="button" onClick={cancelVip} className="justify-self-start text-xs text-foreground/60 underline">
+            Cancelar VIP
+          </button>
+        )}
       </div>
 
       <div id="comprar" className={`${card} grid gap-3`}>

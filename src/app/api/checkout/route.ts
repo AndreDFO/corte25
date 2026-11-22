@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { affiliatePercentFor, referralDiscount } from "@/lib/credits";
 import { checkCoupon } from "@/lib/coupons";
 import { discounted } from "@/lib/pricing";
+import { vipStatus } from "@/lib/vip";
 
 function validCpfCnpj(v: string) {
   const d = v.replace(/\D/g, "");
@@ -20,6 +21,11 @@ export async function POST(req: Request) {
   const product = String(b.product || "") as ProductId;
   if (!(product in CATALOG)) return Response.json({ error: "Produto inválido." }, { status: 400 });
 
+  if (product === "vip") {
+    const st = await vipStatus(user);
+    if (st.admin) return Response.json({ error: "Sua conta de administrador já é VIP." }, { status: 400 });
+    if (st.active && !st.canceled) return Response.json({ error: "Você já é VIP." }, { status: 400 });
+  }
   const profile = await getProfile(user.id);
   if (!profile) return Response.json({ error: "Conta não encontrada." }, { status: 404 });
   let customer = profile.asaas_customer_id;

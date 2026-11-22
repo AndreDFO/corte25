@@ -352,6 +352,10 @@ async function processJob(id: string) {
     bodies: await probeAll(job.blocks.bodies),
     ctas: await probeAll(job.blocks.ctas),
   };
+  // Recursos VIP só nos primeiros job.vipLimit vídeos (cota do assinante); sem limite, em todos.
+  const vipFor = (i: number) => job.vipLimit === undefined || i < job.vipLimit;
+  // Cópia sem o corte de silêncio, para os vídeos fora da cota VIP.
+  const plain = { hooks: blocks.hooks.map((c) => ({ ...c })), bodies: blocks.bodies.map((c) => ({ ...c })), ctas: blocks.ctas.map((c) => ({ ...c })) };
   if (job.trimSilence) {
     job.message = "Cortando as partes sem som…";
     await saveJob(job);
@@ -375,7 +379,7 @@ async function processJob(id: string) {
   const { items, source } = await generateCopy(job.productGiven === false ? "" : job.product, job.details, combos.length);
 
   const maxDur = job.durationMode && job.durationMode !== "auto" ? Number(job.durationMode) : null;
-  const recipes = combos.map((c, i) => buildRecipe(blocks, c, id, i, maxDur));
+  const recipes = combos.map((c, i) => buildRecipe(vipFor(i) ? blocks : plain, c, id, i, maxDur));
   job.copySource = source;
   job.variations = combos.map((c, i) => ({
     index: i,
@@ -384,6 +388,7 @@ async function processJob(id: string) {
     recipe: describeCombo(c),
     durationSec: recipes[i].total,
     status: "pending",
+    ...(job.vipLimit !== undefined && i < job.vipLimit ? { vip: true } : {}),
   }));
   job.status = "rendering";
   job.message = "Montando os vídeos…";
@@ -407,7 +412,7 @@ async function processJob(id: string) {
       const v = job.variations[i];
       await queueUpdate(i, { status: "rendering" });
       try {
-        await renderVariation(job, dir, v, recipes[i], music);
+        await renderVariation(vipFor(i) ? job : { ...job, captions: false }, dir, v, recipes[i], vipFor(i) ? music : undefined);
         await queueUpdate(i, { status: "done" });
       } catch (err) {
         console.error(`[job ${id}] vídeo ${i + 1}:`, err);

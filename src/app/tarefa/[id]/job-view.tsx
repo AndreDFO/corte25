@@ -385,6 +385,11 @@ function Card({
       className={`rounded-xl border overflow-hidden flex flex-col ${selected ? "border-brand ring-4 ring-brand/50 bg-brand/10" : "border-foreground/10 bg-foreground/[0.03]"}`}
     >
       <div className="relative aspect-[9/16] bg-black grid place-items-center">
+        {v.vip && (
+          <span title="Vídeo VIP" className="absolute right-2 top-2 z-10 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-black text-white shadow">
+            ⭐ VIP
+          </span>
+        )}
         {v.status === "done" && (
           <button
             type="button"

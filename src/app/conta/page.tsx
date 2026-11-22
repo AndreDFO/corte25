@@ -6,6 +6,7 @@ import { balance, referralDiscount, syncPendingPayments } from "@/lib/credits";
 import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase-admin";
 import { AFFILIATE_PERCENT, CATALOG } from "@/lib/pricing";
 import { isAdminEmail } from "@/lib/admin";
+import { vipAllowance, vipStatus } from "@/lib/vip";
 import AccountPanel from "./account-panel";
 
 // Indicações de quem está logado: quantas contas vieram pelo link, compras pagas e comissão.
@@ -43,7 +44,12 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       .then((r) => r.data ?? []),
     affiliateStats(user.id),
   ]);
-  const [discount, admin] = await Promise.all([referralDiscount(user.id, profile?.referred_by), isAdminEmail()]);
+  const [discount, admin, vip, allowance] = await Promise.all([
+    referralDiscount(user.id, profile?.referred_by),
+    isAdminEmail(),
+    vipStatus(user),
+    vipAllowance(user),
+  ]);
   return (
     <AccountPanel
       email={user.email || ""}
@@ -62,6 +68,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       payments={payments}
       siteUrl={process.env.SITE_URL || "https://corte25.com.br"}
       admin={admin}
+      vip={{ ...vip, quota: allowance.vip ? null : allowance.quota, subscriber: allowance.subscriber }}
     />
   );
 }

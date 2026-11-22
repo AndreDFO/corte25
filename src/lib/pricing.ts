@@ -53,6 +53,11 @@ export const AFFILIATE_LATER_PERCENT = 3;
 export const discounted = (value: number, percent: number) => Math.round(value * (100 - percent)) / 100;
 export const brl = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 export const FREE_VIDEOS = 2;
+// Plano VIP (aprovado 22/11): extra mensal que libera textos, cortar silêncio, música, narração e legenda automática.
+export const VIP_PRICE = 14.99;
+export const VIP_DAYS = 31; // cada mensalidade paga vale 31 dias
+// Quem tem qualquer assinatura mensal (sem VIP) ganha 3 vídeos por mês com os recursos VIP (pedido do Andre, 22/11).
+export const SUBSCRIBER_VIP_VIDEOS = 3;
 export const FREE_TRIALS_PER_PERSON = 1;
 
 export function comboCount(h: number, b: number, c: number) {
@@ -72,5 +77,6 @@ export const CATALOG = {
   "assinatura-550": { credits: 22, value: SUBSCRIPTIONS[1].value, label: "Assinatura mensal · 550 vídeos", recurring: true },
   "assinatura-850": { credits: 34, value: SUBSCRIPTIONS[2].value, label: "Assinatura mensal · 850 vídeos", recurring: true },
   "assinatura-1150": { credits: 46, value: SUBSCRIPTIONS[3].value, label: "Assinatura mensal · 1.150 vídeos", recurring: true },
+  vip: { credits: 0, value: 14.99, label: "VIP mensal", recurring: true },
 } as const;
 export type ProductId = keyof typeof CATALOG;

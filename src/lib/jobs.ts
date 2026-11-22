@@ -18,9 +18,12 @@ export interface Variation {
   status: VariationStatus;
   error?: string;
   narrated?: string; // data da narração gravada pelo microfone (arquivo video_XX_narrado.mp4)
+  vip?: boolean; // vídeo feito com recursos VIP pela cota do assinante (mostra o selo VIP)
 }
 
 export interface Job {
+  // Recursos VIP só nos primeiros N vídeos (cota de 3/mês do assinante). Sem isso: todos os vídeos.
+  vipLimit?: number;
   id: string;
   createdAt: string;
   product: string;
