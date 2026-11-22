@@ -311,7 +311,7 @@ export default function AccountPanel(p: {
       </div>
 
 
-      <div id="vip" className="grid scroll-mt-24 gap-0.5 rounded-2xl border-2 border-accent/40 bg-surface px-4 py-3 ring-1 ring-foreground/10">
+      <div id="vip" className="grid scroll-mt-24 gap-1 rounded-2xl border-2 border-accent/40 bg-surface px-4 py-3.5 ring-1 ring-foreground/10">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-foreground/60">⭐ Plano VIP</p>
           {p.vip.active ? (
@@ -334,7 +334,6 @@ export default function AccountPanel(p: {
             <p className="text-2xl font-black leading-none">
               {brl(VIP_PRICE)} <span className="text-base font-bold text-foreground/60">/mês</span>
             </p>
-            <p className="mt-1 text-[11px] leading-tight text-foreground/50">Música, legenda e +25 vídeos/mês</p>
           </div>
           {!p.vip.admin && (!p.vip.active || vipCanceled || p.vip.coupon) && (
             <button
@@ -349,6 +348,12 @@ export default function AccountPanel(p: {
             </button>
           )}
         </div>
+        <p className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-xs leading-snug text-foreground/60">
+          {["Música", "Legenda automática", "Textos no vídeo", "Cortar partes sem som", "Narração", "Transição suave"].map((f) => (
+            <span key={f} className="whitespace-nowrap">✓ {f}</span>
+          ))}
+          <b className="whitespace-nowrap text-foreground/80">✓ +25 vídeos (+2 grátis) por mês</b>
+        </p>
         {p.vip.active && !p.vip.admin && p.vip.until && (
           <p className="mt-1 text-xs">
             {p.vip.coupon ? "Liberado pelo cupom até " : vipCanceled ? "Cancelado: continua VIP até " : "Próxima renovação por volta de "}
