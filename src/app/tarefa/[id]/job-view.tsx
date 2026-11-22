@@ -67,22 +67,16 @@ export default function JobView({ id }: { id: string }) {
   const finished = job.status === "done" || job.status === "error";
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Link href="/" className="mb-3 inline-flex items-center gap-1 rounded-lg bg-foreground/5 px-3 py-1.5 text-sm font-semibold hover:bg-foreground/10">
-            ← Voltar ao início
-          </Link>
-          <p className="text-sm text-foreground/50">Produto</p>
-          <h1 className="text-3xl font-extrabold">{job.product}</h1>
-          <p className="mt-1 text-foreground/60">
+    <div className="mx-auto max-w-6xl px-4 py-5 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-extrabold sm:text-2xl">{job.product}</h1>
+          <p className="text-xs text-foreground/60">
             {job.message}
+            {job.expiresAt && now > 0 && (
+              <span className="ml-1 font-bold text-accent-ink">· ⏱ disponível por mais {timeLeft(job.expiresAt, now)}</span>
+            )}
           </p>
-          {job.expiresAt && now > 0 && (
-            <p className="mt-2 inline-block rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent-ink">
-              ⏱ Disponível por mais {timeLeft(job.expiresAt, now)}: baixe quantas vezes quiser
-            </p>
-          )}
         </div>
         {done > 0 && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -91,10 +85,10 @@ export default function JobView({ id }: { id: string }) {
                 id={id}
                 files={job.variations.filter((v) => v.status === "done").map((v) => v.file)}
                 all
-                className="rounded-lg bg-brand px-4 py-2.5 font-bold text-on-brand hover:bg-brand-dark disabled:opacity-60"
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-on-brand hover:bg-brand-dark disabled:opacity-60"
               />
             ) : (
-              <span className="rounded-lg bg-foreground/10 px-4 py-2.5 font-bold text-foreground/50">Baixar todos ao terminar</span>
+              <span className="rounded-lg bg-foreground/10 px-4 py-2 text-sm font-bold text-foreground/50">Baixar todos ao terminar</span>
             )}
             <a href={`/api/jobs/${id}/legendas`} className="text-xs font-semibold text-foreground/60 underline hover:text-foreground">
               Baixar legendas
@@ -103,29 +97,29 @@ export default function JobView({ id }: { id: string }) {
         )}
       </div>
       {finished && done > 0 && (
-        <p className="mt-3 text-sm text-foreground/60">
+        <p className="mt-2 text-xs text-foreground/55">
           📱 No celular, toque em <b>Baixar todos</b> e depois em <b>Salvar vídeos</b> para mandar direto para a galeria
           {done > SHARE_CHUNK ? ` (vão de ${SHARE_CHUNK} em ${SHARE_CHUNK})` : ""}. Ou marque só os que quiser.
         </p>
       )}
 
-      <div className="mt-6 h-2 rounded-full bg-foreground/10 overflow-hidden">
+      <div className="mt-3 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-accent to-brand transition-all"
           style={{ width: `${job.status === "writing" || job.status === "queued" ? 3 : pct}%` }}
         />
       </div>
-      <p className="mt-2 text-sm text-foreground/50">
+      <p className="mt-1 text-xs text-foreground/50">
         {done} de {total} vídeos prontos
       </p>
 
       {job.plan === "free" && finished && done > 0 && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand/40 bg-brand/10 p-5">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand/40 bg-brand/10 px-4 py-3">
           <div>
-            <p className="font-bold text-lg">Gostou? Libere 25 vídeos + 2 de bônus, sem marca d&apos;água.</p>
-            <p className="text-sm text-foreground/70">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
+            <p className="text-sm font-bold">Gostou? Libere 25 vídeos + 2 de bônus, sem marca d&apos;água.</p>
+            <p className="hidden text-xs text-foreground/70 sm:block">Cada gancho com cada corpo e cada CTA, prontos para postar.</p>
           </div>
-          <Link href="/" className="rounded-lg bg-brand text-on-brand hover:bg-brand-dark px-5 py-3 font-bold">
+          <Link href="/" className="rounded-lg bg-brand text-on-brand hover:bg-brand-dark px-4 py-2 text-sm font-bold">
             Gerar o lote completo
           </Link>
         </div>
@@ -135,7 +129,7 @@ export default function JobView({ id }: { id: string }) {
         <p className="mt-6 rounded-lg bg-brand/10 border border-brand/40 p-4 text-sm">{job.message}</p>
       )}
 
-      <div className="mt-8 grid gap-5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mt-4 grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-6">
         {job.variations.map((v) => (
           <Card
             key={v.index}
@@ -248,7 +242,7 @@ function SaveButton({ id, files, all, className }: { id: string; files: string[]
     const b = prepared.start + prepared.files.length;
     label = many ? `Salvar ${a}–${b} de ${n} na galeria` : `Salvar ${plural(n)} na galeria`;
   } else if (savedN >= n && n > 0) label = `✓ ${plural(n)} salvos. Salvar de novo`;
-  else if (!n) label = "Marque os vídeos para baixar";
+  else if (!n) label = "Marque para baixar";
   else label = all ? `Baixar todos (${plural(n)})` : `Baixar ${plural(n)}`;
 
   return (
@@ -282,17 +276,17 @@ function SelectionBar({
 }) {
   const n = files.length;
   return (
-    <div className="sticky bottom-3 z-20 mt-6 flex flex-wrap items-center gap-2 rounded-2xl bg-surface/95 p-3 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.35)] ring-1 ring-foreground/10 backdrop-blur">
-      <span className="text-sm font-semibold">
-        {n} de {allCount} selecionado{n === 1 ? "" : "s"}
+    <div className="sticky bottom-3 z-20 mt-4 flex items-center gap-2 rounded-2xl bg-surface/95 px-3 py-2 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.35)] ring-1 ring-foreground/10 backdrop-blur">
+      <span className="whitespace-nowrap text-xs font-semibold">
+        {n}/{allCount} marcado{n === 1 ? "" : "s"}
       </span>
-      <button type="button" onClick={n === allCount ? onClear : onAll} className="text-sm text-accent-ink underline">
+      <button type="button" onClick={n === allCount ? onClear : onAll} className="whitespace-nowrap text-xs text-accent-ink underline">
         {n === allCount ? "Limpar" : "Marcar todos"}
       </button>
       <SaveButton
         id={id}
         files={files}
-        className="ml-auto rounded-xl bg-brand px-4 py-2.5 text-sm font-black text-on-brand hover:bg-brand-dark disabled:opacity-50"
+        className="ml-auto rounded-xl bg-brand px-3 py-2 text-xs font-black text-on-brand hover:bg-brand-dark disabled:opacity-50"
       />
     </div>
   );
@@ -327,25 +321,24 @@ function Card({ id, v, selected, onToggle }: { id: string; v: Variation; selecte
           <span className="text-xs text-foreground/40 animate-pulse">{v.status === "rendering" ? "Montando…" : "Na fila"}</span>
         )}
       </div>
-      <div className="p-3 grid gap-2 text-xs">
-        <p className="font-bold text-sm leading-snug">
+      <div className="p-2 grid gap-1.5 text-[11px]">
+        <p className="font-bold leading-snug line-clamp-2">
           #{v.index + 1} · <span className="text-accent-ink">{v.durationSec}s</span> · {v.hook}
         </p>
-        <p className="text-foreground/40">{v.recipe}</p>
-        <p className="text-foreground/60 line-clamp-3">{fullCaption}</p>
-        <div className="flex gap-2 mt-auto">
+        <p className="hidden text-foreground/55 line-clamp-2 sm:block">{fullCaption}</p>
+        <div className="flex flex-col gap-1 mt-auto sm:flex-row sm:gap-1.5">
           <button
             onClick={() => {
               navigator.clipboard.writeText(fullCaption);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
-            className="flex-1 rounded-md bg-foreground/10 hover:bg-foreground/15 py-1.5"
+            className="flex-1 rounded-md bg-foreground/10 hover:bg-foreground/15 py-1"
           >
-            {copied ? "Copiado!" : "Copiar legenda"}
+            {copied ? "Copiado!" : "Copiar texto"}
           </button>
           {v.status === "done" && (
-            <a href={`${src}?download=1`} className="flex-1 text-center rounded-md bg-brand text-on-brand hover:bg-brand-dark py-1.5 font-semibold">
+            <a href={`${src}?download=1`} className="flex-1 text-center rounded-md bg-brand text-on-brand hover:bg-brand-dark py-1 font-semibold">
               Baixar
             </a>
           )}
