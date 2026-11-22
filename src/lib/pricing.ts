@@ -12,8 +12,23 @@ export const PACKAGES: { credits: number; price: string; perBatch: string; best?
   { credits: 10, price: "R$ 29,90", perBatch: "R$ 0,12 por vídeo" },
   { credits: 40, price: "R$ 89,99", perBatch: "R$ 0,09 por vídeo", best: true },
 ];
-// Assinatura mensal: 15 lotes por mês.
-export const SUBSCRIPTION = { credits: 15, price: "R$ 39,90", perBatch: "R$ 0,11 por vídeo" };
+// Assinaturas mensais (vídeos por mês = lotes × 25). Para mudar preço, troque só "value" aqui.
+// 550 e 850 vídeos: pedido do Andre (22/11); preços sugeridos, confirmar com ele.
+export const SUBSCRIPTIONS = [
+  { id: "assinatura", credits: 15, value: 39.9 }, // 375 vídeos
+  { id: "assinatura-550", credits: 22, value: 54.9 }, // 550 vídeos
+  { id: "assinatura-850", credits: 34, value: 79.9 }, // 850 vídeos
+] as const;
+export const perVideo = (value: number, credits: number) =>
+  `R$ ${(Math.round((value / (credits * 25)) * 100) / 100).toFixed(2).replace(".", ",")} por vídeo`;
+const subLabel = (s: (typeof SUBSCRIPTIONS)[number]) => ({
+  credits: s.credits,
+  price: `R$ ${s.value.toFixed(2).replace(".", ",")}`,
+  perBatch: perVideo(s.value, s.credits),
+});
+// A assinatura de entrada (375 vídeos), usada nos textos curtos.
+export const SUBSCRIPTION = subLabel(SUBSCRIPTIONS[0]);
+export const SUBSCRIPTION_OPTIONS = SUBSCRIPTIONS.map((s) => ({ id: s.id, ...subLabel(s) }));
 // perBatch agora mostra o preço por vídeo (valor ÷ (lotes × 25)), arredondado.
 // Comissão do afiliado (decidido em 22/11/2026). Entra junto com login e pagamento.
 export const AFFILIATE_PERCENT = 15;
@@ -39,6 +54,8 @@ export const CATALOG = {
   "pacote-3": { credits: 3, value: 14.9, label: "75 vídeos (3 lotes)", recurring: false },
   "pacote-10": { credits: 10, value: 29.9, label: "250 vídeos (10 lotes)", recurring: false },
   "pacote-40": { credits: 40, value: 89.99, label: "1.000 vídeos (40 lotes)", recurring: false },
-  assinatura: { credits: 15, value: 39.9, label: "Assinatura mensal · 375 vídeos", recurring: true },
+  assinatura: { credits: 15, value: SUBSCRIPTIONS[0].value, label: "Assinatura mensal · 375 vídeos", recurring: true },
+  "assinatura-550": { credits: 22, value: SUBSCRIPTIONS[1].value, label: "Assinatura mensal · 550 vídeos", recurring: true },
+  "assinatura-850": { credits: 34, value: SUBSCRIPTIONS[2].value, label: "Assinatura mensal · 850 vídeos", recurring: true },
 } as const;
 export type ProductId = keyof typeof CATALOG;

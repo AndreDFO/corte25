@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
-import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
 
 function clientId() {
   try {
@@ -387,21 +387,25 @@ export default function UploadForm() {
               Cada lote vale {VIDEOS_PER_LOT} vídeos de saldo. Você escolhe quantos gerar por vez e, gerando {BATCH_VIDEOS} de uma vez, ganha mais {FREE_VIDEOS} grátis. Tudo combinando seus ganchos, corpos e CTAs, sem marca
               d&apos;água, com legendas e download em ZIP.
             </p>
-            <a href="/conta?comprar=assinatura" className="block rounded-xl border-2 border-accent bg-accent/10 p-4 text-left hover:bg-accent/15">
-              <span className="flex items-baseline justify-between">
-                <span className="font-bold">
-                  Assinatura mensal{" "}
-                  <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-black uppercase text-white">recomendado</span>
+            {SUBSCRIPTION_OPTIONS.map((x, i) => (
+              <a
+                key={x.id}
+                href={`/conta?comprar=${x.id}`}
+                className={`block rounded-xl p-3 text-left hover:bg-accent/15 ${i === 0 ? "border-2 border-accent bg-accent/10" : "border border-accent/50"}`}
+              >
+                <span className="flex items-baseline justify-between">
+                  <span className="font-bold">
+                    Assinatura · {x.credits * 25} vídeos/mês{" "}
+                    {i === 0 && <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-black uppercase text-white">recomendado</span>}
+                  </span>
+                  <span className="whitespace-nowrap text-lg font-extrabold">
+                    {x.price}
+                    <span className="text-xs font-semibold text-foreground/60">/mês</span>
+                  </span>
                 </span>
-                <span className="whitespace-nowrap text-lg font-extrabold">
-                  {SUBSCRIPTION.price}
-                  <span className="text-xs font-semibold text-foreground/60">/mês</span>
-                </span>
-              </span>
-              <span className="block text-xs text-foreground/60">
-                {SUBSCRIPTION.credits * 25} vídeos por mês · {SUBSCRIPTION.perBatch}
-              </span>
-            </a>
+                <span className="block text-xs text-foreground/60">{x.perBatch}</span>
+              </a>
+            ))}
             <p className="-mb-2 text-xs font-semibold text-foreground/50">Ou pacotes avulsos, sem mensalidade:</p>
             {PACKAGES.map((p) => (
               <a

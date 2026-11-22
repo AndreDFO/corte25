@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION, brl, discounted, type ProductId } from "@/lib/pricing";
+import { AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION_OPTIONS, brl, discounted, type ProductId } from "@/lib/pricing";
 
 type Payment = { id: string; product: string; value: number; status: string; created_at: string };
 
@@ -118,14 +118,17 @@ export default function AccountPanel(p: {
     return p.discount ? { full: brl(full), now: brl(discounted(full, p.discount)) } : { full: "", now: brl(full) };
   };
   const options: { id: ProductId; title: string; full: string; price: string; sub: string; accent?: boolean }[] = [
-    {
-      id: "assinatura",
-      title: "Assinatura mensal",
-      full: priceOf("assinatura").full,
-      price: `${priceOf("assinatura").now}/mês`,
-      sub: `${SUBSCRIPTION.credits * 25} vídeos por mês · ${SUBSCRIPTION.perBatch}${p.discount ? " · desconto no 1º mês" : ""}`,
-      accent: true,
-    },
+    ...SUBSCRIPTION_OPTIONS.map((x, i) => {
+      const id = x.id as ProductId;
+      return {
+        id,
+        title: `Assinatura · ${x.credits * 25} vídeos/mês`,
+        full: priceOf(id).full,
+        price: `${priceOf(id).now}/mês`,
+        sub: `${x.perBatch}${p.discount ? " · desconto no 1º mês" : ""}`,
+        accent: i === 0,
+      };
+    }),
     ...PACKAGES.map((x) => {
       const id = `pacote-${x.credits}` as ProductId;
       return { id, title: `${x.credits * 25} vídeos`, full: priceOf(id).full, price: priceOf(id).now, sub: x.perBatch };
