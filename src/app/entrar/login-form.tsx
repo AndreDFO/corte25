@@ -2,23 +2,38 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import PasswordInput from "../password-input";
 
 export default function LoginForm() {
   const params = useSearchParams();
   const back = params.get("volta") || "/conta";
-  const [mode, setMode] = useState<"entrar" | "cadastrar">(params.get("modo") === "cadastrar" ? "cadastrar" : "entrar");
+  const [mode, setMode] = useState<"entrar" | "cadastrar" | "recuperar">(params.get("modo") === "cadastrar" ? "cadastrar" : "entrar");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const linkError = params.get("erro") === "link";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setBusy(true);
     try {
+      if (mode === "recuperar") {
+        const res = await fetch("/api/conta/recuperar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(j.error || "Não deu certo, tente de novo.");
+        setSent(true);
+        setBusy(false);
+        return;
+      }
       const res = await fetch(`/api/conta/${mode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -42,8 +57,12 @@ export default function LoginForm() {
             <button
               key={m}
               type="button"
-              onClick={() => setMode(m)}
-              className={`rounded-lg py-2 ${mode === m ? "bg-surface shadow-sm" : "text-foreground/50"}`}
+              onClick={() => {
+                setMode(m);
+                setSent(false);
+                setError("");
+              }}
+              className={`rounded-lg py-2 ${mode === m || (mode === "recuperar" && m === "entrar") ? "bg-surface shadow-sm" : "text-foreground/50"}`}
             >
               {m === "entrar" ? "Entrar" : "Criar conta"}
             </button>
@@ -62,16 +81,21 @@ export default function LoginForm() {
           required
           className={field}
         />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          autoComplete={mode === "entrar" ? "current-password" : "new-password"}
-          placeholder={mode === "entrar" ? "Senha" : "Crie uma senha (mínimo 8 caracteres)"}
-          aria-label="Senha"
-          required
-          className={field}
-        />
+        {mode === "recuperar" ? (
+          <p className="text-xs text-foreground/60">
+            Digite o e-mail da sua conta. Vamos mandar um link para você criar uma senha nova.
+          </p>
+        ) : (
+          <PasswordInput
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === "entrar" ? "current-password" : "new-password"}
+            placeholder={mode === "entrar" ? "Senha" : "Crie uma senha (mínimo 8 caracteres)"}
+            aria-label="Senha"
+            required
+            className={field}
+          />
+        )}
         {mode === "cadastrar" && (
           <input
             value={whatsapp}
@@ -83,10 +107,29 @@ export default function LoginForm() {
             className={field}
           />
         )}
+        {linkError && mode !== "cadastrar" && !sent && (
+          <p className="text-sm text-brand-ink">O link de nova senha venceu ou já foi usado. Peça outro em “Esqueci minha senha”.</p>
+        )}
         {error && <p className="text-sm text-brand-ink">{error}</p>}
-        <button disabled={busy} className="rounded-xl bg-accent py-3 font-black text-white hover:bg-accent-dark disabled:opacity-60">
-          {busy ? "Aguarde…" : mode === "entrar" ? "Entrar" : "Criar conta"}
-        </button>
+        {sent ? (
+          <p className="rounded-lg bg-brand/15 px-3 py-2 text-sm font-semibold">
+            Pronto! Se existir uma conta com esse e-mail, o link para criar a nova senha chega em alguns minutos. Confira também o spam.
+          </p>
+        ) : (
+          <button disabled={busy} className="rounded-xl bg-accent py-3 font-black text-white hover:bg-accent-dark disabled:opacity-60">
+            {busy ? "Aguarde…" : mode === "entrar" ? "Entrar" : mode === "cadastrar" ? "Criar conta" : "Enviar link de nova senha"}
+          </button>
+        )}
+        {mode === "entrar" && (
+          <button type="button" onClick={() => { setMode("recuperar"); setError(""); }} className="justify-self-center text-xs text-foreground/60 underline">
+            Esqueci minha senha
+          </button>
+        )}
+        {mode === "recuperar" && (
+          <button type="button" onClick={() => { setMode("entrar"); setSent(false); setError(""); }} className="justify-self-center text-xs text-foreground/60 underline">
+            Voltar para o login
+          </button>
+        )}
       </form>
     </div>
   );
