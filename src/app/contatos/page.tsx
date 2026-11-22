@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { isAdmin } from "@/lib/admin";
-import { PACKAGES } from "@/lib/pricing";
+import { BATCH_VIDEOS, PACKAGES } from "@/lib/pricing";
+
+const FULL_VIDEOS = BATCH_VIDEOS + 2; // lote pago: 25 + 2 de bônus
 import { listLeads } from "@/lib/leads";
 
 export const metadata = { title: "Contatos do teste grátis · Corte25", robots: { index: false } };
@@ -42,6 +44,11 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
   const h = await headers();
   const site = (process.env.SITE_URL || `https://${h.get("x-forwarded-host") || h.get("host")}`).replace(/\/$/, "");
   const entry = PACKAGES[0];
+  // Preço por vídeo do pacote de entrada, contando só os 25 pagos de cada lote (os 2 de bônus ficam de fora).
+  const paidVideos = entry.credits * BATCH_VIDEOS;
+  const bonusVideos = entry.credits * (FULL_VIDEOS - BATCH_VIDEOS);
+  const priceNum = Number(entry.price.replace(/[^\d,]/g, "").replace(",", "."));
+  const perVideo = `R$ ${(Math.ceil((priceNum / paidVideos) * 100) / 100).toFixed(2).replace(".", ",")}`;
   // Um por número, o mais recente primeiro.
   const seen = new Set<string>();
   const leads = all
@@ -54,7 +61,7 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
       <div>
         <h1 className="text-3xl font-black tracking-tight">Contatos do teste grátis</h1>
         <p className="text-sm text-foreground/60">
-          {leads.length} contato{leads.length === 1 ? "" : "s"}. O botão abre a conversa no seu WhatsApp com uma mensagem pronta, que você pode editar antes de enviar.
+          {leads.length} contato{leads.length === 1 ? "" : "s"}. O botão abre a conversa no WhatsApp Web com uma mensagem pronta, que você pode editar antes de enviar.
         </p>
       </div>
       {leads.length === 0 && <p className="text-foreground/60">Ninguém fez o teste grátis ainda.</p>}
@@ -64,7 +71,7 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
             `Oi! Aqui é do Corte25 😊 Vi que você testou com o produto "${l.product}". Curtiu os 2 vídeos?\n\n` +
             `No lote completo você recebe 25 vídeos prontos para o TikTok Shop, sem marca d'água, e ganha mais 2 totalmente grátis. ` +
             `É só gravar 3 ganchos, 3 corpos e 3 CTAs que o Corte25 monta tudo.\n\n` +
-            `Para começar, o pacote de entrada tem ${entry.credits} lotes por ${entry.price} (${entry.perBatch}). Garanta o seu aqui: ${site}/conta?comprar=pacote-${entry.credits}`;
+            `Para começar, o pacote de entrada tem ${entry.credits} lotes por ${entry.price}: são ${paidVideos} vídeos + ${bonusVideos} grátis, menos de ${perVideo} por vídeo. Garanta o seu aqui: ${site}/conta?comprar=pacote-${entry.credits}`;
           return (
             <li key={l.whatsapp} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface p-4 ring-1 ring-foreground/10">
               <div className="min-w-0">
@@ -73,14 +80,24 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
                   {l.product} · {new Date(l.createdAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}
                 </p>
               </div>
-              <a
-                href={`https://wa.me/${l.whatsapp}?text=${encodeURIComponent(msg)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl bg-brand px-4 py-2 text-sm font-black text-on-brand hover:bg-brand-dark"
-              >
-                Chamar no WhatsApp
-              </a>
+              <div className="grid justify-items-end gap-1">
+                <a
+                  href={`https://web.whatsapp.com/send?phone=${l.whatsapp}&text=${encodeURIComponent(msg)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl bg-brand px-4 py-2 text-sm font-black text-on-brand hover:bg-brand-dark"
+                >
+                  Chamar no WhatsApp Web
+                </a>
+                <a
+                  href={`https://wa.me/${l.whatsapp}?text=${encodeURIComponent(msg)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-foreground/60 underline"
+                >
+                  abrir no celular
+                </a>
+              </div>
             </li>
           );
         })}
