@@ -4,6 +4,7 @@ import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
 import { trackPath } from "@/lib/music-library";
+import { NoAudioError, extractAudio } from "@/lib/music-extract";
 import { spendVipQuota, vipAllowance } from "@/lib/vip";
 import { type VipFeature, MIX_RULE, mixOk, BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
 import { claimTrial, releaseTrial, trialKeys } from "@/lib/trials";
@@ -53,6 +54,18 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
   for (const v of all) {
     if (v.size > MAX_FILE_MB * 1024 * 1024)
       return Response.json({ error: `${v.name} passa de ${MAX_FILE_MB} MB.` }, { status: 400 });
+  }
+
+  // Música enviada pela pessoa (áudio OU vídeo): o FFmpeg tira só o som, antes de cobrar qualquer coisa.
+  let musicAudio: Buffer | null = null;
+  if (music instanceof File && music.size > 0) {
+    try {
+      musicAudio = await extractAudio(music);
+    } catch (e) {
+      if (e instanceof NoAudioError)
+        return Response.json({ error: `Não achei som em ${music.name}. Envie um vídeo com áudio ou um MP3.` }, { status: 400 });
+      throw e;
+    }
   }
 
   const plan = form.get("plan") === "full" ? "full" : "free";
@@ -142,9 +155,10 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
     // Música da biblioteca (Openverse CC0/domínio público ou as faixas próprias).
     musicName = `musica_${track}${path.extname(trackFile)}`;
     await fs.copyFile(trackFile, path.join(dir, "inputs", musicName));
-  } else if (allow("musica") && music instanceof File && music.size > 0) {
-    musicName = `musica_${safeName(music.name)}`;
-    await fs.writeFile(path.join(dir, "inputs", musicName), Buffer.from(await music.arrayBuffer()));
+  } else if (allow("musica") && musicAudio && music instanceof File) {
+    // Só o som (m4a), mesmo quando a pessoa enviou um vídeo.
+    musicName = `musica_${safeName(music.name).replace(/\.[^.]+$/, "")}.m4a`;
+    await fs.writeFile(path.join(dir, "inputs", musicName), musicAudio);
   }
 
   const job: Job = {

@@ -413,7 +413,7 @@ export default function UploadForm() {
                     ))}
                 </optgroup>
               ))}
-              <option value="arquivo">Enviar minha música…</option>
+              <option value="arquivo">Usar o som de um vídeo ou áudio meu…</option>
             </select>
             {isTrack(track) && (
               <button
@@ -436,10 +436,15 @@ export default function UploadForm() {
       )}
       {track === "arquivo" && (
         <label className="-mt-1 flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-foreground/15 bg-field px-2 py-2">
-          <input type="file" accept="audio/*" hidden onChange={(e) => setMusic(e.target.files?.[0] || null)} />
+          <input type="file" accept="audio/*,video/*" hidden onChange={(e) => setMusic(e.target.files?.[0] || null)} />
           <span className="shrink-0 rounded-md bg-foreground/10 px-2 py-0.5 text-xs font-semibold">Escolher arquivo</span>
-          <span className="truncate text-xs text-foreground/60">{music ? music.name : "MP3 ou outro áudio do seu celular"}</span>
+          <span className="truncate text-xs text-foreground/60">{music ? music.name : "Vídeo ou MP3: usamos só o som"}</span>
         </label>
+      )}
+      {track === "arquivo" && (
+        <p className="-mt-1 text-[11px] text-foreground/55">
+          ⚠️ Use só som que você pode usar (sua voz, seu jingle ou música liberada). Música famosa pode ser silenciada ou bloqueada pelo TikTok.
+        </p>
       )}
 
       <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${canText ? "cursor-pointer" : "opacity-50"}`}>

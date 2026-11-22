@@ -44,7 +44,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-foreground/10 py-6 text-center text-xs text-foreground/40">
           Corte25 · 25 vídeos + 2 grátis para o TikTok Shop
         </footer>
-        <RelatarProblema />
+        <Suspense fallback={null}>
+          <RelatarProblema />
+        </Suspense>
       </body>
     </html>
   );
