@@ -6,6 +6,8 @@ import crypto from "crypto";
 
 // "Usar o som de um vídeo meu" (pedido do Andre): a pessoa envia um vídeo ou um áudio e o
 // servidor tira só o som com o FFmpeg (sem a imagem), em AAC, até MAX_SECONDS.
+// O som é normalizado (loudnorm, -20 LUFS): vídeo alto ou baixo vira música de fundo no mesmo nível
+// das músicas da busca (pedido do Andre 22/11: o som tirado do vídeo ficava alto demais).
 // Roda ANTES de descontar saldo ou o teste grátis: se o arquivo não tiver som, nada é cobrado.
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
@@ -34,7 +36,7 @@ export async function extractAudio(file: File | Buffer): Promise<Buffer> {
   try {
     await fs.writeFile(input, Buffer.isBuffer(file) ? file : Buffer.from(await file.arrayBuffer()));
     try {
-      await run(["-hide_banner", "-loglevel", "error", "-y", "-i", input, "-map", "0:a:0", "-vn", "-sn", "-dn", "-t", String(MAX_SECONDS), "-ac", "2", "-ar", "44100", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", output]);
+      await run(["-hide_banner", "-loglevel", "error", "-y", "-i", input, "-map", "0:a:0", "-vn", "-sn", "-dn", "-t", String(MAX_SECONDS), "-af", "loudnorm=I=-20:TP=-2:LRA=11", "-ac", "2", "-ar", "44100", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", output]);
     } catch (e) {
       throw new NoAudioError((e as Error).message);
     }

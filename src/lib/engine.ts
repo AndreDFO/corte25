@@ -324,7 +324,10 @@ async function renderVariation(
   );
   if (musicInput >= 0) {
     f.push(`[${musicInput}:a]volume=0.28,atrim=duration=${esc(T)},afade=t=out:st=${esc(Math.max(0, T - 1))}:d=1[am]`);
-    f.push(`[ac][am]amix=inputs=2:duration=first:normalize=0[aout]`);
+    // Ducking: a música abaixa sozinha enquanto alguém fala e volta nas pausas.
+    f.push(`[ac]asplit=2[acm][acs]`);
+    f.push(`[am][acs]sidechaincompress=threshold=0.02:ratio=8:attack=15:release=350[amd]`);
+    f.push(`[acm][amd]amix=inputs=2:duration=first:normalize=0[aout]`);
   } else {
     f.push(`[ac]anull[aout]`);
   }
