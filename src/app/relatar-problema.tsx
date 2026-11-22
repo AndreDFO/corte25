@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 type Msg = { role: "user" | "assistant"; content: string };
 const MAX_USER = 8;
 const erros: string[] = [];
-const OLA = "Oi! Me conta o problema que aconteceu no site: o que você tentou fazer e o que deu errado?";
+const OLA = "Oi! Me conta o problema que aconteceu no site: o que você tentou fazer e o que deu errado? Se quiser, pode anexar um print (não é obrigatório).";
 
 function info() {
   return {
@@ -162,10 +162,13 @@ export default function RelatarProblema() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-3 right-3 z-40 rounded-full border border-foreground/15 bg-surface px-3 py-2 text-xs font-bold shadow-lg hover:bg-foreground/5 sm:bottom-5 sm:right-5 sm:text-sm"
+          title="Relatar problema"
+          className="group fixed bottom-3 right-3 z-40 flex h-10 items-center gap-1.5 rounded-full border border-foreground/15 bg-surface/90 px-2.5 text-sm font-bold opacity-70 shadow-md backdrop-blur hover:opacity-100 sm:bottom-5 sm:right-5"
           aria-label="Relatar problema no site"
         >
-          🐞 Relatar problema
+          {/* Recolhido: só o ícone; o texto aparece ao passar o mouse (pedido do Andre). */}
+          <span aria-hidden>🐞</span>
+          <span className="hidden whitespace-nowrap pr-1 group-hover:inline group-focus-visible:inline">Relatar problema</span>
         </button>
       )}
       {open && (
@@ -229,8 +232,8 @@ export default function RelatarProblema() {
               <form onSubmit={mandar} className="flex items-end gap-1.5">
                 <button
                   type="button"
-                  title="Anexar print"
-                  aria-label="Anexar print"
+                  title="Anexar print (opcional)"
+                  aria-label="Anexar print (opcional)"
                   onClick={() => fileRef.current?.click()}
                   className="rounded-lg border border-foreground/15 px-2.5 py-2 hover:bg-foreground/5"
                 >
