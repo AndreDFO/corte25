@@ -91,3 +91,20 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .dica-cena, .dica-emoji, .dica-barra { animation: none; }
 }
+
+/* Link "ver dicas": rola suave até a dica do bloco e dá um destaque rápido nela. */
+html {
+  scroll-behavior: smooth;
+}
+#dicas > div > div:target {
+  animation: dica-alvo 1.6s ease-out;
+}
+@keyframes dica-alvo {
+  0%,
+  40% {
+    box-shadow: 0 0 0 4px var(--color-accent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}

@@ -21,6 +21,8 @@ function clientId() {
 const isVideo = (f: File) => f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|mkv)$/i.test(f.name);
 
 type BlockKey = "hooks" | "bodies" | "ctas";
+// Cada bloco leva para a sua dica em "Como gravar cada bloco" (src/app/dicas.tsx).
+const TIP_ID: Record<BlockKey, string> = { hooks: "dica-ganchos", bodies: "dica-corpos", ctas: "dica-ctas" };
 const BLOCKS: { key: BlockKey; title: string; one: string; hint: string; color: string }[] = [
   { key: "hooks", title: "Ganchos", one: "Gancho", hint: "Os primeiros segundos, que fazem parar de rolar", color: "var(--color-brand-ink)" },
   { key: "bodies", title: "Corpos", one: "Corpo", hint: "O produto em uso, benefícios, demonstração", color: "var(--color-muted)" },
@@ -190,8 +192,8 @@ export default function UploadForm() {
             <span className="text-sm font-bold" style={{ color: b.color }}>
               {b.title} <span className="text-foreground/50 font-normal">{clips[b.key].length}/{MAX_PER_BLOCK}</span>
             </span>
-            <a href={`#dica-${b.key}`} className="-mt-1 text-[10px] font-semibold text-foreground/50 underline hover:text-foreground">
-              ver dicas
+            <a href={`#${TIP_ID[b.key]}`} className="-mt-1 text-[10px] font-semibold text-foreground/50 underline hover:text-foreground">
+              ver dicas ↓
             </a>
             {clips[b.key].map((f, i) => (
               <div key={i} className="flex min-w-0 items-center gap-1 rounded-md bg-foreground/5 px-2 py-1 text-xs">
