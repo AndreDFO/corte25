@@ -6,8 +6,11 @@ export default function Home() {
     <>
       <div className="mx-auto max-w-6xl px-5 py-6 lg:py-8 grid gap-6 lg:gap-10 lg:grid-cols-[1.1fr_1fr] items-start">
         <section>
-          <p className="inline-block rounded-full bg-accent text-white text-xs font-bold px-3 py-1.5 mb-3 shadow-sm">
-            Para vendedores do TikTok Shop
+          <p className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-xl font-black tracking-tight">
+              Corte<span className="text-accent-ink">25</span>
+            </span>
+            <span className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-white shadow-sm">Para vendedores do TikTok Shop</span>
           </p>
           <h1 className="text-[30px] sm:text-[42px] font-black leading-[1.05] tracking-tight">
             Grave 3 ganchos, 3 corpos e 3 CTAs.

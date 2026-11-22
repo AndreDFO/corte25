@@ -17,15 +17,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <RefBanner />
         <header className="border-b border-foreground/10 bg-surface/70 backdrop-blur">
-          <div className="mx-auto max-w-6xl px-3 sm:px-5 h-16 flex items-center justify-between gap-2">
+          <div className="mx-auto max-w-6xl px-3 sm:px-5 min-h-16 py-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
             <Link href="/" aria-label="Corte25, página inicial" className="shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG pequeno, não precisa de otimização */}
-              <img src="/logo-corte25.svg" alt="Corte25" width={143} height={40} className="hidden h-9 w-auto min-[430px]:block sm:h-11" />
-              {/* Celular estreito: só o ícone, para caber saldo e "+ Comprar" lado a lado. */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- SVG pequeno */}
-              <img src="/logo-icone.svg" alt="Corte25" width={40} height={40} className="h-9 w-9 max-[340px]:h-8 max-[340px]:w-8 min-[430px]:hidden" />
+              <img src="/logo-corte25.svg" alt="Corte25" width={143} height={40} className="h-8 w-auto min-[400px]:h-9 sm:h-11" />
             </Link>
-            <nav className="flex items-center gap-1 text-sm max-[360px]:text-xs min-[361px]:gap-1.5 sm:gap-4">
+            <nav className="ml-auto flex items-center gap-1 text-sm max-[360px]:text-xs min-[361px]:gap-1.5 sm:gap-4">
               <span className="hidden lg:inline text-foreground/60">25 vídeos + 2 grátis</span>
               <Suspense fallback={null}>
                 <HomeLink />
