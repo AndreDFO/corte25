@@ -60,6 +60,17 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
     if (res.ok) setList(list.map((x) => (x.id === c.id ? { ...x, active: !c.active } : x)));
   }
 
+  async function remove(c: Coupon) {
+    const aviso =
+      c.uses > 0
+        ? `Excluir o cupom ${c.code}? Ele para de funcionar e some da lista. As vendas que já usaram ele continuam no relatório.`
+        : `Excluir o cupom ${c.code} para sempre?`;
+    if (!window.confirm(aviso)) return;
+    const res = await fetch(`/api/admin/cupons?id=${encodeURIComponent(c.id)}`, { method: "DELETE" });
+    if (res.ok) setList(list.filter((x) => x.id !== c.id));
+    else alert((await res.json().catch(() => ({}))).error || "Não foi possível excluir.");
+  }
+
   const hint = KINDS.find((k) => k.id === kind)!.hint;
   return (
     <div className="mx-auto grid max-w-3xl gap-4 px-5 py-8">
@@ -143,9 +154,17 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
                     {c.note ? ` · ${c.note}` : ""}
                   </p>
                 </div>
-                <button onClick={() => toggle(c)} className="rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-bold">
-                  {c.active ? "Desativar" : "Ativar"}
-                </button>
+                <span className="flex gap-2">
+                  <button onClick={() => toggle(c)} className="rounded-lg border border-foreground/15 px-3 py-1.5 text-sm font-bold">
+                    {c.active ? "Desativar" : "Ativar"}
+                  </button>
+                  <button
+                    onClick={() => remove(c)}
+                    className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-bold text-red-700 hover:bg-red-50"
+                  >
+                    Excluir
+                  </button>
+                </span>
               </li>
             );
           })}

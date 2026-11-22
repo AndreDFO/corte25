@@ -12,7 +12,7 @@ async function guard() {
 export async function GET() {
   const denied = await guard();
   if (denied) return denied;
-  const { data, error } = await supabaseAdmin().from("coupons").select("*").order("created_at", { ascending: false });
+  const { data, error } = await supabaseAdmin().from("coupons").select("*").is("deleted_at", null).order("created_at", { ascending: false });
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ coupons: data });
 }
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     .single();
   if (error)
     return Response.json(
-      { error: error.code === "23505" ? "Já existe um cupom com esse código." : error.message },
+      { error: error.code === "23505" ? "Esse código já existe ou já foi usado num cupom excluído. Escolha outro." : error.message },
       { status: 400 },
     );
   return Response.json({ coupon: data });
@@ -57,4 +57,24 @@ export async function PATCH(req: Request) {
   const { error } = await supabaseAdmin().from("coupons").update({ active: Boolean(b.active) }).eq("id", String(b.id));
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true });
+}
+
+// Exclui um cupom. Se nunca foi usado em nenhuma cobrança, apaga de vez. Se já foi usado,
+// some da lista e para de valer, mas fica guardado para o histórico de vendas e relatório.
+export async function DELETE(req: Request) {
+  const denied = await guard();
+  if (denied) return denied;
+  const id = new URL(req.url).searchParams.get("id") || "";
+  const db = supabaseAdmin();
+  const { data: c } = await db.from("coupons").select("id, code, uses").eq("id", id).maybeSingle();
+  if (!c) return Response.json({ ok: true });
+  const { count } = await db.from("payments").select("id", { count: "exact", head: true }).eq("coupon_code", c.code);
+  if (c.uses === 0 && (count ?? 0) === 0) {
+    const { error } = await db.from("coupons").delete().eq("id", id);
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ ok: true, mode: "apagado" });
+  }
+  const { error } = await db.from("coupons").update({ active: false, deleted_at: new Date().toISOString() }).eq("id", id);
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ ok: true, mode: "arquivado" });
 }

@@ -38,7 +38,7 @@ export async function checkCoupon(rawCode: string, userId: string, product: Prod
   if (!code) return { ok: false, error: "Digite o código do cupom." };
   const db = supabaseAdmin();
   const { data: c } = await db.from("coupons").select("*").eq("code", code).maybeSingle<Coupon>();
-  if (!c || !c.active) return { ok: false, error: "Cupom não encontrado." };
+  if (!c || !c.active || (c as Coupon & { deleted_at?: string | null }).deleted_at) return { ok: false, error: "Cupom não encontrado." };
   if (c.expires_at && new Date(c.expires_at).getTime() < Date.now()) return { ok: false, error: "Esse cupom já venceu." };
   if (c.max_uses !== null && c.uses >= c.max_uses) return { ok: false, error: "Esse cupom já atingiu o limite de usos." };
   const { count } = await db

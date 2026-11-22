@@ -59,7 +59,7 @@ async function Admin({ searchParams }: { searchParams: Promise<Record<string, st
   }
   const now = nowMs();
   const [{ data }, stats] = await Promise.all([
-    supabaseAdmin().from("coupons").select("*").order("created_at", { ascending: false }),
+    supabaseAdmin().from("coupons").select("*").is("deleted_at", null).order("created_at", { ascending: false }),
     adminStats(now),
   ]);
   return (
