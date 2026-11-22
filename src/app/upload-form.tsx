@@ -49,6 +49,8 @@ export default function UploadForm() {
   const [saldo, setSaldo] = useState<{ logged: boolean; videos: number } | null>(null);
   const touched = useRef(false);
   useEffect(() => {
+    // Roda toda vez que a tela inicial aparece (o Next guarda a tela ao navegar e volta com o estado antigo).
+    touched.current = false;
     fetch("/api/conta/saldo", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
