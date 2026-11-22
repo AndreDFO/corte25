@@ -61,7 +61,7 @@ export default function UploadForm() {
   }, []);
   const [doneId, setDoneId] = useState("");
   // Textos gravados no vídeo (gancho e chamada final): opcional, pedido do Andre.
-  const [captions, setCaptions] = useState(true);
+  const [captions, setCaptions] = useState(false);
 
   // Teste grátis: 1 gancho, 1 corpo e 1 CTA (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
   const maxPer = plan === "free" ? 1 : MAX_PER_BLOCK;
@@ -272,7 +272,7 @@ export default function UploadForm() {
         )}
         {plan === "free" && (
           <span className="w-full text-center text-[11px] font-semibold text-foreground/60">
-            No teste grátis basta 1 gancho, 1 corpo e 1 CTA. Os 2 vídeos saem com textos e legendas diferentes.
+            No teste grátis basta 1 gancho, 1 corpo e 1 CTA. Os 2 vídeos saem com legendas e hashtags diferentes.
           </span>
         )}
         {plan === "full" && total > 0 && total < videos + bonus && (
@@ -342,15 +342,12 @@ export default function UploadForm() {
         </label>
       </div>
 
-      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm">
-        <span className="min-w-0">
-          <span className="block font-semibold">Textos no vídeo</span>
-          <span className="block text-[11px] text-foreground/55">
-            {captions ? "Gancho no início e chamada no fim, escritos no vídeo" : "Vídeo limpo, sem nenhum texto escrito"}
-          </span>
-        </span>
+      <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-foreground/70">
         <input type="checkbox" checked={captions} onChange={(e) => setCaptions(e.target.checked)} className="peer sr-only" />
-        <span className="relative h-6 w-11 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5" />
+        <span className="relative h-4 w-7 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-3" />
+        <span>
+          Textos no vídeo <span className="text-foreground/45">({captions ? "gancho e chamada escritos" : "desligado, vídeo limpo"})</span>
+        </span>
       </label>
 
       {plan === "free" && (
