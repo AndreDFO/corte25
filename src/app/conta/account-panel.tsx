@@ -19,6 +19,7 @@ export default function AccountPanel(p: {
   credits: number;
   refCode: string;
   hasWallet: boolean;
+  walletId?: string; // carteira do Asaas já salva (só a própria pessoa vê)
   hasCustomer: boolean;
   paymentsOn: boolean;
   buy: string | null;
@@ -35,15 +36,18 @@ export default function AccountPanel(p: {
   const [doc, setDoc] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [wallet, setWallet] = useState("");
-  const [walletMsg, setWalletMsg] = useState(p.hasWallet ? "Carteira cadastrada. Você recebe automaticamente." : "");
+  const [wallet, setWallet] = useState(p.walletId || "");
+  const [savedWallet, setSavedWallet] = useState(p.walletId || "");
+  const [walletMsg, setWalletMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<{ code: string; msg: string; price: string; full: string | null; product: string } | null>(null);
   const [couponErr, setCouponErr] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
   const refLink = `${p.siteUrl}/?ref=${p.refCode}`;
+  const shareText = `Use meu link e ganhe ${REFERRAL_DISCOUNT}% de desconto na primeira compra do Corte25 👉 ${refLink}`;
 
   async function pay() {
     if (!chosen) return;
@@ -96,7 +100,8 @@ export default function AccountPanel(p: {
       body: JSON.stringify({ walletId: wallet }),
     });
     const j = await res.json().catch(() => ({}));
-    setWalletMsg(res.ok ? "Carteira cadastrada. Você recebe automaticamente." : j.error);
+    if (res.ok) setSavedWallet(wallet.trim());
+    setWalletMsg(res.ok ? "" : j.error);
   }
 
   async function logout() {
@@ -284,9 +289,22 @@ export default function AccountPanel(p: {
         <p className="text-sm text-foreground/70">
           Quem criar conta pelo seu link vira sua indicação. A comissão cai direto na sua conta do Asaas, sem pedir saque.
         </p>
-        <p className="rounded-lg border border-dashed border-accent/60 bg-accent/10 px-3 py-2 text-sm">
-          <b>Texto para divulgar:</b> &quot;Use meu link e ganhe {REFERRAL_DISCOUNT}% de desconto na primeira compra do Corte25 👉 {refLink}&quot;
-        </p>
+        <div className="grid gap-2 rounded-lg border border-dashed border-accent/60 bg-accent/10 px-3 py-2 text-sm">
+          <p>
+            <b>Texto para divulgar:</b> &quot;{shareText}&quot;
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(shareText);
+              setCopiedText(true);
+              setTimeout(() => setCopiedText(false), 1500);
+            }}
+            className="justify-self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-white hover:bg-accent-dark"
+          >
+            {copiedText ? "Texto copiado!" : "Copiar texto"}
+          </button>
+        </div>
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
             ["Indicações", String(p.affiliate.referrals)],
@@ -324,11 +342,19 @@ export default function AccountPanel(p: {
             aria-label="ID da carteira do Asaas"
             className="min-w-0 flex-1 rounded-lg bg-field border border-foreground/15 px-3 py-2 text-sm"
           />
-          <button type="button" onClick={saveWallet} className="rounded-lg bg-brand px-3 text-sm font-bold text-on-brand">
-            Salvar
+          <button
+            type="button"
+            onClick={saveWallet}
+            disabled={Boolean(savedWallet) && wallet.trim() === savedWallet}
+            className="rounded-lg bg-brand px-3 text-sm font-bold text-on-brand disabled:opacity-60"
+          >
+            {savedWallet && wallet.trim() === savedWallet ? "Salvo ✓" : "Salvar"}
           </button>
         </div>
-        {walletMsg && <p className="text-xs text-foreground/70">{walletMsg}</p>}
+        {savedWallet && wallet.trim() === savedWallet && (
+          <p className="text-xs font-semibold text-foreground/70">✓ Carteira salva. Você recebe os {p.affiliatePercent}% automaticamente.</p>
+        )}
+        {walletMsg && <p className="text-xs text-brand-ink">{walletMsg}</p>}
       </div>
 
       {p.payments.length > 0 && (

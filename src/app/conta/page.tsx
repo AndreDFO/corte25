@@ -51,6 +51,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       credits={credits}
       refCode={profile?.ref_code || ""}
       hasWallet={Boolean(profile?.affiliate_wallet_id)}
+      walletId={profile?.affiliate_wallet_id || ""}
       hasCustomer={Boolean(profile?.asaas_customer_id)}
       paymentsOn={asaasConfigured()}
       buy={buy}
