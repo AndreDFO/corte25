@@ -17,17 +17,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <RefBanner />
         <header className="border-b border-foreground/10 bg-surface/70 backdrop-blur">
-          <div className="mx-auto max-w-6xl px-3 sm:px-5 min-h-16 py-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-3 py-2 sm:h-16 sm:flex-row sm:justify-between sm:gap-2 sm:px-5 sm:py-0">
             <Link href="/" aria-label="Corte25, página inicial" className="shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG pequeno, não precisa de otimização */}
-              <img src="/logo-corte25.svg" alt="Corte25" width={143} height={40} className="h-8 w-auto min-[400px]:h-9 sm:h-11" />
+              <img src="/logo-corte25.svg" alt="Corte25" width={143} height={40} className="h-11 w-auto sm:h-11" />
             </Link>
-            <nav className="ml-auto flex items-center gap-1 text-sm max-[360px]:text-xs min-[361px]:gap-1.5 sm:gap-4">
+            {/* Celular: logo em cima e botões embaixo, todos do mesmo tamanho e centralizados (pedido do Andre). */}
+            <nav className="flex w-full items-center justify-center gap-1.5 text-sm sm:w-auto sm:gap-4">
               <span className="hidden lg:inline text-foreground/60">25 vídeos + 2 grátis</span>
               <Suspense fallback={null}>
                 <HomeLink />
               </Suspense>
-              <Link href="/meus-videos" className="whitespace-nowrap rounded-lg bg-foreground/5 px-2 py-1.5 font-semibold hover:bg-foreground/10 max-[340px]:px-1.5 max-[340px]:text-[11px] sm:px-3">
+              <Link href="/meus-videos" className="flex-1 whitespace-nowrap rounded-lg bg-foreground/5 px-2 py-2 text-center font-semibold hover:bg-foreground/10 max-[350px]:px-1 max-[350px]:text-xs sm:flex-none sm:px-3 sm:py-1.5">
                 Meus vídeos
               </Link>
               <Suspense fallback={<HeaderAccountFallback />}>
