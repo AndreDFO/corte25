@@ -53,3 +53,18 @@ export function claimTrial(keys: string[]): Promise<boolean> {
   );
   return run;
 }
+
+// Devolve o teste grátis quando o lote não chegou a sair (erro ao criar ou nenhum vídeo gerado).
+export function releaseTrial(keys: string[]): Promise<void> {
+  const run = lock.then(async () => {
+    if (trialsLimitDisabled() || !keys.length) return;
+    const store = await read();
+    for (const k of keys) if (store[k]) store[k] = Math.max(0, store[k] - 1);
+    await fs.writeFile(FILE, JSON.stringify(store));
+  });
+  lock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}

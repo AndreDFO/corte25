@@ -6,7 +6,7 @@ import { startJob } from "@/lib/engine";
 import { trackPath } from "@/lib/music-library";
 import { spendVipQuota, vipAllowance } from "@/lib/vip";
 import { type VipFeature, MIX_RULE, mixOk, BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
-import { claimTrial, trialKeys } from "@/lib/trials";
+import { claimTrial, releaseTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 import { currentUser } from "@/lib/auth";
 import { consumeVideos } from "@/lib/credits";
@@ -18,6 +18,18 @@ const files = (form: FormData, name: string) =>
   form.getAll(name).filter((v): v is File => v instanceof File && v.size > 0);
 
 export async function POST(req: Request) {
+  const ctx = { claimed: [] as string[] };
+  try {
+    return await handle(req, ctx);
+  } catch (err) {
+    // Deu erro ao criar o lote: o teste grátis volta a valer.
+    if (ctx.claimed.length) await releaseTrial(ctx.claimed).catch(() => {});
+    console.error("[jobs] criar lote", err);
+    return Response.json({ error: "Não deu para começar a gerar agora. Tente de novo em instantes." }, { status: 500 });
+  }
+}
+
+async function handle(req: Request, ctx: { claimed: string[] }) {
   const form = await req.formData();
   // Nome do produto é opcional (pedido do Andre): sem nome, o lote fica com a data e a hora em que foi gerado.
   const typed = String(form.get("product") || "").trim().slice(0, 120);
@@ -76,11 +88,14 @@ export async function POST(req: Request) {
   const whatsapp = plan === "free" ? normalizeWhatsapp(String(form.get("whatsapp") || "")) : null;
   if (plan === "free" && !whatsapp)
     return Response.json({ error: "Informe um WhatsApp válido com DDD para fazer o teste grátis." }, { status: 400 });
-  if (plan === "free") {
+  // A conta do dono (ADMIN_EMAILS) testa o grátis quantas vezes quiser.
+  const ownerTest = Boolean(user?.email && (process.env.ADMIN_EMAILS || "").toLowerCase().split(/[,\s]+/).includes(user.email.toLowerCase()));
+  if (plan === "free" && !ownerTest) {
     // 1 teste por pessoa: conta por rede, por navegador e por número de WhatsApp.
     const keys = [...trialKeys(req, String(form.get("clientId") || "") || null), "wa:" + crypto.createHash("sha256").update(whatsapp!).digest("hex").slice(0, 24)];
     if (user) keys.push("user:" + user.id);
     const ok = await claimTrial(keys);
+    if (ok) ctx.claimed = keys;
     if (!ok)
       return Response.json(
         { error: "Você já usou seu teste grátis. Para gerar todas as combinações, escolha o lote completo.", code: "trial_used" },
@@ -152,6 +167,7 @@ export async function POST(req: Request) {
     message: "Na fila…",
     variations: [],
     ownerId: user?.id ?? null,
+    ...(ctx.claimed.length ? { trialKeys: ctx.claimed } : {}),
   };
   await saveJob(job);
   if (user && job.vipLimit) await spendVipQuota(user.id, id, job.vipLimit).catch((e) => console.warn("[vip] cota", e));
