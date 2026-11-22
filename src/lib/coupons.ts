@@ -51,7 +51,7 @@ export async function checkCoupon(rawCode: string, userId: string, product: Prod
     .eq("user_id", userId);
   if ((count ?? 0) > 0) return { ok: false, error: "Você já usou esse cupom." };
   if (c.kind === "vip" || c.kind === "gratis")
-    return { ok: false, error: "Esse cupom não precisa de compra: resgate em Minha conta, no quadro \"Tenho um cupom\"." };
+    return { ok: false, error: "Esse cupom não precisa de compra: resgate em Minha conta, no link \"Tenho um cupom\" embaixo do saldo." };
 
   const base: number = CATALOG[product].value;
   let value: number = base;

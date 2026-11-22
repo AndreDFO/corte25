@@ -129,7 +129,7 @@ export async function hasVipFeature(user: U, f: VipFeature): Promise<boolean> {
 // Mesmo resgate do campo "Tenho um cupom" (src/lib/redeem.ts), só que aceita apenas cupom VIP.
 export async function redeemVipCoupon(userId: string, rawCode: string): Promise<{ ok: true; until: string; features: string[] } | { ok: false; error: string }> {
   const { data: c } = await supabaseAdmin().from("coupons").select("kind").eq("code", normalizeCode(rawCode)).maybeSingle();
-  if (c?.kind === "gratis") return { ok: false, error: "Esse cupom dá vídeos grátis: resgate no quadro \"Tenho um cupom\", logo abaixo do saldo." };
+  if (c?.kind === "gratis") return { ok: false, error: "Esse cupom dá vídeos grátis: resgate em Minha conta, no link \"Tenho um cupom\" embaixo do saldo." };
   const r = await redeemCoupon(userId, rawCode);
   if (!r.ok) return r;
   if (r.kind !== "vip") return { ok: false, error: "Esse cupom não é VIP." };
