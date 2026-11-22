@@ -26,8 +26,11 @@ export async function HeaderAccount() {
         <Link href="/conta" className={btn} title="Minha conta e saldo">
           {credits === null ? "Minha conta" : `${credits} vídeo${credits === 1 ? "" : "s"}`}
         </Link>
-        <Link href="/conta#comprar" className="mt-0.5 text-[10px] text-foreground/60 underline hover:text-foreground">
-          Comprar créditos
+        <Link
+          href="/conta#comprar"
+          className="mt-1 whitespace-nowrap rounded-full bg-accent px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm hover:bg-accent-dark"
+        >
+          + Comprar
         </Link>
       </span>
       <LogoutButton className="hidden text-xs text-foreground/50 underline hover:text-foreground sm:inline" />
