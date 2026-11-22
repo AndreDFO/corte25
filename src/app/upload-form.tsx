@@ -54,12 +54,18 @@ export default function UploadForm() {
   }, []);
   const [doneId, setDoneId] = useState("");
 
+  // Teste grátis: 1 gancho, 1 corpo e 1 CTA (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
+  const maxPer = plan === "free" ? 1 : MAX_PER_BLOCK;
+  function choosePlan(next: "free" | "full") {
+    setPlan(next);
+    if (next === "free") setClips((c) => ({ hooks: c.hooks.slice(0, 1), bodies: c.bodies.slice(0, 1), ctas: c.ctas.slice(0, 1) }));
+  }
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
 
   function add(key: BlockKey, list: FileList | null) {
     if (!list) return;
     const added = Array.from(list).filter(isVideo);
-    setClips((c) => ({ ...c, [key]: [...c[key], ...added].slice(0, MAX_PER_BLOCK) }));
+    setClips((c) => ({ ...c, [key]: [...c[key], ...added].slice(0, maxPer) }));
   }
 
   function remove(key: BlockKey, i: number) {
@@ -152,7 +158,7 @@ export default function UploadForm() {
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          onClick={() => setPlan("free")}
+          onClick={() => choosePlan("free")}
           className={`rounded-xl border px-3 py-2 text-left ${plan === "free" ? "border-accent bg-accent/10 ring-2 ring-accent/30" : "border-foreground/15 hover:bg-foreground/5"}`}
         >
           <span className="flex items-center gap-1.5 text-sm font-bold">
@@ -163,7 +169,7 @@ export default function UploadForm() {
         </button>
         <button
           type="button"
-          onClick={() => setPlan("full")}
+          onClick={() => choosePlan("full")}
           className={`rounded-xl border px-3 py-2 text-left ${plan === "full" ? "border-brand bg-brand/10 ring-2 ring-brand/30" : "border-foreground/15 hover:bg-foreground/5"}`}
         >
           <span className="block text-sm font-bold">Lote completo</span>
@@ -202,7 +208,7 @@ export default function UploadForm() {
             title={b.hint}
           >
             <span className="text-sm font-bold" style={{ color: b.color }}>
-              {b.title} <span className="text-foreground/50 font-normal">{clips[b.key].length}/{MAX_PER_BLOCK}</span>
+              {b.title} <span className="text-foreground/50 font-normal">{clips[b.key].length}/{maxPer}</span>
             </span>
             <a href={`#${TIP_ID[b.key]}`} className="-mt-1 text-[10px] font-semibold text-foreground/50 underline hover:text-foreground">
               ver dicas ↓
@@ -222,7 +228,7 @@ export default function UploadForm() {
                 </button>
               </div>
             ))}
-            {clips[b.key].length < MAX_PER_BLOCK && (
+            {clips[b.key].length < maxPer && (
               <label
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
@@ -231,7 +237,7 @@ export default function UploadForm() {
                 }}
                 className="cursor-pointer rounded-lg border border-dashed border-foreground/25 hover:border-foreground/50 py-2 text-center text-xs font-semibold text-foreground/60"
               >
-                <input type="file" accept="video/*" multiple hidden onChange={(e) => add(b.key, e.target.files)} />+
+                <input type="file" accept="video/*" multiple={maxPer > 1} hidden onChange={(e) => add(b.key, e.target.files)} />+
                 Adicionar
               </label>
             )}
@@ -243,13 +249,15 @@ export default function UploadForm() {
         <span className="text-foreground/60">
           {clips.hooks.length} × {clips.bodies.length} × {clips.ctas.length} →
         </span>
-        <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">
-          {plan === "full" ? videos : BATCH_VIDEOS} vídeos
-        </span>
+        {plan === "full" && (
+          <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-on-brand">{videos} vídeos</span>
+        )}
         {(plan === "free" || bonus > 0) && (
           <>
-            <span className="text-foreground/40">+</span>
-            <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">{FREE_VIDEOS} grátis</span>
+            {plan === "full" && <span className="text-foreground/40">+</span>}
+            <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">
+              {plan === "full" ? bonus : FREE_VIDEOS} grátis
+            </span>
           </>
         )}
         {plan === "free" && (
@@ -299,26 +307,26 @@ export default function UploadForm() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <label className="grid gap-1">
-          <span className="text-xs font-medium text-foreground/60">Duração máxima</span>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-end gap-2 text-sm">
+        <label className="grid min-w-0 gap-1">
+          <span className="truncate text-xs font-medium text-foreground/60">Duração máxima</span>
           <select
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
-            className="rounded-lg bg-field border border-foreground/15 px-2 py-2 outline-none focus:border-brand"
+            className="w-full min-w-0 rounded-lg bg-field border border-foreground/15 px-2 py-2 outline-none focus:border-brand"
           >
-            <option value="auto">Livre (clipes inteiros)</option>
+            <option value="auto">Livre</option>
             <option value="15">15 segundos</option>
             <option value="20">20 segundos</option>
             <option value="25">25 segundos</option>
             <option value="30">30 segundos</option>
           </select>
         </label>
-        <label className="grid gap-1">
-          <span className="text-xs font-medium text-foreground/60">Música de fundo (opcional)</span>
-          <span className="flex items-center gap-2 rounded-lg bg-field border border-foreground/15 px-2 py-2 cursor-pointer">
+        <label className="grid min-w-0 gap-1">
+          <span className="truncate text-xs font-medium text-foreground/60">Música (opcional)</span>
+          <span className="flex min-w-0 items-center gap-2 rounded-lg bg-field border border-foreground/15 px-2 py-2 cursor-pointer">
             <input type="file" accept="audio/*" hidden onChange={(e) => setMusic(e.target.files?.[0] || null)} />
-            <span className="rounded-md bg-foreground/10 px-2 py-0.5 text-xs font-semibold">Escolher</span>
+            <span className="shrink-0 rounded-md bg-foreground/10 px-2 py-0.5 text-xs font-semibold">Escolher</span>
             <span className="truncate text-xs text-foreground/60">{music ? music.name : "nenhuma"}</span>
           </span>
         </label>

@@ -38,6 +38,8 @@ export async function POST(req: Request) {
   }
 
   const plan = form.get("plan") === "full" ? "full" : "free";
+  if (plan === "free" && [hooks, bodies, ctas].some((l) => l.length > 1))
+    return Response.json({ error: "No teste grátis envie só 1 gancho, 1 corpo e 1 CTA." }, { status: 400 });
   // Com login ativo (Supabase configurado), o lote completo gasta 1 crédito da conta.
   // Sem login (PC de teste), vale a trava antiga: só libera com UNLOCK_FULL=true.
   const online = supabaseConfigured();
