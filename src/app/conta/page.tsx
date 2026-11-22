@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { currentUser, getProfile } from "@/lib/auth";
 import { asaasConfigured } from "@/lib/asaas";
-import { balance, syncPendingPayments } from "@/lib/credits";
+import { balance, referralDiscount, syncPendingPayments } from "@/lib/credits";
 import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase-admin";
 import { AFFILIATE_PERCENT, CATALOG } from "@/lib/pricing";
 import AccountPanel from "./account-panel";
@@ -42,6 +42,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       .then((r) => r.data ?? []),
     affiliateStats(user.id),
   ]);
+  const discount = await referralDiscount(user.id, profile?.referred_by);
   return (
     <AccountPanel
       email={user.email || ""}
@@ -55,6 +56,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       paid={sp.pago === "1"}
       affiliatePercent={AFFILIATE_PERCENT}
       affiliate={affiliate}
+      discount={discount}
       payments={payments}
       siteUrl={process.env.SITE_URL || "https://corte25.com.br"}
     />

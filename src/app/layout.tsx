@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { HeaderAccount, HeaderAccountFallback } from "./header-account";
+import RefBanner from "./ref-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" data-theme="claro" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
+        <RefBanner />
         <header className="border-b border-foreground/10 bg-surface/70 backdrop-blur">
           <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
             <Link href="/" className="font-extrabold text-xl tracking-tight">

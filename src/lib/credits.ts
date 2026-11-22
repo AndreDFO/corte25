@@ -1,4 +1,4 @@
-import { CATALOG, VIDEOS_PER_LOT, type ProductId } from "./pricing";
+import { CATALOG, REFERRAL_DISCOUNT, VIDEOS_PER_LOT, type ProductId } from "./pricing";
 import { supabaseAdmin } from "./supabase-admin";
 import { asaasConfigured, getPayment, parseReference } from "./asaas";
 
@@ -76,4 +76,15 @@ export async function syncPendingPayments(userId: string) {
     }
   }
   return granted;
+}
+
+// Desconto da indicação: quem chegou pelo link de um afiliado ganha REFERRAL_DISCOUNT% só na primeira compra paga.
+export async function referralDiscount(userId: string, referredBy: string | null | undefined): Promise<number> {
+  if (!referredBy) return 0;
+  const { count } = await supabaseAdmin()
+    .from("payments")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .in("status", ["CONFIRMED", "RECEIVED", "REFUNDED"]);
+  return (count ?? 0) === 0 ? REFERRAL_DISCOUNT : 0;
 }

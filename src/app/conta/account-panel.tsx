@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CATALOG, PACKAGES, SUBSCRIPTION, type ProductId } from "@/lib/pricing";
+import { CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION, brl, discounted, type ProductId } from "@/lib/pricing";
 
 type Payment = { id: string; product: string; value: number; status: string; created_at: string };
 
@@ -25,6 +25,7 @@ export default function AccountPanel(p: {
   paid?: boolean;
   affiliatePercent: number;
   affiliate: { referrals: number; sales: number; commission: number };
+  discount: number; // % de desconto da indicação na primeira compra (0 = sem desconto)
   payments: Payment[];
   siteUrl: string;
 }) {
@@ -72,9 +73,24 @@ export default function AccountPanel(p: {
     window.location.href = "/";
   }
 
-  const options: { id: ProductId; title: string; price: string; sub: string; accent?: boolean }[] = [
-    { id: "assinatura", title: "Assinatura mensal", price: `${SUBSCRIPTION.price}/mês`, sub: `${SUBSCRIPTION.credits * 25} vídeos por mês · ${SUBSCRIPTION.perBatch}`, accent: true },
-    ...PACKAGES.map((x) => ({ id: `pacote-${x.credits}` as ProductId, title: `${x.credits * 25} vídeos`, price: x.price, sub: x.perBatch })),
+  // Com desconto de indicação, mostra o preço cheio riscado e o novo preço (primeira compra).
+  const priceOf = (id: ProductId) => {
+    const full = CATALOG[id].value;
+    return p.discount ? { full: brl(full), now: brl(discounted(full, p.discount)) } : { full: "", now: brl(full) };
+  };
+  const options: { id: ProductId; title: string; full: string; price: string; sub: string; accent?: boolean }[] = [
+    {
+      id: "assinatura",
+      title: "Assinatura mensal",
+      full: priceOf("assinatura").full,
+      price: `${priceOf("assinatura").now}/mês`,
+      sub: `${SUBSCRIPTION.credits * 25} vídeos por mês · ${SUBSCRIPTION.perBatch}${p.discount ? " · desconto no 1º mês" : ""}`,
+      accent: true,
+    },
+    ...PACKAGES.map((x) => {
+      const id = `pacote-${x.credits}` as ProductId;
+      return { id, title: `${x.credits * 25} vídeos`, full: priceOf(id).full, price: priceOf(id).now, sub: x.perBatch };
+    }),
   ];
   const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";
 
@@ -111,6 +127,11 @@ export default function AccountPanel(p: {
 
       <div id="comprar" className={`${card} grid gap-3`}>
         <h2 className="text-lg font-black">Comprar vídeos</h2>
+        {p.discount > 0 && (
+          <p className="rounded-lg bg-accent/15 px-3 py-2 text-sm font-semibold text-accent-ink">
+            🎁 Você chegou por indicação: {p.discount}% de desconto na sua primeira compra, já aplicado nos preços abaixo.
+          </p>
+        )}
         <div className="grid gap-2 sm:grid-cols-2">
           {options.map((o) => (
             <button
@@ -121,7 +142,10 @@ export default function AccountPanel(p: {
             >
               <span className="flex items-baseline justify-between gap-2">
                 <span className="font-bold">{o.title}</span>
-                <span className="whitespace-nowrap font-extrabold">{o.price}</span>
+                <span className="whitespace-nowrap font-extrabold">
+                  {o.full && <s className="mr-1 text-xs font-semibold text-foreground/40">{o.full}</s>}
+                  {o.price}
+                </span>
               </span>
               <span className="block text-xs text-foreground/60">{o.sub}</span>
             </button>
@@ -166,8 +190,11 @@ export default function AccountPanel(p: {
       <div className={`${card} grid gap-2`}>
         <h2 className="text-lg font-black">Indique e ganhe {p.affiliatePercent}%</h2>
         <p className="text-sm text-foreground/70">
-          Quem criar conta pelo seu link vira sua indicação. Você recebe {p.affiliatePercent}% de tudo que essa pessoa pagar,
-          direto na sua conta do Asaas, sem pedir saque.
+          Quem criar conta pelo seu link vira sua indicação e ganha {REFERRAL_DISCOUNT}% de desconto na primeira compra. Você recebe{" "}
+          {p.affiliatePercent}% de tudo que essa pessoa pagar, direto na sua conta do Asaas, sem pedir saque.
+          <span className="mt-1 block text-xs text-foreground/60">
+            Sugestão para divulgar: &quot;Use meu link e ganhe {REFERRAL_DISCOUNT}% de desconto na primeira compra do Corte25.&quot;
+          </span>
         </p>
         <div className="grid grid-cols-3 gap-2 text-center">
           {[

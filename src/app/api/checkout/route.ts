@@ -2,6 +2,7 @@ import { asaasConfigured, createCheckout, createCustomer } from "@/lib/asaas";
 import { currentUser, getProfile, updateProfile } from "@/lib/auth";
 import { CATALOG, type ProductId } from "@/lib/pricing";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { referralDiscount } from "@/lib/credits";
 
 function validCpfCnpj(v: string) {
   const d = v.replace(/\D/g, "");
@@ -46,24 +47,25 @@ export async function POST(req: Request) {
     wallet = data?.affiliate_wallet_id || null;
   }
 
+  const discountPercent = await referralDiscount(user.id, profile.referred_by);
   try {
     let out;
     try {
-      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: wallet });
+      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: wallet, discountPercent });
     } catch (err) {
       if (!wallet) throw err;
       // Carteira do afiliado recusada (ID errado ou a própria conta): a venda não pode travar.
       // Cobra sem o split; a indicação fica registrada em payments.affiliate_code para pagar à mão.
       console.warn("[checkout] split recusado, cobrando sem ele:", (err as Error).message);
       wallet = null;
-      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: null });
+      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: null, discountPercent });
     }
     await supabaseAdmin().from("payments").upsert({
       id: out.id,
       user_id: user.id,
       product,
       credits: CATALOG[product].credits,
-      value: CATALOG[product].value,
+      value: out.value,
       status: "PENDING",
       affiliate_code: profile.referred_by || null,
       subscription_id: out.subscription || null,

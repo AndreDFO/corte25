@@ -17,6 +17,11 @@ export const SUBSCRIPTION = { credits: 15, price: "R$ 39,90", perBatch: "R$ 0,11
 // perBatch agora mostra o preço por vídeo (valor ÷ (lotes × 25)), arredondado.
 // Comissão do afiliado (decidido em 22/11/2026). Entra junto com login e pagamento.
 export const AFFILIATE_PERCENT = 15;
+// Desconto para quem compra pela indicação de um afiliado, só na primeira compra (decidido em 22/11/2026).
+// A comissão do afiliado (15%) é calculada sobre o valor já com desconto.
+export const REFERRAL_DISCOUNT = 10;
+export const discounted = (value: number, percent: number) => Math.round(value * (100 - percent)) / 100;
+export const brl = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 export const FREE_VIDEOS = 2;
 export const FREE_TRIALS_PER_PERSON = 1;
 

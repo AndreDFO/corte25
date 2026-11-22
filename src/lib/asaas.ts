@@ -1,7 +1,7 @@
 // Cliente mínimo da API do Asaas (cobrança Pix/cartão/boleto, assinatura e split para afiliado).
 // Chaves só por variável de ambiente no servidor: ASAAS_API_KEY, ASAAS_API_URL, ASAAS_WEBHOOK_TOKEN.
 // Sandbox: https://api-sandbox.asaas.com/v3 · Produção: https://api.asaas.com/v3
-import { AFFILIATE_PERCENT, CATALOG, type ProductId } from "./pricing";
+import { AFFILIATE_PERCENT, CATALOG, discounted, type ProductId } from "./pricing";
 
 const API = (process.env.ASAAS_API_URL || "https://api-sandbox.asaas.com/v3").replace(/\s+/g, "").replace(/\/+$/, "");
 // Tira espaços e quebras de linha coladas junto com a chave.
@@ -61,13 +61,15 @@ export async function createCheckout(opts: {
   userId: string;
   product: ProductId;
   affiliateWallet?: string | null;
-}): Promise<{ id: string; url: string; subscription?: string }> {
+  discountPercent?: number; // desconto da indicação (só na primeira compra)
+}): Promise<{ id: string; url: string; subscription?: string; value: number }> {
   const item = CATALOG[opts.product];
+  const value = opts.discountPercent ? discounted(item.value, opts.discountPercent) : item.value;
   const base = {
     customer: opts.customer,
     billingType: "UNDEFINED",
-    value: item.value,
-    description: `Corte25 · ${item.label}`,
+    value: item.recurring ? item.value : value,
+    description: `Corte25 · ${item.label}${opts.discountPercent ? ` · ${opts.discountPercent}% de desconto pela indicação` : ""}`,
     externalReference: `${opts.userId}:${opts.product}`,
     split: split(opts.affiliateWallet),
   };
@@ -89,10 +91,20 @@ export async function createCheckout(opts: {
     // A primeira mensalidade já nasce com a assinatura; pega o link dela.
     const list = await call<{ data: { id: string; invoiceUrl: string }[] }>("GET", `/subscriptions/${sub.id}/payments`);
     const first = list.data[0];
-    return { id: first.id, url: first.invoiceUrl, subscription: sub.id };
+    // Desconto só na primeira mensalidade: ajusta o valor dessa cobrança; as próximas vêm cheias.
+    let firstValue: number = item.value;
+    if (value !== item.value) {
+      try {
+        await call("PUT", `/payments/${first.id}`, { value });
+        firstValue = value;
+      } catch (err) {
+        console.warn("[asaas] não deu para aplicar o desconto na 1ª mensalidade:", (err as Error).message);
+      }
+    }
+    return { id: first.id, url: first.invoiceUrl, subscription: sub.id, value: firstValue };
   }
   const pay = await withCallback<{ id: string; invoiceUrl: string }>("/payments", { ...base, dueDate: today(1) });
-  return { id: pay.id, url: pay.invoiceUrl };
+  return { id: pay.id, url: pay.invoiceUrl, value };
 }
 
 export async function getPayment(id: string) {
