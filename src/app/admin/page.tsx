@@ -7,6 +7,8 @@ import { currentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Coupon } from "@/lib/coupons";
 import AdminCoupons from "./admin-coupons";
+import Stats from "./stats";
+import { adminStats } from "@/lib/admin-stats";
 
 const nowMs = () => Date.now();
 
@@ -55,8 +57,16 @@ async function Admin({ searchParams }: { searchParams: Promise<Record<string, st
       </form>
     );
   }
-  const { data } = await supabaseAdmin().from("coupons").select("*").order("created_at", { ascending: false });
-  return <AdminCoupons initial={(data ?? []) as Coupon[]} now={nowMs()} />;
+  const now = nowMs();
+  const [{ data }, stats] = await Promise.all([
+    supabaseAdmin().from("coupons").select("*").order("created_at", { ascending: false }),
+    adminStats(now),
+  ]);
+  return (
+    <AdminCoupons initial={(data ?? []) as Coupon[]} now={now}>
+      <Stats s={stats} />
+    </AdminCoupons>
+  );
 }
 
 export default function Page({ searchParams }: PageProps<"/admin">) {

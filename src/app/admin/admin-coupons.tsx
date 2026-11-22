@@ -19,7 +19,7 @@ function describe(c: Coupon) {
 
 const field = "rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm";
 
-export default function AdminCoupons({ initial, now }: { initial: Coupon[]; now: number }) {
+export default function AdminCoupons({ initial, now, children }: { initial: Coupon[]; now: number; children?: React.ReactNode }) {
   const [list, setList] = useState(initial);
   const [code, setCode] = useState("");
   const [kind, setKind] = useState<CouponKind>("percent");
@@ -74,6 +74,8 @@ export default function AdminCoupons({ initial, now }: { initial: Coupon[]; now:
           </Link>
         </div>
       </div>
+
+      {children}
 
       <form onSubmit={create} className="grid gap-3 rounded-2xl bg-surface p-5 ring-1 ring-foreground/10">
         <h2 className="text-lg font-black">Criar cupom</h2>
