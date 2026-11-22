@@ -42,7 +42,6 @@ export default function AccountPanel(p: {
   const [savedWallet, setSavedWallet] = useState(p.walletId || "");
   const [walletMsg, setWalletMsg] = useState("");
   const [copied, setCopied] = useState(false);
-  const [copiedText, setCopiedText] = useState(false);
   const [showComm, setShowComm] = useState(false);
   // Comissão em centavos inteiros (39,90 × 15% = 5,985 → R$ 5,99).
   const comm = (value: number, percent: number) => Math.round(Math.round(value * 100) * percent / 100) / 100;
@@ -57,7 +56,36 @@ export default function AccountPanel(p: {
   const [couponErr, setCouponErr] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
   const refLink = `${p.siteUrl}/?ref=${p.refCode}`;
-  const shareText = `Use meu link e ganhe ${REFERRAL_DISCOUNT}% de desconto na primeira compra do Corte25 👉 ${refLink}`;
+  // Kit do afiliado: textos prontos com o link da pessoa (copiar ou mandar no WhatsApp).
+  const kit = [
+    {
+      id: "convite",
+      title: "Convite para outro vendedor",
+      text: `Oi! Você vende no TikTok Shop? O Corte25 transforma poucos vídeos seus em 25 vídeos diferentes, prontos para postar, com gancho, corpo e chamada para comprar. Eu uso e recomendo. Dá para testar grátis e, pelo meu link, você ganha ${REFERRAL_DISCOUNT}% de desconto na primeira compra 👉 ${refLink}`,
+    },
+    {
+      id: "ganhar",
+      title: "Convite para ganhar dinheiro indicando",
+      text: `Além de fazer 25 vídeos para TikTok Shop em minutos, o Corte25 paga ${p.affiliatePercent}% de comissão nas ${AFFILIATE_MAX_PURCHASES} primeiras compras de cada pessoa que você indicar e ${AFFILIATE_LATER_PERCENT}% para sempre depois, direto na sua conta do Asaas. Crie sua conta grátis, teste e comece a indicar 👉 ${refLink}`,
+    },
+    {
+      id: "whatsapp",
+      title: "WhatsApp (contatos e status)",
+      text: `Descobri um site que faz 25 vídeos para TikTok Shop a partir de poucos vídeos meus, em minutos 🎬 Ficaram muito bons e dá para testar grátis. Com meu link tem ${REFERRAL_DISCOUNT}% de desconto na primeira compra: ${refLink}`,
+    },
+    {
+      id: "tiktok",
+      title: "Legenda para TikTok ou Instagram",
+      text: `Gravei poucos vídeos e saíram 25 prontos para postar 😱 Quer saber como? O link está na bio, e com ele você tem ${REFERRAL_DISCOUNT}% de desconto. #tiktokshop #vendasonline #afiliados`,
+    },
+    {
+      id: "grupo",
+      title: "Post para grupo de vendedores",
+      text: `Para quem vende no TikTok Shop e não tem tempo de editar: o Corte25 junta seus ganchos, corpos e chamadas e monta 25 vídeos diferentes de uma vez. Dá para testar grátis antes de pagar, e quem gosta ainda ganha comissão indicando. Link com ${REFERRAL_DISCOUNT}% de desconto na primeira compra: ${refLink}`,
+    },
+  ];
+  const [copiedKit, setCopiedKit] = useState("");
+  const [kitOpen, setKitOpen] = useState(false);
 
   async function pay() {
     if (!chosen) return;
@@ -206,6 +234,28 @@ export default function AccountPanel(p: {
       {p.paid && (
         <div className="rounded-2xl bg-brand/20 p-4 text-sm font-semibold ring-1 ring-brand">
           Pagamento recebido, obrigado! Seus vídeos entram no saldo em instantes. Se ainda não aparecerem, atualize a página.
+        </div>
+      )}
+
+      {(p.paid || p.payments.some((x) => x.status === "CONFIRMED" || x.status === "RECEIVED")) && !savedWallet && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-accent/15 p-4 ring-1 ring-accent">
+          <div className="min-w-0 flex-1">
+            <p className="font-black">💸 Ganhe dinheiro indicando o Corte25</p>
+            <p className="text-sm text-foreground/70">
+              Você ganha {p.affiliatePercent}% nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada pessoa que indicar e {AFFILIATE_LATER_PERCENT}% para sempre
+              depois. Já tem textos prontos para mandar.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setKitOpen(true);
+              document.getElementById("afiliado")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="rounded-xl bg-accent px-5 py-2.5 font-black text-white hover:bg-accent-dark"
+          >
+            Quero ser afiliado
+          </button>
         </div>
       )}
 
@@ -399,7 +449,7 @@ export default function AccountPanel(p: {
         </p>
       </div>
 
-      <div className={`${card} grid gap-2`}>
+      <div id="afiliado" className={`${card} grid gap-2 scroll-mt-24`}>
         <h2 className="text-lg font-black">
           Indique: eles ganham {REFERRAL_DISCOUNT}%, você ganha {p.affiliatePercent}%
         </h2>
@@ -461,20 +511,61 @@ export default function AccountPanel(p: {
           Quem criar conta pelo seu link vira sua indicação. A comissão cai direto na sua conta do Asaas, sem pedir saque.
         </p>
         <div className="grid gap-2 rounded-lg border border-dashed border-accent/60 bg-accent/10 px-3 py-2 text-sm">
-          <p>
-            <b>Texto para divulgar:</b> &quot;{shareText}&quot;
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(shareText);
-              setCopiedText(true);
-              setTimeout(() => setCopiedText(false), 1500);
-            }}
-            className="justify-self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-white hover:bg-accent-dark"
-          >
-            {copiedText ? "Texto copiado!" : "Copiar texto"}
-          </button>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-black">🧰 Kit do afiliado: textos prontos com o seu link</p>
+            <button type="button" onClick={() => setKitOpen((v) => !v)} className="rounded-lg border border-accent/60 px-3 py-1 text-xs font-bold">
+              {kitOpen ? "Fechar" : "Abrir kit"}
+            </button>
+          </div>
+          {!kitOpen && <p className="text-xs text-foreground/70">5 textos para copiar ou mandar direto no WhatsApp, e dicas de onde divulgar.</p>}
+          {kitOpen && (
+            <>
+              {kit.map((k) => (
+                <div key={k.id} className="grid gap-1.5 rounded-lg bg-background/70 px-3 py-2">
+                  <p className="text-xs font-bold text-foreground/70">{k.title}</p>
+                  <p className="text-xs">{k.text}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(k.text);
+                        setCopiedKit(k.id);
+                        setTimeout(() => setCopiedKit(""), 1500);
+                      }}
+                      className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-white hover:bg-accent-dark"
+                    >
+                      {copiedKit === k.id ? "Copiado!" : "Copiar"}
+                    </button>
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(k.text)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg bg-[#25d366] px-3 py-1.5 text-xs font-bold text-white"
+                    >
+                      Mandar no WhatsApp
+                    </a>
+                  </div>
+                </div>
+              ))}
+              <div className="grid gap-1 rounded-lg bg-background/70 px-3 py-2 text-xs">
+                <p className="font-bold text-foreground/70">🎬 Vídeos para mostrar</p>
+                <p>
+                  Os melhores vídeos de divulgação são os que o Corte25 fez para você. Abra{" "}
+                  <Link href="/meus-videos" className="font-semibold underline">Meus vídeos</Link>, baixe 2 ou 3 e poste com a legenda
+                  acima. Mostre o antes (poucos vídeos) e o depois (25 prontos).
+                </p>
+              </div>
+              <div className="grid gap-1 rounded-lg bg-background/70 px-3 py-2 text-xs">
+                <p className="font-bold text-foreground/70">📍 Onde divulgar</p>
+                <ul className="list-disc space-y-0.5 pl-4">
+                  <li>Grupos de WhatsApp, Telegram e Facebook de vendedores e afiliados do TikTok Shop.</li>
+                  <li>Comentários e mensagens para quem vende no TikTok Shop e posta pouco.</li>
+                  <li>Seu status do WhatsApp e a bio do seu TikTok ou Instagram.</li>
+                </ul>
+                <p className="text-foreground/60">Dica: sem spam. Uma mensagem por grupo e responda as dúvidas, isso vende mais.</p>
+              </div>
+            </>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
