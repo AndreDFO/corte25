@@ -10,6 +10,7 @@ export default function JobView({ id }: { id: string }) {
   const [job, setJob] = useState<(Job & { expiresAt?: string }) | null>(null);
   const [now, setNow] = useState(0);
   const [notFound, setNotFound] = useState(false);
+  const [otherAccount, setOtherAccount] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -19,6 +20,7 @@ export default function JobView({ id }: { id: string }) {
       try {
         const res = await fetch(`/api/jobs/${id}`, { cache: "no-store" });
         if (res.status === 404) return setNotFound(true);
+        if (res.status === 403) return setOtherAccount(true);
         const j: Job & { expiresAt?: string } = await res.json();
         if (stop) return;
         setJob(j);
@@ -38,6 +40,16 @@ export default function JobView({ id }: { id: string }) {
     };
   }, [id]);
 
+  if (otherAccount)
+    return (
+      <div className="p-10 text-center">
+        <p className="font-bold">Este lote é de outra conta.</p>
+        <p className="mt-1 text-sm text-foreground/60">Entre com a conta que gerou os vídeos para ver e baixar.</p>
+        <Link href={`/entrar?volta=/tarefa/${id}`} className="mt-4 inline-block rounded-xl bg-brand px-5 py-2.5 font-bold text-on-brand">
+          Entrar
+        </Link>
+      </div>
+    );
   if (notFound)
     return (
       <div className="p-10 text-center">

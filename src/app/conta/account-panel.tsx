@@ -70,6 +70,9 @@ export default function AccountPanel(p: {
 
   async function logout() {
     await fetch("/api/conta/sair", { method: "POST" });
+    try {
+      localStorage.removeItem("corte25_jobs");
+    } catch {}
     window.location.href = "/";
   }
 

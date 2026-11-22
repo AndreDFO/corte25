@@ -117,6 +117,7 @@ export async function POST(req: Request) {
     status: "queued",
     message: "Na fila…",
     variations: [],
+    ownerId: user?.id ?? null,
   };
   await saveJob(job);
   // Liga o lote à conta (o lote pago já é ligado ao descontar o saldo): aparece em "Meus vídeos" em qualquer aparelho.

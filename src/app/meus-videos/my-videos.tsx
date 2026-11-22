@@ -13,19 +13,19 @@ export default function MyVideos() {
 
   useEffect(() => {
     (async () => {
-      // Lotes deste navegador + lotes da conta (feitos em outro aparelho, com login).
-      const mine = readMyJobs();
+      // Com login: só os lotes da conta (de qualquer aparelho). Sem login: os lotes deste navegador.
+      let mine = readMyJobs();
       try {
         const r = await fetch("/api/conta/videos", { cache: "no-store" });
-        const j = r.ok ? ((await r.json()) as { ids: string[] }) : { ids: [] };
-        for (const id of j.ids) if (!mine.some((m) => m.id === id)) mine.push({ id, product: "", createdAt: "" });
+        const j = r.ok ? ((await r.json()) as { logged: boolean; ids: string[] }) : null;
+        if (j?.logged) mine = j.ids.map((id) => ({ id, product: "", createdAt: "" }));
       } catch {}
       const gone: string[] = [];
       const found: Row[] = [];
       for (const m of mine) {
         try {
           const res = await fetch(`/api/jobs/${m.id}`, { cache: "no-store" });
-          if (res.status === 404) gone.push(m.id);
+          if (res.status === 404 || res.status === 403) gone.push(m.id);
           else if (res.ok) found.push(await res.json());
         } catch {}
       }

@@ -34,6 +34,7 @@ export interface Job {
   copySource?: "claude" | "template";
   message?: string;
   variations: Variation[];
+  ownerId?: string | null; // conta que gerou (null = sem login); só ela vê o lote
 }
 
 export function newJobId() {

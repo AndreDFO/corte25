@@ -1,3 +1,4 @@
+import { canAccessJob, forbidden } from "@/lib/job-access";
 import { createWriteStream, openAsBlob, promises as fs } from "fs";
 import path from "path";
 import { finished } from "stream/promises";
@@ -44,6 +45,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!/^[a-f0-9]{16}$/.test(id)) return new Response("não encontrado", { status: 404 });
   const job = await loadJob(id);
   if (!job) return new Response("não encontrado", { status: 404 });
+  if (!(await canAccessJob(job))) return forbidden();
   if (job.status !== "done" && job.status !== "error")
     return new Response("os vídeos ainda estão sendo gerados", { status: 409 });
 

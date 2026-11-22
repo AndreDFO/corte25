@@ -1,3 +1,4 @@
+import { canAccessJob, forbidden } from "@/lib/job-access";
 import { createReadStream, promises as fs } from "fs";
 import path from "path";
 import { Readable } from "stream";
@@ -7,7 +8,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string; fil
   const { id, file } = await ctx.params;
   if (!/^[a-f0-9]{16}$/.test(id) || !/^video_\d{2}\.mp4$/.test(file))
     return new Response("não encontrado", { status: 404 });
-  if (!(await loadJob(id))) return new Response("não encontrado", { status: 404 });
+  const job = await loadJob(id);
+  if (!job) return new Response("não encontrado", { status: 404 });
+  if (!(await canAccessJob(job))) return forbidden();
   const full = path.join(jobDir(id), "outputs", file);
   let size: number;
   try {
