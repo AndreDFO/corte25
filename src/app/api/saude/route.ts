@@ -1,8 +1,10 @@
+import { connection } from "next/server";
 import { asaasConfigured } from "@/lib/asaas";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "@/lib/supabase-admin";
 
 // Diagnóstico sem segredos: qual versão está no ar e quais configurações o site enxerga.
 export async function GET() {
+  await connection(); // sempre na hora, nunca a versão gerada no build
   const anonRef = (() => {
     try {
       return JSON.parse(Buffer.from(SUPABASE_ANON_KEY.split(".")[1] || "", "base64url").toString()).ref ?? null;
