@@ -386,7 +386,7 @@ export default function UploadForm() {
                 </span>
               </span>
               <span className="block text-xs text-foreground/60">
-                {SUBSCRIPTION.credits} lotes por mês · {SUBSCRIPTION.perBatch}
+                {SUBSCRIPTION.credits * 25} vídeos por mês · {SUBSCRIPTION.perBatch}
               </span>
             </a>
             <p className="-mb-2 text-xs font-semibold text-foreground/50">Ou pacotes avulsos, sem mensalidade:</p>
@@ -397,7 +397,7 @@ export default function UploadForm() {
                 className={`block rounded-xl border px-4 py-2.5 text-left hover:bg-foreground/5 ${p.best ? "border-brand bg-brand/10" : "border-foreground/15"}`}
               >
                 <span className="flex items-baseline justify-between">
-                  <span className="font-bold">{p.credits} lotes</span>
+                  <span className="font-bold">{p.credits * 25} vídeos</span>
                   <span className="text-lg font-extrabold">{p.price}</span>
                 </span>
                 <span className="block text-xs text-foreground/50">

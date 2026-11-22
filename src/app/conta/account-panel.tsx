@@ -73,8 +73,8 @@ export default function AccountPanel(p: {
   }
 
   const options: { id: ProductId; title: string; price: string; sub: string; accent?: boolean }[] = [
-    { id: "assinatura", title: "Assinatura mensal", price: `${SUBSCRIPTION.price}/mês`, sub: `${SUBSCRIPTION.credits} lotes (${SUBSCRIPTION.credits * 25} vídeos) por mês · ${SUBSCRIPTION.perBatch}`, accent: true },
-    ...PACKAGES.map((x) => ({ id: `pacote-${x.credits}` as ProductId, title: `${x.credits} lotes`, price: x.price, sub: `${x.credits * 25} vídeos · ${x.perBatch}` })),
+    { id: "assinatura", title: "Assinatura mensal", price: `${SUBSCRIPTION.price}/mês`, sub: `${SUBSCRIPTION.credits * 25} vídeos por mês · ${SUBSCRIPTION.perBatch}`, accent: true },
+    ...PACKAGES.map((x) => ({ id: `pacote-${x.credits}` as ProductId, title: `${x.credits * 25} vídeos`, price: x.price, sub: x.perBatch })),
   ];
   const card = "rounded-2xl bg-surface p-5 ring-1 ring-foreground/10";
 
@@ -92,7 +92,7 @@ export default function AccountPanel(p: {
 
       {p.paid && (
         <div className="rounded-2xl bg-brand/20 p-4 text-sm font-semibold ring-1 ring-brand">
-          Pagamento recebido, obrigado! Seus lotes entram no saldo em instantes. Se ainda não aparecerem, atualize a página.
+          Pagamento recebido, obrigado! Seus vídeos entram no saldo em instantes. Se ainda não aparecerem, atualize a página.
         </div>
       )}
 
@@ -110,7 +110,7 @@ export default function AccountPanel(p: {
       </div>
 
       <div id="comprar" className={`${card} grid gap-3`}>
-        <h2 className="text-lg font-black">Comprar lotes</h2>
+        <h2 className="text-lg font-black">Comprar vídeos</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {options.map((o) => (
             <button
@@ -159,7 +159,7 @@ export default function AccountPanel(p: {
           <p className="rounded-lg bg-foreground/5 px-3 py-2 text-sm text-foreground/60">O pagamento entra no ar em breve.</p>
         )}
         <p className="text-xs text-foreground/50">
-          Você paga por Pix, cartão ou boleto na página segura do Asaas. Os lotes entram aqui assim que o pagamento é confirmado.
+          Você paga por Pix, cartão ou boleto na página segura do Asaas. Os vídeos entram no seu saldo assim que o pagamento é confirmado.
         </p>
       </div>
 
