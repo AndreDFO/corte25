@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
-import { trackPath } from "@/lib/music-library";
+import { downloadOnline, isOnlineId } from "@/lib/music-library";
 import { NoAudioError, extractAudio } from "@/lib/music-extract";
 import { spendVipQuota, vipAllowance } from "@/lib/vip";
 import { type VipFeature, MIX_RULE, mixOk, BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
@@ -56,9 +56,18 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
       return Response.json({ error: `${v.name} passa de ${MAX_FILE_MB} MB.` }, { status: 400 });
   }
 
-  // Música enviada pela pessoa (áudio OU vídeo): o FFmpeg tira só o som, antes de cobrar qualquer coisa.
+  // Música: busca externa (track = ov_<id>) ou enviada pela pessoa (áudio OU vídeo).
+  // O FFmpeg deixa só o som. Tudo antes de cobrar: se falhar, nada é descontado.
+  const track = String(form.get("track") || "");
   let musicAudio: Buffer | null = null;
-  if (music instanceof File && music.size > 0) {
+  let musicLabel = "";
+  if (isOnlineId(track)) {
+    const raw = await downloadOnline(track).catch(() => null);
+    if (!raw) return Response.json({ error: "Não deu para baixar a música escolhida. Escolha outra ou tente de novo." }, { status: 400 });
+    musicAudio = await extractAudio(raw).catch(() => null);
+    if (!musicAudio) return Response.json({ error: "A música escolhida veio com defeito. Escolha outra." }, { status: 400 });
+    musicLabel = track;
+  } else if (music instanceof File && music.size > 0) {
     try {
       musicAudio = await extractAudio(music);
     } catch (e) {
@@ -66,6 +75,7 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
         return Response.json({ error: `Não achei som em ${music.name}. Envie um vídeo com áudio ou um MP3.` }, { status: 400 });
       throw e;
     }
+    musicLabel = safeName(music.name).replace(/\.[^.]+$/, "");
   }
 
   const plan = form.get("plan") === "full" ? "full" : "free";
@@ -92,7 +102,7 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
   const wantCaptions = form.get("captions") === "1";
   const wantTrim = form.get("trimSilence") === "1";
   const wantAuto = form.get("autoCaptions") === "1";
-  const wantMusic = Boolean(form.get("track")) || (music instanceof File && music.size > 0);
+  const wantMusic = Boolean(musicAudio);
   const needsQuota = (wantCaptions && !has("textos")) || (wantTrim && !has("silencio")) || (wantMusic && !has("musica")) || (wantAuto && !has("legenda"));
   const quotaVideos = !allowance.vip && plan === "full" && needsQuota ? allowance.quota : 0;
   const allow = (f: VipFeature) => has(f) || quotaVideos > 0;
@@ -149,15 +159,8 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
     ctas: await save(ctas, "cta"),
   };
   let musicName: string | undefined;
-  const track = String(form.get("track") || "");
-  const trackFile = allow("musica") && track && track !== "arquivo" ? await trackPath(track) : null;
-  if (trackFile) {
-    // Música da biblioteca (Openverse CC0/domínio público ou as faixas próprias).
-    musicName = `musica_${track}${path.extname(trackFile)}`;
-    await fs.copyFile(trackFile, path.join(dir, "inputs", musicName));
-  } else if (allow("musica") && musicAudio && music instanceof File) {
-    // Só o som (m4a), mesmo quando a pessoa enviou um vídeo.
-    musicName = `musica_${safeName(music.name).replace(/\.[^.]+$/, "")}.m4a`;
+  if (allow("musica") && musicAudio) {
+    musicName = `musica_${musicLabel}.m4a`;
     await fs.writeFile(path.join(dir, "inputs", musicName), musicAudio);
   }
 

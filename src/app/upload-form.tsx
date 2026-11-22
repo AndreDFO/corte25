@@ -34,42 +34,66 @@ export default function UploadForm() {
   const router = useRouter();
   const [clips, setClips] = useState<Record<BlockKey, File[]>>({ hooks: [], bodies: [], ctas: [] });
   const [music, setMusic] = useState<File | null>(null);
-  // Música: "" = sem música, slug da playlist, ou "arquivo" = a pessoa envia a dela.
+  // Música: "" = sem música, "arquivo" = som de um vídeo/áudio da pessoa, "busca" = música grátis buscada na hora.
   const [track, setTrack] = useState("");
-  const [tracks, setTracks] = useState<{ id: string; title: string; style: string }[]>([]);
+  type Found = { id: string; title: string; seconds: number; creator?: string; preview: string };
+  const [picked, setPicked] = useState<Found | null>(null);
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState<Found[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchErr, setSearchErr] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   useEffect(() => {
+    if (track !== "busca" || suggestions.length) return;
     fetch("/api/musicas")
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => j?.tracks && setTracks(j.tracks))
+      .then((j) => j?.suggestions && setSuggestions(j.suggestions))
       .catch(() => {});
-  }, []);
-  const isTrack = (v: string) => v !== "" && v !== "arquivo";
-  const trackUrl = (id: string) => `/api/musicas/${encodeURIComponent(id)}`;
-  const styles = [...new Set(tracks.map((t) => t.style))];
-  const [playing, setPlaying] = useState(false);
+  }, [track, suggestions.length]);
+  async function searchMusic(q: string) {
+    q = q.trim();
+    if (q.length < 2) return;
+    setQuery(q);
+    setSearching(true);
+    setSearchErr("");
+    try {
+      const r = await fetch(`/api/musicas?q=${encodeURIComponent(q)}`);
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "A busca falhou.");
+      setFound(j.tracks || []);
+    } catch (e) {
+      setFound(null);
+      setSearchErr((e as Error).message);
+    } finally {
+      setSearching(false);
+    }
+  }
+  const [playing, setPlaying] = useState("");
   const player = useRef<HTMLAudioElement | null>(null);
-  function preview() {
-    if (!isTrack(track)) return;
+  function preview(t: Found) {
     if (!player.current) {
       player.current = new Audio();
-      player.current.onended = () => setPlaying(false);
+      player.current.onended = () => setPlaying("");
     }
     const a = player.current;
-    if (playing) {
+    if (playing === t.id) {
       a.pause();
-      setPlaying(false);
+      setPlaying("");
       return;
     }
-    if (!a.src.endsWith(trackUrl(track))) a.src = trackUrl(track);
+    a.src = t.preview;
     a.currentTime = 0;
-    a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    setPlaying(t.id);
+    a.play().catch(() => setPlaying(""));
   }
   function chooseTrack(v: string) {
     player.current?.pause();
-    setPlaying(false);
+    setPlaying("");
     setTrack(v);
     if (v !== "arquivo") setMusic(null);
+    if (v !== "busca") setPicked(null);
   }
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const [product, setProduct] = useState("");
   const [details, setDetails] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -143,6 +167,7 @@ export default function UploadForm() {
     setError("");
     setDoneId("");
     if (!mixed) return setError(MIX_RULE);
+    if (canMusic && track === "busca" && !picked) return setError("Escolha uma música da busca (botão Usar) ou mude para Sem música.");
     if (plan === "free" && whatsapp.replace(/\D/g, "").length < 10)
       return setError("Informe seu WhatsApp com DDD para fazer o teste grátis.");
     const fd = new FormData();
@@ -157,7 +182,7 @@ export default function UploadForm() {
     if (plan === "free") fd.append("whatsapp", whatsapp);
     fd.append("clientId", clientId());
     (Object.keys(clips) as BlockKey[]).forEach((k) => clips[k].forEach((f) => fd.append(k, f)));
-    if (isTrack(track)) fd.append("track", track);
+    if (track === "busca" && picked) fd.append("track", picked.id);
     else if (track === "arquivo" && music) fd.append("music", music);
 
     // Os vídeos abrem numa aba nova (pedido do Andre). A aba é aberta já no clique,
@@ -402,30 +427,9 @@ export default function UploadForm() {
               className="w-full min-w-0 rounded-lg bg-field border border-foreground/15 px-2 py-2 outline-none focus:border-brand disabled:opacity-50"
             >
               <option value="">Sem música</option>
-              {styles.map((s) => (
-                <optgroup key={s} label={s}>
-                  {tracks
-                    .filter((t) => t.style === s)
-                    .map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
               <option value="arquivo">Usar o som de um vídeo ou áudio meu…</option>
+              <option value="busca">🔎 Buscar música grátis…</option>
             </select>
-            {isTrack(track) && (
-              <button
-                type="button"
-                onClick={preview}
-                aria-label={playing ? "Parar prévia" : "Ouvir prévia"}
-                title={playing ? "Parar" : "Ouvir"}
-                className="grid w-9 shrink-0 place-items-center rounded-lg bg-accent text-sm font-black text-white hover:bg-accent-dark"
-              >
-                {playing ? "■" : "▶"}
-              </button>
-            )}
           </span>
         </div>
       </div>
@@ -440,6 +444,81 @@ export default function UploadForm() {
           <span className="shrink-0 rounded-md bg-foreground/10 px-2 py-0.5 text-xs font-semibold">Escolher arquivo</span>
           <span className="truncate text-xs text-foreground/60">{music ? music.name : "Vídeo ou MP3: usamos só o som"}</span>
         </label>
+      )}
+      {track === "busca" && (
+        <div className="-mt-1 grid gap-2 rounded-lg border border-foreground/15 bg-field p-2">
+          {picked ? (
+            <div className="flex min-w-0 items-center gap-2 text-xs">
+              <button type="button" onClick={() => preview(picked)} aria-label="Ouvir" className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-accent font-black text-white">
+                {playing === picked.id ? "■" : "▶"}
+              </button>
+              <span className="min-w-0 flex-1 truncate">
+                ✅ <b>{picked.title}</b> <span className="text-foreground/50">({mmss(picked.seconds)})</span>
+              </span>
+              <button type="button" onClick={() => setPicked(null)} className="shrink-0 underline">
+                Trocar
+              </button>
+            </div>
+          ) : (
+            <>
+              <span className="flex gap-1">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      searchMusic(query);
+                    }
+                  }}
+                  placeholder="Ex.: trap beat, funk, lofi, reggaeton"
+                  aria-label="Buscar música"
+                  className="w-full min-w-0 rounded-md border border-foreground/15 bg-background px-2 py-1.5 text-sm outline-none focus:border-brand"
+                />
+                <button type="button" onClick={() => searchMusic(query)} disabled={searching} className="shrink-0 rounded-md bg-accent px-3 text-xs font-bold text-white disabled:opacity-60">
+                  {searching ? "Buscando…" : "Buscar"}
+                </button>
+              </span>
+              {!found && suggestions.length > 0 && (
+                <span className="flex flex-wrap gap-1">
+                  {suggestions.map((q) => (
+                    <button key={q} type="button" onClick={() => searchMusic(q)} className="rounded-full bg-foreground/10 px-2 py-0.5 text-[11px] font-semibold hover:bg-foreground/20">
+                      {q}
+                    </button>
+                  ))}
+                </span>
+              )}
+              {searchErr && <p className="text-xs text-red-600">{searchErr}</p>}
+              {found && found.length === 0 && <p className="text-xs text-foreground/60">Nada encontrado. Tente outra palavra (em inglês costuma achar mais).</p>}
+              {found && found.length > 0 && (
+                <ul className="grid max-h-56 gap-1 overflow-y-auto">
+                  {found.map((t) => (
+                    <li key={t.id} className="flex min-w-0 items-center gap-2 text-xs">
+                      <button type="button" onClick={() => preview(t)} aria-label={playing === t.id ? "Parar" : "Ouvir"} className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-foreground/10 font-black">
+                        {playing === t.id ? "■" : "▶"}
+                      </button>
+                      <span className="min-w-0 flex-1 truncate">
+                        {t.title} <span className="text-foreground/50">({mmss(t.seconds)})</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          player.current?.pause();
+                          setPlaying("");
+                          setPicked(t);
+                        }}
+                        className="shrink-0 rounded-md bg-brand px-2 py-1 font-bold text-on-brand"
+                      >
+                        Usar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+          <p className="text-[11px] text-foreground/55">Músicas de uso comercial livre (CC0 / domínio público), sem precisar dar crédito.</p>
+        </div>
       )}
       {track === "arquivo" && (
         <p className="-mt-1 text-[11px] text-foreground/55">

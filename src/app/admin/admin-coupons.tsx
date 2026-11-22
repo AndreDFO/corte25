@@ -142,19 +142,6 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
             type="button"
             className="underline"
             onClick={async (e) => {
-              const b = e.currentTarget;
-              b.textContent = "Buscando músicas…";
-              const res = await fetch("/api/admin/musicas", { method: "POST" });
-              const j = await res.json().catch(() => ({}));
-              b.textContent = res.ok ? `Músicas atualizadas (${j.tracks})` : j.error || "Falhou";
-            }}
-          >
-            Atualizar músicas
-          </button>
-          <button
-            type="button"
-            className="underline"
-            onClick={async (e) => {
               if (!window.confirm("Liberar o teste grátis de novo para todo mundo? Quem já usou poderá testar outra vez.")) return;
               const b = e.currentTarget;
               const res = await fetch("/api/admin/testes", { method: "POST" });
