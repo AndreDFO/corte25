@@ -18,6 +18,7 @@ export interface Variation {
   status: VariationStatus;
   error?: string;
   narrated?: string; // data da narração gravada pelo microfone (arquivo video_XX_narrado.mp4)
+  noTransition?: boolean; // pediu transição suave e saiu com corte seco (o saldo desse vídeo foi devolvido)
   noCaption?: boolean; // pediu legenda automática e saiu sem ela (o saldo desse vídeo foi devolvido)
   vip?: boolean; // vídeo feito com recursos VIP pela cota do assinante (mostra o selo VIP)
 }
