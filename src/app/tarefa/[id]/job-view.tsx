@@ -336,7 +336,21 @@ function SelectionBar({
 function bigScreen(video: HTMLVideoElement | null) {
   if (!video) return;
   const el = video as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
-  if (el.requestFullscreen) el.requestFullscreen().then(() => el.play().catch(() => {})).catch(() => el.webkitEnterFullscreen?.());
+  // Em tela cheia mostra os controles do aparelho (lá tem espaço); ao sair, voltam os controles do card.
+  el.controls = true;
+  const off = () => {
+    if (document.fullscreenElement) return;
+    el.controls = false;
+    document.removeEventListener("fullscreenchange", off);
+  };
+  el.addEventListener("webkitendfullscreen", () => (el.controls = false), { once: true });
+  if (el.requestFullscreen)
+    el.requestFullscreen()
+      .then(() => {
+        document.addEventListener("fullscreenchange", off);
+        el.play().catch(() => {});
+      })
+      .catch(() => el.webkitEnterFullscreen?.());
   else el.webkitEnterFullscreen?.();
 }
 
@@ -359,6 +373,8 @@ function Card({
 }) {
   const [copied, setCopied] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [paused, setPaused] = useState(true);
+  const [progress, setProgress] = useState(0);
   const isNarr = shown !== v.file;
   // ?n= muda a cada nova narração, para o navegador não mostrar a gravação anterior.
   const src = `/api/jobs/${id}/files/${shown}${isNarr ? `?n=${encodeURIComponent(v.narrated || "")}` : ""}`;
@@ -395,7 +411,47 @@ function Card({
           </button>
         )}
         {v.status === "done" ? (
-          <video ref={videoRef} key={src} src={src} controls playsInline preload="metadata" className="h-full w-full object-cover" />
+          <>
+            {/* Controles próprios: o menu nativo (3 pontinhos) abria para fora da tela nos cards pequenos. */}
+            <video
+              ref={videoRef}
+              key={src}
+              src={src}
+              playsInline
+              preload="metadata"
+              onClick={(e) => (e.currentTarget.paused ? e.currentTarget.play() : e.currentTarget.pause())}
+              onPlay={() => setPaused(false)}
+              onPause={() => setPaused(true)}
+              onEnded={() => setPaused(true)}
+              onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime / (e.currentTarget.duration || 1))}
+              className="h-full w-full cursor-pointer object-cover"
+            />
+            {paused && (
+              <button
+                type="button"
+                aria-label={`Tocar o vídeo ${v.index + 1}`}
+                onClick={() => videoRef.current?.play()}
+                className="absolute left-1/2 top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/50 text-white ring-2 ring-white/80"
+              >
+                <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5" fill="currentColor">
+                  <path d="M7 4.5v15l13-7.5z" />
+                </svg>
+              </button>
+            )}
+            <div
+              className="absolute inset-x-0 bottom-0 h-3 cursor-pointer"
+              onClick={(e) => {
+                const el = videoRef.current;
+                if (!el || !el.duration) return;
+                const r = e.currentTarget.getBoundingClientRect();
+                el.currentTime = ((e.clientX - r.left) / r.width) * el.duration;
+              }}
+            >
+              <div className="absolute inset-x-0 bottom-0 h-1 bg-white/25">
+                <div className="h-full bg-brand" style={{ width: `${Math.min(100, progress * 100)}%` }} />
+              </div>
+            </div>
+          </>
         ) : v.status === "error" ? (
           <span className="text-xs text-brand-ink p-3 text-center">Falhou</span>
         ) : (
