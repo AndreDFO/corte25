@@ -38,3 +38,11 @@ export function saveLead(lead: Lead) {
   lock = run.catch(() => {});
   return run;
 }
+
+export async function listLeads(): Promise<Lead[]> {
+  try {
+    return JSON.parse(await fs.readFile(FILE, "utf8"));
+  } catch {
+    return [];
+  }
+}
