@@ -354,8 +354,33 @@ export default function UploadForm() {
                 }}
                 className="cursor-pointer rounded-lg border border-dashed border-foreground/25 hover:border-foreground/50 py-2 text-center text-xs font-semibold text-foreground/60"
               >
-                <input type="file" accept="video/*" multiple={maxPer > 1} hidden onChange={(e) => add(b.key, e.target.files)} />+
-                Adicionar
+                <input
+                  type="file"
+                  accept="video/*"
+                  multiple={maxPer > 1}
+                  hidden
+                  onChange={(e) => {
+                    add(b.key, e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                + Adicionar
+              </label>
+            )}
+            {clips[b.key].length < maxPer && (
+              // Só no celular/tablet (tela de toque): abre a câmera para gravar na hora.
+              <label className="hidden cursor-pointer rounded-lg border border-foreground/25 bg-field py-2 text-center text-xs font-semibold text-foreground/70 hover:border-foreground/50 pointer-coarse:block">
+                <input
+                  type="file"
+                  accept="video/*"
+                  capture={b.key === "bodies" ? "environment" : "user"}
+                  hidden
+                  onChange={(e) => {
+                    add(b.key, e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                🎥 Gravar
               </label>
             )}
           </div>
