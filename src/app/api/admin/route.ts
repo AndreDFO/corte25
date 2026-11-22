@@ -1,18 +1,28 @@
 import { NextResponse } from "next/server";
 import { ADMIN_COOKIE, keyHash, keyMatches } from "@/lib/admin";
 
-// /api/admin?chave=... grava o acesso do dono neste navegador e abre /contatos.
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const given = url.searchParams.get("chave") || "";
-  if (!keyMatches(given)) return new Response("chave inválida", { status: 403 });
-  const res = NextResponse.redirect(new URL("/contatos", url));
-  res.cookies.set(ADMIN_COOKIE, keyHash(given), {
-    httpOnly: true,
-    secure: url.protocol === "https:",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+// Grava o acesso do dono neste navegador (cookie de 30 dias) e volta para /contatos.
+// Aceita o formulário de /contatos (POST, campo "chave") ou /api/admin?chave=... (GET).
+// O redirecionamento usa caminho relativo: atrás do Railway, req.url pode trazer o endereço interno.
+function respond(req: Request, given: string) {
+  const ok = keyMatches(given.trim());
+  const res = new NextResponse(null, { status: 303, headers: { Location: ok ? "/contatos" : "/contatos?erro=1" } });
+  if (ok)
+    res.cookies.set(ADMIN_COOKIE, keyHash(given.trim()), {
+      httpOnly: true,
+      secure: (req.headers.get("x-forwarded-proto") || new URL(req.url).protocol.replace(":", "")) === "https",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
   return res;
+}
+
+export async function GET(req: Request) {
+  return respond(req, new URL(req.url).searchParams.get("chave") || "");
+}
+
+export async function POST(req: Request) {
+  const form = await req.formData().catch(() => null);
+  return respond(req, String(form?.get("chave") || ""));
 }
