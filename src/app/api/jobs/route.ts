@@ -102,12 +102,13 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
   const wantCaptions = form.get("captions") === "1";
   const wantTrim = form.get("trimSilence") === "1";
   const wantAuto = form.get("autoCaptions") === "1";
+  const wantFade = form.get("transition") === "1";
   const wantMusic = Boolean(musicAudio);
-  const needsQuota = (wantCaptions && !has("textos")) || (wantTrim && !has("silencio")) || (wantMusic && !has("musica")) || (wantAuto && !has("legenda"));
+  const needsQuota = (wantCaptions && !has("textos")) || (wantTrim && !has("silencio")) || (wantMusic && !has("musica")) || (wantAuto && !has("legenda")) || (wantFade && !has("transicao"));
   const quotaVideos = !allowance.vip && plan === "full" && needsQuota ? allowance.quota : 0;
   const allow = (f: VipFeature) => has(f) || quotaVideos > 0;
   // Recursos que valem em todos os vídeos mesmo fora da cota (vieram de cupom).
-  const vipKeep = (["textos", "silencio", "musica", "legenda"] as const).filter((f) => has(f));
+  const vipKeep = (["textos", "silencio", "musica", "legenda", "transicao"] as const).filter((f) => has(f));
   const whatsapp = plan === "free" ? normalizeWhatsapp(String(form.get("whatsapp") || "")) : null;
   if (plan === "free" && !whatsapp)
     return Response.json({ error: "Informe um WhatsApp válido com DDD para fazer o teste grátis." }, { status: 400 });
@@ -172,6 +173,7 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
     captions: allow("textos") && wantCaptions,
     ...(allow("silencio") && wantTrim ? { trimSilence: true } : {}),
     ...(allow("legenda") && wantAuto ? { autoCaptions: true } : {}),
+    ...(allow("transicao") && wantFade ? { transition: true } : {}),
     details,
     inputs: [...blocks.hooks, ...blocks.bodies, ...blocks.ctas],
     blocks,

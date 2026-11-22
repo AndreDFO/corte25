@@ -3,9 +3,9 @@ import { VIP_PRODUCTS, ALL_VIP_FEATURES, SUBSCRIBER_VIP_VIDEOS, SUBSCRIPTIONS, V
 import { normalizeCode, type Coupon } from "./coupons";
 
 // Plano VIP (22/11/2026): assinatura extra de R$ 14,99/mês. Só VIP (e o admin) usa:
-// textos no vídeo, cortar partes sem som, música (biblioteca e envio), narração e legenda automática.
+// textos no vídeo, cortar partes sem som, música (biblioteca e envio), narração, legenda automática e transição suave.
 // Use isVip() no SERVIDOR antes de aplicar qualquer um desses recursos (não confie só na tela).
-export const VIP_FEATURES = ["textos no vídeo", "cortar partes sem som", "música", "narração", "legenda automática"] as const;
+export const VIP_FEATURES = ["textos no vídeo", "cortar partes sem som", "música", "narração", "legenda automática", "transição suave"] as const;
 
 type U = { id: string; email?: string | null } | null | undefined;
 

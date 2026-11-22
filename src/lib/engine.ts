@@ -114,7 +114,12 @@ export interface Recipe {
   brightness: number;
   hookStyle: number;
   musicOffset: number;
+  fade: number; // VIP: transição suave entre os blocos (segundos de sobreposição); 0 = corte seco
 }
+
+// Transição suave (VIP, chave na tela de geração): gancho, corpo e CTA se misturam por ~0,3 s
+// (imagem com xfade e som com acrossfade) em vez do corte seco.
+export const TRANSITION_SEC = 0.3;
 
 export const DURATION_OPTIONS = [15, 20, 25, 30] as const;
 export type DurationMode = "auto" | "15" | "20" | "25" | "30";
@@ -150,6 +155,7 @@ export function buildRecipe(
   seed: string,
   index: number,
   maxDur: number | null,
+  transition = false,
 ): Recipe {
   const r = rng(`${seed}:${index}`);
   const hook = blocks.hooks[combo.hook];
@@ -158,8 +164,11 @@ export function buildRecipe(
   // Gancho e CTA entram inteiros (até 8 s cada). O corpo é cortado para caber na duração máxima.
   const hDur = Math.min(hook.duration, 8);
   const cDur = Math.min(cta.duration, 8);
+  // Com transição, cada emenda sobrepõe "fade" segundos; o corpo ganha esse tempo para manter a duração escolhida.
+  // Clipes muito curtos usam uma transição menor (no máximo 1/3 do clipe).
+  const fade = transition ? Math.round(Math.min(TRANSITION_SEC, hDur / 3, body.duration / 3, cDur / 3) * 100) / 100 : 0;
   let bDur = body.duration;
-  if (maxDur) bDur = Math.max(Math.min(2, body.duration), Math.min(body.duration, maxDur - hDur - cDur));
+  if (maxDur) bDur = Math.max(Math.min(2, body.duration), Math.min(body.duration, maxDur - hDur - cDur + 2 * fade));
   // Pequenas diferenças visuais em cada vídeo para não ficarem idênticos.
   const zoom = r() < 0.5 ? 1 : 1.04 + r() * 0.06;
   const segments: Segment[] = [
@@ -169,7 +178,8 @@ export function buildRecipe(
   ];
   return {
     segments,
-    total: Math.round((hDur + bDur + cDur) * 10) / 10,
+    total: Math.round((hDur + bDur + cDur - 2 * fade) * 10) / 10,
+    fade,
     saturation: 1 + r() * 0.15,
     contrast: 1 + r() * 0.05,
     brightness: (r() - 0.5) * 0.04,
@@ -204,7 +214,8 @@ async function renderVariation(
         if (ws < -0.05 || ws >= s.dur - 0.05) continue;
         words.push({ w: w.w, s: offset + Math.max(0, ws), e: offset + Math.min(w.e - cut, s.dur) });
       }
-      offset += s.dur;
+      offset += s.dur - rc.fade; // com transição, o próximo bloco começa "fade" segundos antes
+
     }
     if (words.length) {
       assFile = `legenda_${v.index}.ass`;
@@ -251,8 +262,25 @@ async function renderVariation(
         `asetpts=PTS-STARTPTS,apad,atrim=duration=${esc(s.dur)}[a${k}]`,
     );
   });
-  const pairs = rc.segments.map((_, k) => `[v${k}][a${k}]`).join("");
-  f.push(`${pairs}concat=n=${rc.segments.length}:v=1:a=1[vc][ac]`);
+  if (rc.fade > 0) {
+    // Transição suave: cada bloco entra misturado com o anterior (imagem e som).
+    let vPrev = "v0";
+    let aPrev = "a0";
+    let start = 0;
+    for (let k = 1; k < rc.segments.length; k++) {
+      start += rc.segments[k - 1].dur - rc.fade;
+      const last = k === rc.segments.length - 1;
+      const vOut = last ? "vc" : `vx${k}`;
+      const aOut = last ? "ac" : `ax${k}`;
+      f.push(`[${vPrev}][v${k}]xfade=transition=fade:duration=${esc(rc.fade)}:offset=${esc(start)}[${vOut}]`);
+      f.push(`[${aPrev}][a${k}]acrossfade=d=${esc(rc.fade)}:c1=tri:c2=tri[${aOut}]`);
+      vPrev = vOut;
+      aPrev = aOut;
+    }
+  } else {
+    const pairs = rc.segments.map((_, k) => `[v${k}][a${k}]`).join("");
+    f.push(`${pairs}concat=n=${rc.segments.length}:v=1:a=1[vc][ac]`);
+  }
 
   const T = rc.total;
   const hookY = ["h*0.14", "h*0.20", "(h-text_h)/2-h*0.12"][rc.hookStyle];
@@ -380,7 +408,7 @@ async function processJob(id: string) {
   // Recursos VIP só nos primeiros job.vipLimit vídeos (cota do assinante); sem limite, em todos.
   const vipFor = (i: number) => job.vipLimit === undefined || i < job.vipLimit;
   // Recursos liberados por cupom (job.vipKeep) valem em todos, mesmo fora da cota.
-  const keep = (f: "textos" | "silencio" | "musica" | "legenda", i: number) => vipFor(i) || Boolean(job.vipKeep?.includes(f));
+  const keep = (f: NonNullable<Job["vipKeep"]>[number], i: number) => vipFor(i) || Boolean(job.vipKeep?.includes(f));
   // Cópia sem o corte de silêncio, para os vídeos fora da cota VIP.
   const plain = { hooks: blocks.hooks.map((c) => ({ ...c })), bodies: blocks.bodies.map((c) => ({ ...c })), ctas: blocks.ctas.map((c) => ({ ...c })) };
   // Legenda automática (VIP): ouve a fala de cada clipe uma vez, antes do corte do silêncio.
@@ -424,7 +452,7 @@ async function processJob(id: string) {
   const { items, source } = await generateCopy(job.productGiven === false ? "" : job.product, job.details, combos.length);
 
   const maxDur = job.durationMode && job.durationMode !== "auto" ? Number(job.durationMode) : null;
-  const recipes = combos.map((c, i) => buildRecipe(keep("silencio", i) ? blocks : plain, c, id, i, maxDur));
+  const recipes = combos.map((c, i) => buildRecipe(keep("silencio", i) ? blocks : plain, c, id, i, maxDur, Boolean(job.transition) && keep("transicao", i)));
   job.copySource = source;
   job.variations = combos.map((c, i) => ({
     index: i,

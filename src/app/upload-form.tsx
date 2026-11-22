@@ -121,6 +121,7 @@ export default function UploadForm() {
   const canText = can("textos");
   const canTrim = can("silencio");
   const canAuto = can("legenda");
+  const canFade = can("transicao");
   const vipHref = saldo?.logged ? "/conta#vip" : "/entrar?volta=/conta%23vip";
   const touched = useRef(false);
   useEffect(() => {
@@ -141,6 +142,7 @@ export default function UploadForm() {
   const [captions, setCaptions] = useState(false);
   const [trimSilence, setTrimSilence] = useState(false);
   const [autoCaptions, setAutoCaptions] = useState(false);
+  const [transition, setTransition] = useState(false);
 
   // Teste grátis: até 3 por bloco, para os 2 vídeos saírem misturados (pedido do Andre). Lote completo: até MAX_PER_BLOCK.
   const maxPer = plan === "free" ? FREE_MAX_PER_BLOCK : MAX_PER_BLOCK;
@@ -177,6 +179,7 @@ export default function UploadForm() {
     fd.append("captions", captions ? "1" : "0");
     if (trimSilence) fd.append("trimSilence", "1");
     if (autoCaptions) fd.append("autoCaptions", "1");
+    if (transition) fd.append("transition", "1");
     fd.append("plan", plan);
     if (plan === "full") fd.append("videos", String(videos));
     if (plan === "free") fd.append("whatsapp", whatsapp);
@@ -552,23 +555,32 @@ export default function UploadForm() {
         </span>
       </label>
 
+      <label className={`flex w-fit items-center gap-2 text-xs text-foreground/70 ${canFade ? "cursor-pointer" : "opacity-50"}`}>
+        <input type="checkbox" disabled={!canFade} checked={canFade && transition} onChange={(e) => setTransition(e.target.checked)} className="peer sr-only" />
+        <span className="relative h-4 w-7 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-3" />
+        <span>
+          {!canFade && "🔒 "}Transição suave{" "}
+          <span className="text-foreground/45">({transition ? "gancho, corpo e CTA se misturam" : "desligada, corte seco"})</span>
+        </span>
+      </label>
+
       {!saldo?.vip && quota > 0 && plan === "full" && (
         <p className="rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
           ⭐ <b>Assinante:</b> você ainda tem <b>{quota} vídeo{quota === 1 ? "" : "s"} VIP</b> este mês. Os primeiros {quota} vídeos deste lote
-          saem com música, textos e corte de silêncio (com selo VIP).{" "}
+          saem com música, textos, corte de silêncio e transição suave (com selo VIP).{" "}
           <a href={vipHref} className="font-bold underline">
             Seja VIP para todos
           </a>
         </p>
       )}
-      {saldo && !(canMusic && canText && canTrim && canAuto) && (
+      {saldo && !(canMusic && canText && canTrim && canAuto && canFade) && (
         <a
           href={vipHref}
           className="flex items-center justify-between gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-xs hover:bg-accent/15"
         >
           <span>
-            <b>🔒 {[!canMusic && "Música", !canText && "textos no vídeo", !canTrim && "cortar silêncio", !canAuto && "legenda automática"].filter(Boolean).join(", ").replace(/^./, (c) => c.toUpperCase()).replace(/, ([^,]*)$/, " e $1")}</b>{" "}
-            {[canMusic, canText, canTrim, canAuto].filter((x) => !x).length > 1 ? "são exclusivos" : "é exclusivo"} do VIP.
+            <b>🔒 {[!canMusic && "Música", !canText && "textos no vídeo", !canTrim && "cortar silêncio", !canAuto && "legenda automática", !canFade && "transição suave"].filter(Boolean).join(", ").replace(/^./, (c) => c.toUpperCase()).replace(/, ([^,]*)$/, " e $1")}</b>{" "}
+            {[canMusic, canText, canTrim, canAuto, canFade].filter((x) => !x).length > 1 ? "são exclusivos" : "é exclusivo"} do VIP.
           </span>
           <span className="shrink-0 rounded-lg bg-accent px-2.5 py-1.5 font-black text-white">Seja VIP · R$ 14,99/mês</span>
         </a>

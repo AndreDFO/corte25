@@ -25,12 +25,13 @@ export interface Job {
   // Recursos VIP só nos primeiros N vídeos (cota de 3/mês do assinante). Sem isso: todos os vídeos.
   vipLimit?: number;
   trialKeys?: string[]; // teste grátis: chaves usadas, para devolver o teste se nenhum vídeo sair
-  vipKeep?: ("textos" | "silencio" | "musica" | "legenda")[]; // recursos de cupom: valem em todos os vídeos, mesmo fora do vipLimit
+  vipKeep?: ("textos" | "silencio" | "musica" | "legenda" | "transicao")[]; // recursos de cupom: valem em todos os vídeos, mesmo fora do vipLimit
   id: string;
   createdAt: string;
   product: string;
   captions?: boolean; // false = vídeo sem textos gravados (gancho e chamada); a legenda para postar continua
   trimSilence?: boolean; // true = corta o começo e o fim sem som de cada clipe (desligado por padrão)
+  transition?: boolean; // VIP: transição suave entre gancho, corpo e CTA (desligada por padrão = corte seco)
   autoCaptions?: boolean; // VIP: legenda automática da fala, palavra por palavra (desligada por padrão)
   productGiven?: boolean; // false = sem nome (o "product" é só a data); os textos não citam o nome
   details: string;
