@@ -147,3 +147,14 @@ export async function redeemVipCoupon(userId: string, rawCode: string): Promise<
 export async function spendVipQuota(userId: string, jobId: string, videos: number) {
   if (videos > 0) await supabaseAdmin().from("vip_usage").insert({ user_id: userId, job_id: jobId, videos });
 }
+
+// Devolve vídeos da cota VIP do mês gastos num lote que falhou (ou saiu sem a legenda prometida).
+export async function refundVipQuota(userId: string, jobId: string, videos: number) {
+  if (videos < 1) return;
+  const db = supabaseAdmin();
+  const { data } = await db.from("vip_usage").select("id, videos").eq("user_id", userId).eq("job_id", jobId).maybeSingle();
+  if (!data) return;
+  const left = Number(data.videos) - videos;
+  if (left > 0) await db.from("vip_usage").update({ videos: left }).eq("id", data.id);
+  else await db.from("vip_usage").delete().eq("id", data.id);
+}

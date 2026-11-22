@@ -15,16 +15,39 @@ const CLI = process.env.WHISPER_CLI || "whisper-cli";
 const MODEL = process.env.WHISPER_MODEL || "/opt/whisper/ggml-small-q5_1.bin";
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 
-function run(cmd: string, args: string[]): Promise<void> {
+// Tempo máximo por etapa (ffmpeg ou whisper) de cada clipe. Passou disso, o processo é encerrado
+// e o clipe fica sem legenda: o lote nunca pode ficar travado em "Ouvindo a fala…" (22/11).
+const STEP_TIMEOUT_MS = (Number(process.env.WHISPER_TIMEOUT_SEC) || 120) * 1000;
+
+export class WhisperTimeout extends Error {}
+
+function run(cmd: string, args: string[], timeoutMs = STEP_TIMEOUT_MS): Promise<void> {
   return new Promise((resolve, reject) => {
-    const p = spawn(cmd, args, { windowsHide: true });
+    // stdout ignorado: um pipe não lido pode encher e travar o processo para sempre.
+    const p = spawn(cmd, args, { windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      p.kill("SIGKILL");
+      // Não espera o "close": um processo filho pode segurar o pipe aberto.
+      reject(new WhisperTimeout(`${path.basename(cmd)} passou de ${Math.round(timeoutMs / 1000)} s e foi encerrado`));
+    }, timeoutMs);
+    timer.unref?.();
     let err = "";
     p.stderr.on("data", (d) => {
       err += d;
       if (err.length > 8000) err = err.slice(-4000);
     });
-    p.on("error", reject);
-    p.on("close", (c) => (c === 0 ? resolve() : reject(new Error(`${path.basename(cmd)} saiu com código ${c}: ${err.slice(-800)}`))));
+    p.on("error", (e) => {
+      clearTimeout(timer);
+      reject(e);
+    });
+    p.on("close", (c, sig) => {
+      clearTimeout(timer);
+      if (timedOut) return;
+      if (c === 0) resolve();
+      else reject(new Error(`${path.basename(cmd)} saiu com código ${c ?? sig}: ${err.slice(-800)}`));
+    });
   });
 }
 
