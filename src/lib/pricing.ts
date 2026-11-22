@@ -20,6 +20,8 @@ export const AFFILIATE_PERCENT = 15;
 // Desconto para quem compra pela indicação de um afiliado, só na primeira compra (decidido em 22/11/2026).
 // A comissão do afiliado (15%) é calculada sobre o valor já com desconto.
 export const REFERRAL_DISCOUNT = 10;
+// O afiliado recebe a comissão só nas 3 primeiras compras pagas de cada indicado (decidido em 22/11/2026).
+export const AFFILIATE_MAX_PURCHASES = 3;
 export const discounted = (value: number, percent: number) => Math.round(value * (100 - percent)) / 100;
 export const brl = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 export const FREE_VIDEOS = 2;

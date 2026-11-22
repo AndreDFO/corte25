@@ -114,6 +114,11 @@ export async function getPayment(id: string) {
   );
 }
 
+// Para de repassar comissão nas próximas mensalidades (o afiliado já recebeu nas 3 primeiras compras).
+export async function removeSubscriptionSplit(id: string) {
+  return call("PUT", `/subscriptions/${encodeURIComponent(id)}`, { split: [] });
+}
+
 export async function cancelSubscription(id: string) {
   return call("DELETE", `/subscriptions/${id}`);
 }

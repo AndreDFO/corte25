@@ -2,7 +2,7 @@ import { asaasConfigured, createCheckout, createCustomer } from "@/lib/asaas";
 import { currentUser, getProfile, updateProfile } from "@/lib/auth";
 import { CATALOG, type ProductId } from "@/lib/pricing";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { referralDiscount } from "@/lib/credits";
+import { affiliateStillEarns, referralDiscount } from "@/lib/credits";
 
 function validCpfCnpj(v: string) {
   const d = v.replace(/\D/g, "");
@@ -36,9 +36,11 @@ export async function POST(req: Request) {
     await updateProfile(user.id, { asaas_customer_id: customer, name, cpf_cnpj: cpfCnpj });
   }
 
-  // Afiliado: quem indicou e já cadastrou a carteira do Asaas recebe 15% via split.
+  // Afiliado: quem indicou e já cadastrou a carteira do Asaas recebe 15% via split,
+  // só nas 3 primeiras compras pagas do indicado.
   let wallet: string | null = null;
-  if (profile.referred_by) {
+  const earns = Boolean(profile.referred_by) && (await affiliateStillEarns(user.id));
+  if (earns) {
     const { data } = await supabaseAdmin()
       .from("profiles")
       .select("affiliate_wallet_id")
@@ -67,7 +69,7 @@ export async function POST(req: Request) {
       credits: CATALOG[product].credits,
       value: out.value,
       status: "PENDING",
-      affiliate_code: profile.referred_by || null,
+      affiliate_code: earns ? profile.referred_by : null,
       subscription_id: out.subscription || null,
     });
     return Response.json({ url: out.url });

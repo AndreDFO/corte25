@@ -1,6 +1,6 @@
-import { CATALOG, REFERRAL_DISCOUNT, VIDEOS_PER_LOT, type ProductId } from "./pricing";
+import { AFFILIATE_MAX_PURCHASES, CATALOG, REFERRAL_DISCOUNT, VIDEOS_PER_LOT, type ProductId } from "./pricing";
 import { supabaseAdmin } from "./supabase-admin";
-import { asaasConfigured, getPayment, parseReference } from "./asaas";
+import { asaasConfigured, getPayment, parseReference, removeSubscriptionSplit } from "./asaas";
 
 // Credita os lotes de um pagamento confirmado. Repetir o mesmo pagamento não credita de novo
 // (índice único em payment_id + reason).
@@ -24,6 +24,13 @@ export async function grantForPayment(p: { paymentId: string; userId: string; pr
     payment_id: p.paymentId,
   });
   if (error && error.code !== "23505") throw error; // 23505 = já creditado antes
+
+  // Assinatura com split: ao chegar na 3ª compra paga, tira a comissão das próximas mensalidades.
+  if (p.subscription && !(await affiliateStillEarns(p.userId))) {
+    await removeSubscriptionSplit(p.subscription).catch((err) =>
+      console.warn("[afiliado] não deu para tirar o split da assinatura", p.subscription, (err as Error).message),
+    );
+  }
 }
 
 export async function refundPayment(paymentId: string) {
@@ -81,10 +88,20 @@ export async function syncPendingPayments(userId: string) {
 // Desconto da indicação: quem chegou pelo link de um afiliado ganha REFERRAL_DISCOUNT% só na primeira compra paga.
 export async function referralDiscount(userId: string, referredBy: string | null | undefined): Promise<number> {
   if (!referredBy) return 0;
+  return (await paidPurchases(userId)) === 0 ? REFERRAL_DISCOUNT : 0;
+}
+
+// Quantas compras pagas a pessoa já fez (conta estornadas também, para não reabrir benefício).
+export async function paidPurchases(userId: string): Promise<number> {
   const { count } = await supabaseAdmin()
     .from("payments")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .in("status", ["CONFIRMED", "RECEIVED", "REFUNDED"]);
-  return (count ?? 0) === 0 ? REFERRAL_DISCOUNT : 0;
+  return count ?? 0;
+}
+
+// A comissão do afiliado vale nas AFFILIATE_MAX_PURCHASES primeiras compras pagas do indicado.
+export async function affiliateStillEarns(userId: string) {
+  return (await paidPurchases(userId)) < AFFILIATE_MAX_PURCHASES;
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION, brl, discounted, type ProductId } from "@/lib/pricing";
+import { AFFILIATE_MAX_PURCHASES, CATALOG, PACKAGES, REFERRAL_DISCOUNT, SUBSCRIPTION, brl, discounted, type ProductId } from "@/lib/pricing";
 
 type Payment = { id: string; product: string; value: number; status: string; created_at: string };
 
@@ -128,9 +128,12 @@ export default function AccountPanel(p: {
       <div id="comprar" className={`${card} grid gap-3`}>
         <h2 className="text-lg font-black">Comprar vídeos</h2>
         {p.discount > 0 && (
-          <p className="rounded-lg bg-accent/15 px-3 py-2 text-sm font-semibold text-accent-ink">
-            🎁 Você chegou por indicação: {p.discount}% de desconto na sua primeira compra, já aplicado nos preços abaixo.
-          </p>
+          <div className="rounded-xl bg-accent px-4 py-3 text-white">
+            <p className="text-2xl font-black">🎁 {p.discount}% OFF</p>
+            <p className="text-sm font-semibold">
+              Você chegou por indicação: {p.discount}% de desconto na sua primeira compra, já aplicado nos preços abaixo.
+            </p>
+          </div>
         )}
         <div className="grid gap-2 sm:grid-cols-2">
           {options.map((o) => (
@@ -191,7 +194,8 @@ export default function AccountPanel(p: {
         <h2 className="text-lg font-black">Indique e ganhe {p.affiliatePercent}%</h2>
         <p className="text-sm text-foreground/70">
           Quem criar conta pelo seu link vira sua indicação e ganha {REFERRAL_DISCOUNT}% de desconto na primeira compra. Você recebe{" "}
-          {p.affiliatePercent}% de tudo que essa pessoa pagar, direto na sua conta do Asaas, sem pedir saque.
+          {p.affiliatePercent}% do valor pago nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada indicado, direto na sua conta do
+          Asaas, sem pedir saque.
           <span className="mt-1 block text-xs text-foreground/60">
             Sugestão para divulgar: &quot;Use meu link e ganhe {REFERRAL_DISCOUNT}% de desconto na primeira compra do Corte25.&quot;
           </span>
