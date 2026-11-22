@@ -22,9 +22,14 @@ export async function HeaderAccount() {
       <span className="hidden max-w-32 truncate text-foreground/70 md:inline" title={user.email || ""}>
         Olá, <b className="text-foreground">{first}</b>
       </span>
-      <Link href="/conta" className={btn} title="Minha conta e saldo">
-        {credits === null ? "Minha conta" : `${credits} vídeo${credits === 1 ? "" : "s"}`}
-      </Link>
+      <span className="flex flex-col items-center leading-none">
+        <Link href="/conta" className={btn} title="Minha conta e saldo">
+          {credits === null ? "Minha conta" : `${credits} vídeo${credits === 1 ? "" : "s"}`}
+        </Link>
+        <Link href="/conta#comprar" className="mt-0.5 text-[10px] text-foreground/60 underline hover:text-foreground">
+          Comprar créditos
+        </Link>
+      </span>
       <LogoutButton className="hidden text-xs text-foreground/50 underline hover:text-foreground sm:inline" />
     </>
   );
