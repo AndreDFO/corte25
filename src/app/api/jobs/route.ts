@@ -180,6 +180,7 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
     music: musicName,
     plan,
     count: plan === "full" ? videos + bonusFor(videos) : FREE_VIDEOS,
+    ...(plan === "full" && user ? { charged: videos } : {}),
     ...(quotaVideos > 0 ? { vipLimit: Math.min(quotaVideos, videos + bonusFor(videos)), ...(vipKeep.length ? { vipKeep } : {}) } : {}),
     durationMode,
     status: "queued",

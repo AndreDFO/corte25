@@ -87,6 +87,17 @@ export async function consumeVideos(userId: string, jobId: string, n: number): P
   return (data as number) >= 0;
 }
 
+// Devolve n vídeos de um lote que falhou (uma vez por lote).
+export async function refundJobVideos(userId: string, jobId: string, n: number): Promise<boolean> {
+  if (n < 1) return false;
+  const db = supabaseAdmin();
+  const { data: done } = await db.from("credit_ledger").select("id").eq("job_id", jobId).eq("reason", "ajuste").limit(1);
+  if (done?.length) return false;
+  const { error } = await db.from("credit_ledger").insert({ user_id: userId, delta: n, reason: "ajuste", job_id: jobId });
+  if (error) throw error;
+  return true;
+}
+
 // Reserva para quando o aviso (webhook) do Asaas atrasa ou falha: ao abrir a conta, consulta no
 // Asaas as cobranças ainda pendentes desta pessoa e credita as que já foram pagas.
 const PAID = new Set(["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"]);

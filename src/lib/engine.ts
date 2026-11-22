@@ -1,12 +1,14 @@
 import { releaseTrial } from "./trials";
-import { spawn } from "child_process";
+import { type ChildProcess, spawn } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
-import { Job, Variation, jobDir, loadJob, saveJob } from "./jobs";
+import { DATA_DIR, Job, Variation, jobDir, loadJob, saveJob } from "./jobs";
 import { generateCopy } from "./copy";
 import { VIDEO_CTA_BG, VIDEO_CTA_TEXT } from "./theme";
 import { Word, transcribeClip, whisperAvailable } from "./transcribe";
 import { buildAss } from "./captions-ass";
+import { refundJobVideos } from "./credits";
+import { refundVipQuota } from "./vip";
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH || "ffprobe";
@@ -23,9 +25,17 @@ interface ClipInfo {
   offset?: number; // segundos cortados no começo (corte das partes sem som)
 }
 
+// Processos do FFmpeg de cada lote (pela pasta do lote), para encerrar quando o lote é cancelado.
+const children = new Map<string, Set<ChildProcess>>();
+
 function run(cmd: string, args: string[], cwd?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { cwd, windowsHide: true });
+    if (cwd) {
+      if (!children.has(cwd)) children.set(cwd, new Set());
+      children.get(cwd)!.add(p);
+      p.on("exit", () => children.get(cwd)?.delete(p));
+    }
     let out = "";
     let err = "";
     p.stdout.on("data", (d) => (out += d));
@@ -367,26 +377,104 @@ async function soundBounds(c: ClipInfo): Promise<{ start: number; end: number } 
 
 const running = new Set<string>();
 
+// Devolve ao saldo os vídeos pagos que não saíram. Lotes antigos (sem "charged") não devolvem nada.
+async function refundFailed(job: Job, failed: number): Promise<number> {
+  if (job.plan !== "full" || !job.ownerId || !job.charged || failed <= 0) return 0;
+  const n = Math.min(job.charged, failed);
+  if (n <= 0) return 0;
+  return (await refundJobVideos(job.ownerId, job.id, n).catch((e) => {
+    console.error(`[job ${job.id}] não deu para devolver ${n} vídeo(s):`, e);
+    return false;
+  }))
+    ? n
+    : 0;
+}
+
+// Ao ligar o servidor (deploy ou reinício), os lotes que estavam no meio ficariam parados para sempre.
+// Recomeça uma vez os que ainda estão dentro dos 10 minutos (sem a legenda automática se tinha parado nela);
+// os outros são cancelados com o saldo devolvido.
+export async function resumeStuckJobs() {
+  const root = path.join(DATA_DIR, "jobs");
+  const ids = await fs.readdir(root).catch(() => [] as string[]);
+  for (const id of ids) {
+    if (!/^[a-f0-9]{16}$/.test(id) || running.has(id)) continue;
+    const job = await loadJob(id).catch(() => null);
+    if (!job || job.status === "done" || job.status === "error") continue;
+    // Passou do limite (ou já foi recomeçado uma vez): cancela e devolve o saldo.
+    if (job.resumed || Date.now() - new Date(job.createdAt).getTime() > JOB_TIMEOUT_MIN * 60_000) {
+      console.log(`[job ${id}] parado por reinício do servidor: cancelado e devolvido`);
+      await failJob(id, "A geração foi interrompida e cancelada.");
+      continue;
+    }
+    const atCaptions = Boolean(job.autoCaptions) && /Ouvindo a fala/.test(job.message || "");
+    job.resumed = true;
+    if (atCaptions) job.autoCaptions = false;
+    job.status = "queued";
+    job.message = atCaptions ? "Recomeçando sem a legenda automática…" : "Recomeçando…";
+    job.variations = [];
+    await saveJob(job);
+    console.log(`[job ${id}] recomeçado depois de reinício do servidor${atCaptions ? " (sem legenda automática)" : ""}`);
+    startJob(id);
+  }
+}
+
+// Regra do Andre (22/11): lote que passar de 10 minutos é cancelado e o saldo volta para o cliente.
+export const JOB_TIMEOUT_MIN = Number(process.env.JOB_TIMEOUT_MIN) || 10;
+const cancelled = new Set<string>();
+class Cancelled extends Error {}
+function checkCancelled(id: string) {
+  if (cancelled.has(id)) throw new Cancelled("cancelado");
+}
+
+// Marca o lote como erro e devolve tudo: saldo descontado, cota VIP do mês e teste grátis.
+async function failJob(id: string, message: string) {
+  const job = await loadJob(id);
+  if (!job) return;
+  job.status = "error";
+  job.message = message;
+  const back = await refundFailed(job, job.count);
+  if (back > 0) job.message += ` Devolvemos ${back} vídeo${back === 1 ? "" : "s"} ao seu saldo.`;
+  if (job.vipLimit && job.ownerId) await refundVipQuota(job.ownerId, id, job.vipLimit).catch(() => {});
+  if (job.trialKeys?.length) {
+    await releaseTrial(job.trialKeys).catch(() => {});
+    if (job.plan === "free") job.message += " Seu teste grátis foi liberado de novo.";
+  }
+  await saveJob(job);
+}
+
 export function startJob(id: string) {
   if (running.has(id)) return;
   running.add(id);
+  const timer = setTimeout(async () => {
+    if (!running.has(id)) return;
+    cancelled.add(id);
+    console.error(`[job ${id}] passou de ${JOB_TIMEOUT_MIN} min: cancelado`);
+    for (const p of children.get(jobDir(id)) ?? []) p.kill("SIGKILL");
+    await failJob(id, `A geração passou de ${JOB_TIMEOUT_MIN} minutos e foi cancelada.`).catch((e) => console.error(`[job ${id}]`, e));
+  }, JOB_TIMEOUT_MIN * 60_000);
+  timer.unref?.();
   processJob(id)
     .catch(async (err) => {
+      if (cancelled.has(id)) return; // já foi cancelado e devolvido pelo limite de tempo
       console.error(`[job ${id}]`, err);
-      const job = await loadJob(id);
-      if (job) {
-        job.status = "error";
-        job.message = String(err?.message || err);
-        await saveJob(job);
-        if (job.trialKeys?.length) await releaseTrial(job.trialKeys).catch(() => {});
-      }
+      await failJob(id, String(err?.message || err));
     })
-    .finally(() => running.delete(id));
+    .finally(() => {
+      clearTimeout(timer);
+      running.delete(id);
+      cancelled.delete(id);
+      children.delete(jobDir(id));
+    });
 }
 
 async function processJob(id: string) {
   const job = await loadJob(id);
   if (!job) throw new Error("tarefa não encontrada");
+  // Nunca grava por cima de um lote já cancelado pelo limite de tempo.
+  const saveJobChecked = async (j: Job) => {
+    checkCancelled(id);
+    await saveJob(j);
+  };
   const dir = jobDir(id);
   await fs.mkdir(path.join(dir, "outputs"), { recursive: true });
   await fs.copyFile(FONT_SRC, path.join(dir, "font.otf"));
@@ -413,25 +501,42 @@ async function processJob(id: string) {
   const plain = { hooks: blocks.hooks.map((c) => ({ ...c })), bodies: blocks.bodies.map((c) => ({ ...c })), ctas: blocks.ctas.map((c) => ({ ...c })) };
   // Legenda automática (VIP): ouve a fala de cada clipe uma vez, antes do corte do silêncio.
   let speech: Map<string, Word[]> | null = null;
+  // Clipes cuja fala não foi ouvida (erro, tempo esgotado ou servidor sem whisper).
+  const missedClips = new Set<string>();
   if (job.autoCaptions) {
     if (await whisperAvailable()) {
       job.message = "Ouvindo a fala dos vídeos para a legenda…";
-      await saveJob(job);
+      await saveJobChecked(job);
       speech = new Map();
-      for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) {
+      const all = [...blocks.hooks, ...blocks.bodies, ...blocks.ctas];
+      // Teto para a etapa inteira: passou disso, os clipes que faltam ficam sem legenda e o lote segue.
+      const deadline = Date.now() + (Number(process.env.WHISPER_BUDGET_SEC) || 360) * 1000;
+      for (const [k, c] of all.entries()) {
+        checkCancelled(id);
+        if (Date.now() > deadline) {
+          missedClips.add(c.file);
+          speech.set(c.file, []);
+          continue;
+        }
+        job.message = `Ouvindo a fala dos vídeos para a legenda (${k + 1} de ${all.length})…`;
+        await saveJobChecked(job);
+        const t0 = Date.now();
         const words = await transcribeClip(c.file, c.hasAudio).catch((e) => {
           console.error(`[legenda] ${path.basename(c.file)}:`, e);
+          missedClips.add(c.file);
           return [] as Word[];
         });
+        console.log(`[legenda] ${path.basename(c.file)}: ${words.length} palavras em ${((Date.now() - t0) / 1000).toFixed(1)} s`);
         speech.set(c.file, words);
       }
     } else {
       console.warn("[legenda] servidor sem whisper; vídeos saem sem a legenda automática");
+      for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) missedClips.add(c.file);
     }
   }
   if (job.trimSilence) {
     job.message = "Cortando as partes sem som…";
-    await saveJob(job);
+    await saveJobChecked(job);
     for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) {
       const r = await soundBounds(c).catch(() => null);
       if (!r) continue;
@@ -448,7 +553,8 @@ async function processJob(id: string) {
 
   job.status = "writing";
   job.message = "Criando hooks e legendas…";
-  await saveJob(job);
+  await saveJobChecked(job);
+  checkCancelled(id);
   const { items, source } = await generateCopy(job.productGiven === false ? "" : job.product, job.details, combos.length);
 
   const maxDur = job.durationMode && job.durationMode !== "auto" ? Number(job.durationMode) : null;
@@ -465,7 +571,7 @@ async function processJob(id: string) {
   }));
   job.status = "rendering";
   job.message = "Montando os vídeos…";
-  await saveJob(job);
+  await saveJobChecked(job);
 
   const music = job.music ? path.join(dir, "inputs", job.music) : undefined;
   let cursor = 0;
@@ -480,7 +586,7 @@ async function processJob(id: string) {
   const queueUpdate = (i: number, patch: Partial<Variation>) => (chain = chain.then(() => update(i, patch)));
 
   const worker = async () => {
-    while (cursor < job.variations.length) {
+    while (cursor < job.variations.length && !cancelled.has(id)) {
       const i = cursor++;
       const v = job.variations[i];
       await queueUpdate(i, { status: "rendering" });
@@ -495,6 +601,24 @@ async function processJob(id: string) {
         );
         await queueUpdate(i, { status: "done" });
       } catch (err) {
+        // Falhou com a legenda automática: refaz na hora sem ela (o vídeo sai e o crédito dele volta).
+        if (keep("legenda", i) && job.autoCaptions && speech && !cancelled.has(id)) {
+          console.error(`[job ${id}] vídeo ${i + 1} falhou com legenda, refazendo sem:`, err);
+          try {
+            await renderVariation(
+              { ...job, captions: keep("textos", i) && job.captions, autoCaptions: false },
+              dir,
+              v,
+              recipes[i],
+              keep("musica", i) ? music : undefined,
+              null,
+            );
+            await queueUpdate(i, { status: "done", noCaption: true });
+            continue;
+          } catch (err2) {
+            err = err2;
+          }
+        }
         console.error(`[job ${id}] vídeo ${i + 1}:`, err);
         await queueUpdate(i, { status: "error", error: String((err as Error).message).slice(0, 500) });
       }
@@ -502,11 +626,36 @@ async function processJob(id: string) {
   };
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
   await chain;
+  checkCancelled(id);
 
   const final = (await loadJob(id))!;
   const ok = final.variations.filter((v) => v.status === "done").length;
   final.status = ok > 0 ? "done" : "error";
   final.message = ok === final.variations.length ? "Pronto!" : `${ok} de ${final.variations.length} vídeos gerados.`;
+  // Regra do Andre (22/11): vídeo que pediu legenda automática e saiu sem ela (em algum trecho) não fez o
+  // prometido. Ele é entregue mesmo assim, mas conta como falho para devolver o saldo e a cota VIP do mês.
+  const noCaption = job.autoCaptions
+    ? final.variations.filter((v, i) => {
+        if (v.status !== "done" || !keep("legenda", i)) return false;
+        if (v.noCaption) return true;
+        const c = combos[i];
+        return [blocks.hooks[c.hook], blocks.bodies[c.body], blocks.ctas[c.cta]].some((clip) => missedClips.has(clip.file));
+      })
+    : [];
+  for (const v of noCaption) v.noCaption = true;
+  if (noCaption.length)
+    final.message += ` ${noCaption.length === 1 ? "1 vídeo saiu" : `${noCaption.length} vídeos saíram`} sem a legenda automática.`;
+  // Vídeo pago que falhou ou saiu sem a legenda: devolve ao saldo (até o total descontado).
+  const back = await refundFailed(final, final.variations.length - ok + noCaption.length);
+  if (back > 0) final.message += ` Devolvemos ${back} vídeo${back === 1 ? "" : "s"} ao seu saldo.`;
+  // Cota VIP do assinante: devolve os vídeos da cota que falharam ou ficaram sem legenda.
+  if (final.vipLimit && final.ownerId) {
+    const lost = final.variations.filter((v, i) => i < final.vipLimit! && (v.status !== "done" || v.noCaption)).length;
+    if (lost > 0) {
+      await refundVipQuota(final.ownerId, id, lost).catch((e) => console.error(`[job ${id}] cota VIP:`, e));
+      final.message += ` ${lost === 1 ? "1 vídeo VIP voltou" : `${lost} vídeos VIP voltaram`} para a sua cota do mês.`;
+    }
+  }
   await saveJob(final);
   // Teste grátis sem nenhum vídeo pronto: devolve o teste para a pessoa tentar de novo.
   if (ok === 0 && final.trialKeys?.length) await releaseTrial(final.trialKeys).catch(() => {});

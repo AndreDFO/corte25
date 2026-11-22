@@ -18,12 +18,15 @@ export interface Variation {
   status: VariationStatus;
   error?: string;
   narrated?: string; // data da narração gravada pelo microfone (arquivo video_XX_narrado.mp4)
+  noCaption?: boolean; // pediu legenda automática e saiu sem ela (o saldo desse vídeo foi devolvido)
   vip?: boolean; // vídeo feito com recursos VIP pela cota do assinante (mostra o selo VIP)
 }
 
 export interface Job {
   // Recursos VIP só nos primeiros N vídeos (cota de 3/mês do assinante). Sem isso: todos os vídeos.
   vipLimit?: number;
+  charged?: number; // vídeos descontados do saldo (sem o bônus); os que falharem voltam ao saldo
+  resumed?: boolean; // já foi recomeçado uma vez depois de um reinício do servidor
   trialKeys?: string[]; // teste grátis: chaves usadas, para devolver o teste se nenhum vídeo sair
   vipKeep?: ("textos" | "silencio" | "musica" | "legenda" | "transicao")[]; // recursos de cupom: valem em todos os vídeos, mesmo fora do vipLimit
   id: string;
