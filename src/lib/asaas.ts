@@ -1,7 +1,7 @@
 // Cliente mínimo da API do Asaas (cobrança Pix/cartão/boleto, assinatura e split para afiliado).
 // Chaves só por variável de ambiente no servidor: ASAAS_API_KEY, ASAAS_API_URL, ASAAS_WEBHOOK_TOKEN.
 // Sandbox: https://api-sandbox.asaas.com/v3 · Produção: https://api.asaas.com/v3
-import { AFFILIATE_PERCENT, CATALOG, discounted, type ProductId } from "./pricing";
+import { AFFILIATE_PERCENT, CATALOG, type ProductId } from "./pricing";
 
 const API = (process.env.ASAAS_API_URL || "https://api-sandbox.asaas.com/v3").replace(/\s+/g, "").replace(/\/+$/, "");
 // Tira espaços e quebras de linha coladas junto com a chave.
@@ -61,15 +61,16 @@ export async function createCheckout(opts: {
   userId: string;
   product: ProductId;
   affiliateWallet?: string | null;
-  discountPercent?: number; // desconto da indicação (só na primeira compra)
+  value?: number; // preço da 1ª cobrança já com desconto (indicação ou cupom); sem isso, preço cheio
+  note?: string; // aparece na descrição da cobrança (ex.: "cupom BLACK10")
 }): Promise<{ id: string; url: string; subscription?: string; value: number }> {
   const item = CATALOG[opts.product];
-  const value = opts.discountPercent ? discounted(item.value, opts.discountPercent) : item.value;
+  const value = opts.value ?? item.value;
   const base = {
     customer: opts.customer,
     billingType: "UNDEFINED",
     value: item.recurring ? item.value : value,
-    description: `Corte25 · ${item.label}${opts.discountPercent ? ` · ${opts.discountPercent}% de desconto pela indicação` : ""}`,
+    description: `Corte25 · ${item.label}${opts.note ? ` · ${opts.note}` : ""}`,
     externalReference: `${opts.userId}:${opts.product}`,
     split: split(opts.affiliateWallet),
   };

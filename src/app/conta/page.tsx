@@ -5,6 +5,7 @@ import { asaasConfigured } from "@/lib/asaas";
 import { balance, referralDiscount, syncPendingPayments } from "@/lib/credits";
 import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase-admin";
 import { AFFILIATE_PERCENT, CATALOG } from "@/lib/pricing";
+import { isAdminEmail } from "@/lib/admin";
 import AccountPanel from "./account-panel";
 
 // Indicações de quem está logado: quantas contas vieram pelo link, compras pagas e comissão.
@@ -42,7 +43,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       .then((r) => r.data ?? []),
     affiliateStats(user.id),
   ]);
-  const discount = await referralDiscount(user.id, profile?.referred_by);
+  const [discount, admin] = await Promise.all([referralDiscount(user.id, profile?.referred_by), isAdminEmail()]);
   return (
     <AccountPanel
       email={user.email || ""}
@@ -59,6 +60,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       discount={discount}
       payments={payments}
       siteUrl={process.env.SITE_URL || "https://corte25.com.br"}
+      admin={admin}
     />
   );
 }

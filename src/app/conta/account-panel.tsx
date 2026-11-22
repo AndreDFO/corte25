@@ -28,6 +28,7 @@ export default function AccountPanel(p: {
   discount: number; // % de desconto da indicação na primeira compra (0 = sem desconto)
   payments: Payment[];
   siteUrl: string;
+  admin?: boolean; // só a conta do dono (ADMIN_EMAILS), conferido no servidor
 }) {
   const [chosen, setChosen] = useState<ProductId | null>((p.buy as ProductId) || null);
   const [name, setName] = useState(p.name);
@@ -37,6 +38,11 @@ export default function AccountPanel(p: {
   const [wallet, setWallet] = useState("");
   const [walletMsg, setWalletMsg] = useState(p.hasWallet ? "Carteira cadastrada. Você recebe automaticamente." : "");
   const [copied, setCopied] = useState(false);
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; msg: string; price: string; full: string | null; product: string } | null>(null);
+  const [couponErr, setCouponErr] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
   const refLink = `${p.siteUrl}/?ref=${p.refCode}`;
 
   async function pay() {
@@ -47,7 +53,7 @@ export default function AccountPanel(p: {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product: chosen, name, cpfCnpj: doc }),
+        body: JSON.stringify({ product: chosen, name, cpfCnpj: doc, coupon: coupon?.product === chosen ? coupon.code : undefined }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error || "Não deu certo, tente de novo.");
@@ -56,6 +62,31 @@ export default function AccountPanel(p: {
       setError((err as Error).message);
       setBusy(false);
     }
+  }
+
+  async function applyCoupon(product = chosen, code = couponInput) {
+    setCouponErr("");
+    if (!product) return setCouponErr("Escolha um pacote primeiro.");
+    if (!code.trim()) return;
+    setCouponBusy(true);
+    const res = await fetch("/api/cupom/validar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, product }),
+    });
+    const j = await res.json().catch(() => ({}));
+    setCouponBusy(false);
+    if (!res.ok) {
+      setCoupon(null);
+      return setCouponErr(j.error || "Cupom inválido.");
+    }
+    setCoupon({ code: j.code, msg: j.msg, price: j.price, full: j.full, product });
+  }
+
+  function choose(id: ProductId) {
+    setChosen(id);
+    // Cupom aplicado vale para o pacote escolhido: refaz a conta ao trocar.
+    if (coupon) applyCoupon(id, coupon.code);
   }
 
   async function saveWallet() {
@@ -104,9 +135,16 @@ export default function AccountPanel(p: {
           <h1 className="text-3xl font-black tracking-tight">Minha conta</h1>
           <p className="text-sm text-foreground/60">{p.email}</p>
         </div>
-        <button onClick={logout} className="text-sm text-foreground/60 underline">
-          Sair
-        </button>
+        <div className="flex items-center gap-4">
+          {p.admin && (
+            <Link href="/admin" className="rounded-lg bg-foreground px-3 py-1.5 text-sm font-bold text-background">
+              Área do administrador
+            </Link>
+          )}
+          <button onClick={logout} className="text-sm text-foreground/60 underline">
+            Sair
+          </button>
+        </div>
       </div>
 
       {p.paid && (
@@ -143,7 +181,7 @@ export default function AccountPanel(p: {
             <button
               key={o.id}
               type="button"
-              onClick={() => setChosen(o.id)}
+              onClick={() => choose(o.id)}
               className={`rounded-xl border p-3 text-left ${chosen === o.id ? "border-brand bg-brand/15 ring-2 ring-brand/40" : o.accent ? "border-accent bg-accent/10" : "border-foreground/15"}`}
             >
               <span className="flex items-baseline justify-between gap-2">
@@ -176,6 +214,42 @@ export default function AccountPanel(p: {
             />
           </div>
         )}
+        {p.paymentsOn &&
+          (couponOpen ? (
+            <div className="grid gap-1">
+              <div className="flex gap-2">
+                <input
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                  placeholder="Código do cupom"
+                  aria-label="Código do cupom"
+                  className="min-w-0 flex-1 rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  disabled={couponBusy}
+                  onClick={() => applyCoupon()}
+                  className="rounded-lg border border-foreground/20 px-4 text-sm font-bold disabled:opacity-50"
+                >
+                  {couponBusy ? "…" : "Aplicar"}
+                </button>
+              </div>
+              {couponErr && <p className="text-xs font-semibold text-brand-ink">{couponErr}</p>}
+              {coupon && coupon.product === chosen && (
+                <p className="text-xs font-semibold">
+                  ✅ {coupon.msg} Você paga {coupon.full && <s className="text-foreground/40">{coupon.full}</s>} {coupon.price}.{" "}
+                  <button type="button" onClick={() => setCoupon(null)} className="text-foreground/50 underline">
+                    remover
+                  </button>
+                </p>
+              )}
+            </div>
+          ) : (
+            <button type="button" onClick={() => setCouponOpen(true)} className="justify-self-start text-xs text-foreground/50 underline">
+              Tem um cupom?
+            </button>
+          ))}
         {error && <p className="text-sm text-brand-ink">{error}</p>}
         {p.paymentsOn ? (
           <button

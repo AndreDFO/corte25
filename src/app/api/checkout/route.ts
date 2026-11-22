@@ -3,6 +3,8 @@ import { currentUser, getProfile, updateProfile } from "@/lib/auth";
 import { CATALOG, type ProductId } from "@/lib/pricing";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { affiliateStillEarns, referralDiscount } from "@/lib/credits";
+import { checkCoupon } from "@/lib/coupons";
+import { discounted } from "@/lib/pricing";
 
 function validCpfCnpj(v: string) {
   const d = v.replace(/\D/g, "");
@@ -49,18 +51,40 @@ export async function POST(req: Request) {
     wallet = data?.affiliate_wallet_id || null;
   }
 
-  const discountPercent = await referralDiscount(user.id, profile.referred_by);
+  // Preço: desconto da indicação (1ª compra) ou cupom, o que for menor (não somam).
+  // Cupom de vídeos de bônus soma com o desconto da indicação.
+  const full = CATALOG[product].value;
+  const refPercent = await referralDiscount(user.id, profile.referred_by);
+  let value = refPercent ? discounted(full, refPercent) : full;
+  let note = refPercent ? `${refPercent}% de desconto pela indicação` : "";
+  let couponCode: string | null = null;
+  let bonusVideos = 0;
+  if (b.coupon) {
+    const c = await checkCoupon(String(b.coupon), user.id, product);
+    if (!c.ok) return Response.json({ error: c.error, code: "coupon" }, { status: 400 });
+    bonusVideos = c.bonusVideos;
+    // Só conta como usado se o cupom mudou algo (preço menor ou vídeos de bônus).
+    if (c.value < value) {
+      value = c.value;
+      note = `cupom ${c.coupon.code}`;
+      couponCode = c.coupon.code;
+    } else if (c.bonusVideos) {
+      note = [note, `cupom ${c.coupon.code}`].filter(Boolean).join(" · ");
+      couponCode = c.coupon.code;
+    }
+  }
+  const discountArgs = { value: value !== full ? value : undefined, note: note || undefined };
   try {
     let out;
     try {
-      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: wallet, discountPercent });
+      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: wallet, ...discountArgs });
     } catch (err) {
       if (!wallet) throw err;
       // Carteira do afiliado recusada (ID errado ou a própria conta): a venda não pode travar.
       // Cobra sem o split; a indicação fica registrada em payments.affiliate_code para pagar à mão.
       console.warn("[checkout] split recusado, cobrando sem ele:", (err as Error).message);
       wallet = null;
-      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: null, discountPercent });
+      out = await createCheckout({ customer, userId: user.id, product, affiliateWallet: null, ...discountArgs });
     }
     await supabaseAdmin().from("payments").upsert({
       id: out.id,
@@ -71,6 +95,8 @@ export async function POST(req: Request) {
       status: "PENDING",
       affiliate_code: earns ? profile.referred_by : null,
       subscription_id: out.subscription || null,
+      coupon_code: couponCode,
+      bonus_videos: bonusVideos,
     });
     return Response.json({ url: out.url });
   } catch (err) {

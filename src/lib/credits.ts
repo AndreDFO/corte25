@@ -25,6 +25,15 @@ export async function grantForPayment(p: { paymentId: string; userId: string; pr
   });
   if (error && error.code !== "23505") throw error; // 23505 = já creditado antes
 
+  // Cupom: registra o uso e credita os vídeos de bônus (uma vez só por pagamento).
+  const { data: bonus } = await db.rpc("redeem_coupon", { p_payment: p.paymentId });
+  if (Number(bonus) > 0) {
+    const { error: e2 } = await db
+      .from("credit_ledger")
+      .insert({ user_id: p.userId, delta: Number(bonus), reason: "bonus", payment_id: p.paymentId });
+    if (e2 && e2.code !== "23505") throw e2;
+  }
+
   // Assinatura com split: ao chegar na 3ª compra paga, tira a comissão das próximas mensalidades.
   if (p.subscription && !(await affiliateStillEarns(p.userId))) {
     await removeSubscriptionSplit(p.subscription).catch((err) =>

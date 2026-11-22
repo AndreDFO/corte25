@@ -25,3 +25,22 @@ export async function isAdmin() {
   const user = await currentUser();
   return Boolean(user?.email && emails.includes(user.email.toLowerCase()));
 }
+
+// E-mail da conta logada está em ADMIN_EMAILS (variável do Railway)? Só isso mostra o botão.
+export async function isAdminEmail() {
+  const emails = (process.env.ADMIN_EMAILS || "").toLowerCase().split(/[,\s]+/).filter(Boolean);
+  if (!emails.length) return false;
+  const user = await currentUser();
+  return Boolean(user?.email && emails.includes(user.email.toLowerCase()));
+}
+
+// Área do administrador (cupons): exige as DUAS coisas — conta do dono logada E a senha ADMIN_KEY.
+export async function hasAdminKeyCookie() {
+  const key = process.env.ADMIN_KEY;
+  if (!key || key.length < 12) return false;
+  return (await cookies()).get(ADMIN_COOKIE)?.value === keyHash(key);
+}
+
+export async function isOwnerAdmin() {
+  return (await isAdminEmail()) && (await hasAdminKeyCookie());
+}
