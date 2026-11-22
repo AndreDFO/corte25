@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Coupon } from "@/lib/coupons";
 import AdminCoupons from "./admin-coupons";
 import Stats from "./stats";
+import AdminRelatos, { type Relato } from "./admin-relatos";
 import { adminStats } from "@/lib/admin-stats";
 
 const nowMs = () => Date.now();
@@ -58,13 +59,19 @@ async function Admin({ searchParams }: { searchParams: Promise<Record<string, st
     );
   }
   const now = nowMs();
-  const [{ data }, stats] = await Promise.all([
+  const [{ data }, stats, relatos] = await Promise.all([
     supabaseAdmin().from("coupons").select("*").is("deleted_at", null).order("created_at", { ascending: false }),
     adminStats(now),
+    supabaseAdmin()
+      .from("bug_reports")
+      .select("id, created_at, status, summary, details, page, email, contact, transcript, browser, fix_note, fix_pr, has_print:has_screenshot")
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
   return (
     <AdminCoupons initial={(data ?? []) as Coupon[]} now={now}>
       <Stats s={stats} />
+      <AdminRelatos initial={(relatos.data ?? []) as Relato[]} />
     </AdminCoupons>
   );
 }
