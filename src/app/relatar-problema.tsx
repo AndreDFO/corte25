@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 // Botão flutuante "Relatar problema": conversa curta com a IA, print opcional e envio do relato.
 // Erros do navegador ficam guardados para ajudar na correção (só vão junto quando a pessoa envia).
@@ -52,6 +53,10 @@ async function shrink(file: File): Promise<string> {
 
 export default function RelatarProblema() {
   const [open, setOpen] = useState(false);
+  const [mini, setMini] = useState(false);
+  // Na página do lote a barra "Baixar" fica embaixo: lá o botão aparece só com o ícone para não encostar nela.
+  const pathname = usePathname();
+  const compact = mini || pathname.startsWith("/tarefa");
   const [msgs, setMsgs] = useState<Msg[]>([{ role: "assistant", content: OLA }]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,6 +68,13 @@ export default function RelatarProblema() {
   const [erro, setErro] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lê a preferência salva só no navegador
+      if (localStorage.getItem("corte25_bug_mini") === "1") setMini(true);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const onErr = (e: ErrorEvent) => erros.push(`${e.message} @ ${e.filename?.split("/").pop()}:${e.lineno}`.slice(0, 400));
@@ -159,17 +171,36 @@ export default function RelatarProblema() {
   return (
     <>
       {!open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          title="Relatar problema"
-          className="group fixed bottom-3 left-3 z-40 flex h-10 items-center gap-1.5 rounded-full border border-foreground/15 bg-surface/90 px-2.5 text-sm font-bold opacity-70 shadow-md backdrop-blur hover:opacity-100 sm:bottom-5 sm:left-5"
-          aria-label="Relatar problema no site"
-        >
-          {/* Recolhido: só o ícone; o texto aparece ao passar o mouse. Fica no canto ESQUERDO para não cobrir a barra "Baixar" (que fica à direita). */}
-          <span aria-hidden>🐞</span>
-          <span className="hidden whitespace-nowrap pr-1 group-hover:inline group-focus-visible:inline">Relatar problema</span>
-        </button>
+        // Canto ESQUERDO para não cobrir a barra "Baixar" (que fica à direita).
+        // Aberto: "🐞 Relatar problema" com um X para recolher; recolhido: só o ícone (fica salvo no navegador).
+        <div className="fixed bottom-3 left-3 z-40 flex h-10 items-center rounded-full border border-foreground/15 bg-surface/95 text-sm font-bold shadow-md backdrop-blur sm:bottom-5 sm:left-5">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            title="Relatar problema"
+            aria-label="Relatar problema no site"
+            className={`flex h-full items-center gap-1.5 rounded-full hover:bg-foreground/5 ${compact ? "px-2.5" : "pl-3 pr-1.5"}`}
+          >
+            <span aria-hidden>🐞</span>
+            {!compact && <span className="whitespace-nowrap">Relatar problema</span>}
+          </button>
+          {!compact && (
+            <button
+              type="button"
+              onClick={() => {
+                setMini(true);
+                try {
+                  localStorage.setItem("corte25_bug_mini", "1");
+                } catch {}
+              }}
+              title="Recolher"
+              aria-label="Recolher botão de relatar problema"
+              className="mr-1 flex h-7 w-7 items-center justify-center rounded-full text-xs text-foreground/50 hover:bg-foreground/10"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       )}
       {open && (
         <div
