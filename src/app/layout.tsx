@@ -16,9 +16,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="font-extrabold text-xl tracking-tight">
               Corte<span className="ml-0.5 rounded-md bg-brand px-1.5 text-on-brand">25</span>
             </Link>
-            <nav className="flex items-center gap-4 text-sm">
+            <nav className="flex items-center gap-2 sm:gap-4 text-sm">
               <span className="hidden sm:inline text-foreground/60">25 vídeos + 2 grátis</span>
-              <Link href="/meus-videos" className="rounded-lg bg-foreground/5 px-3 py-1.5 font-semibold hover:bg-foreground/10">
+              <Link href="/" className="hidden sm:inline-block rounded-lg px-2 py-1.5 font-semibold text-foreground/70 hover:bg-foreground/5 hover:text-foreground">
+                Início
+              </Link>
+              <Link href="/meus-videos" className="whitespace-nowrap rounded-lg bg-foreground/5 px-3 py-1.5 font-semibold hover:bg-foreground/10">
                 Meus vídeos
               </Link>
               <Link href="/conta" className="rounded-lg bg-brand px-3 py-1.5 font-bold text-on-brand hover:bg-brand-dark">

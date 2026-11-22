@@ -59,15 +59,13 @@ export default function JobView({ id }: { id: string }) {
     <div className="mx-auto max-w-6xl px-5 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
+          <Link href="/" className="mb-3 inline-flex items-center gap-1 rounded-lg bg-foreground/5 px-3 py-1.5 text-sm font-semibold hover:bg-foreground/10">
+            ← Voltar ao início
+          </Link>
           <p className="text-sm text-foreground/50">Produto</p>
           <h1 className="text-3xl font-extrabold">{job.product}</h1>
           <p className="mt-1 text-foreground/60">
             {job.message}
-            {job.copySource === "template" && (
-              <span className="ml-2 text-xs text-foreground/50">
-                (hooks de modelos prontos; configure a chave da IA para hooks personalizados)
-              </span>
-            )}
           </p>
           {job.expiresAt && now > 0 && (
             <p className="mt-2 inline-block rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accent-ink">
