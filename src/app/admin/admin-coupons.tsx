@@ -20,6 +20,35 @@ function describe(c: Coupon) {
   return `+${n} vídeos de bônus`;
 }
 
+// Botãozinho de copiar o código do cupom.
+function CopyCode({ code }: { code: string }) {
+  const [ok, setOk] = useState(false);
+  return (
+    <button
+      type="button"
+      title="Copiar código"
+      aria-label={`Copiar código ${code}`}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(code);
+        } catch {
+          const t = document.createElement("textarea");
+          t.value = code;
+          document.body.appendChild(t);
+          t.select();
+          document.execCommand("copy");
+          t.remove();
+        }
+        setOk(true);
+        setTimeout(() => setOk(false), 1500);
+      }}
+      className={`ml-1 inline-flex items-center rounded-md border px-1.5 py-0.5 align-middle text-[11px] font-bold ${ok ? "border-brand bg-brand/20" : "border-foreground/15 text-foreground/60 hover:bg-foreground/5"}`}
+    >
+      {ok ? "✓ Copiado" : "📋 Copiar"}
+    </button>
+  );
+}
+
 const field = "rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm";
 
 export default function AdminCoupons({ initial, now, children }: { initial: Coupon[]; now: number; children?: React.ReactNode }) {
@@ -232,7 +261,7 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
               <li key={c.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-foreground/10 p-3 ${c.active && !expired ? "" : "opacity-60"}`}>
                 <div className="min-w-0">
                   <p className="font-black">
-                    {c.code} <span className="font-semibold text-foreground/70">· {describe(c)}</span>
+                    {c.code} <CopyCode code={c.code} /> <span className="font-semibold text-foreground/70">· {describe(c)}</span>
                   </p>
                   <p className="text-xs text-foreground/60">
                     {c.uses} uso{c.uses === 1 ? "" : "s"}
