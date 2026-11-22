@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { AdminStats } from "@/lib/admin-stats";
 import { brl } from "@/lib/pricing";
 
@@ -12,7 +13,12 @@ export default function Stats({ s }: { s: AdminStats }) {
   ];
   return (
     <div className="grid gap-3 rounded-2xl bg-surface p-5 ring-1 ring-foreground/10">
-      <h2 className="text-lg font-black">Vendas e testes</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-black">Relatório de vendas</h2>
+        <Link href="/admin/relatorio" className="rounded-xl bg-accent px-4 py-2 text-sm font-black text-white hover:bg-accent-dark">
+          Abrir relatório (filtro, Excel e PDF)
+        </Link>
+      </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {big.map(([k, v, sub]) => (
           <div key={k} className={box}>
