@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
-import { BATCH_VIDEOS, FREE_VIDEOS, FULL_PRICE, MAX_PER_BLOCK, PACKAGES, comboCount } from "@/lib/pricing";
+import { BATCH_VIDEOS, FREE_VIDEOS, FULL_PRICE, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION, comboCount } from "@/lib/pricing";
 
 function clientId() {
   try {
@@ -33,6 +33,7 @@ export default function UploadForm() {
   const [music, setMusic] = useState<File | null>(null);
   const [product, setProduct] = useState("");
   const [details, setDetails] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [duration, setDuration] = useState("auto");
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -58,11 +59,14 @@ export default function UploadForm() {
     setDoneId("");
     if (!product.trim()) return setError("Informe o nome do produto.");
     if (total === 0) return setError("Adicione pelo menos 1 gancho, 1 corpo e 1 CTA.");
+    if (plan === "free" && whatsapp.replace(/\D/g, "").length < 10)
+      return setError("Informe seu WhatsApp com DDD para fazer o teste grátis.");
     const fd = new FormData();
     fd.append("product", product);
     fd.append("details", details);
     fd.append("duration", duration);
     fd.append("plan", plan);
+    if (plan === "free") fd.append("whatsapp", whatsapp);
     fd.append("clientId", clientId());
     (Object.keys(clips) as BlockKey[]).forEach((k) => clips[k].forEach((f) => fd.append(k, f)));
     if (music) fd.append("music", music);
@@ -249,6 +253,24 @@ export default function UploadForm() {
         </label>
       </div>
 
+      {plan === "free" && (
+        <label className="grid gap-1">
+          <input
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="Seu WhatsApp com DDD: (11) 91234-5678"
+            aria-label="WhatsApp"
+            className="rounded-lg bg-field border border-foreground/15 px-3 py-2 text-sm outline-none focus:border-brand"
+          />
+          <span className="text-[11px] text-foreground/50">
+            Usamos só para avisar sobre seus vídeos e novidades do Corte25. Você pode pedir para sair quando quiser.
+          </span>
+        </label>
+      )}
+
       {error && <p className="text-sm text-brand-ink">{error}</p>}
       {doneId && (
         <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm">
@@ -276,7 +298,7 @@ export default function UploadForm() {
       {payOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5" onClick={() => setPayOpen(false)}>
           <div
-            className="w-full max-w-sm rounded-2xl border border-foreground/10 bg-surface p-6 grid gap-4"
+            className="w-full max-w-sm max-h-[92vh] overflow-y-auto rounded-2xl border border-foreground/10 bg-surface p-5 grid gap-3"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-bold">Compre créditos</h3>
@@ -284,12 +306,32 @@ export default function UploadForm() {
               Cada crédito gera um lote de {BATCH_VIDEOS} vídeos + {FREE_VIDEOS} de bônus, combinando seus ganchos, corpos e CTAs, sem marca
               d&apos;água, com legendas e download em ZIP.
             </p>
+            <button
+              type="button"
+              disabled
+              className="rounded-xl border-2 border-accent bg-accent/10 p-4 text-left opacity-90"
+            >
+              <span className="flex items-baseline justify-between">
+                <span className="font-bold">
+                  Assinatura mensal{" "}
+                  <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-black uppercase text-white">recomendado</span>
+                </span>
+                <span className="whitespace-nowrap text-lg font-extrabold">
+                  {SUBSCRIPTION.price}
+                  <span className="text-xs font-semibold text-foreground/60">/mês</span>
+                </span>
+              </span>
+              <span className="block text-xs text-foreground/60">
+                {SUBSCRIPTION.credits} lotes por mês · {SUBSCRIPTION.perBatch}
+              </span>
+            </button>
+            <p className="-mb-2 text-xs font-semibold text-foreground/50">Ou pacotes avulsos, sem mensalidade:</p>
             {PACKAGES.map((p) => (
               <button
                 key={p.credits}
                 type="button"
                 disabled
-                className={`rounded-xl border p-4 text-left opacity-80 ${p.best ? "border-brand bg-brand/10" : "border-foreground/15"}`}
+                className={`rounded-xl border px-4 py-2.5 text-left opacity-80 ${p.best ? "border-brand bg-brand/10" : "border-foreground/15"}`}
               >
                 <span className="flex items-baseline justify-between">
                   <span className="font-bold">{p.credits} lotes</span>
@@ -298,6 +340,7 @@ export default function UploadForm() {
                 <span className="block text-xs text-foreground/50">
                   {p.perBatch}
                   {p.best ? " · mais econômico" : ""}
+                  {p.tag ? ` · ${p.tag}` : ""}
                 </span>
               </button>
             ))}

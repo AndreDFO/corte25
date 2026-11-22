@@ -1,9 +1,11 @@
+import crypto from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
 import { BATCH_VIDEOS, FREE_VIDEOS, MAX_PER_BLOCK } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
+import { normalizeWhatsapp, saveLead } from "@/lib/leads";
 
 const MAX_FILE_MB = Number(process.env.MAX_FILE_MB || 300);
 
@@ -39,8 +41,13 @@ export async function POST(req: Request) {
       { status: 402 },
     );
   }
+  const whatsapp = plan === "free" ? normalizeWhatsapp(String(form.get("whatsapp") || "")) : null;
+  if (plan === "free" && !whatsapp)
+    return Response.json({ error: "Informe um WhatsApp válido com DDD para fazer o teste grátis." }, { status: 400 });
   if (plan === "free") {
-    const ok = await claimTrial(trialKeys(req, String(form.get("clientId") || "") || null));
+    // 1 teste por pessoa: conta por rede, por navegador e por número de WhatsApp.
+    const keys = [...trialKeys(req, String(form.get("clientId") || "") || null), "wa:" + crypto.createHash("sha256").update(whatsapp!).digest("hex").slice(0, 24)];
+    const ok = await claimTrial(keys);
     if (!ok)
       return Response.json(
         { error: "Você já usou seu teste grátis. Para gerar todas as combinações, escolha o lote completo.", code: "trial_used" },
@@ -88,6 +95,7 @@ export async function POST(req: Request) {
     variations: [],
   };
   await saveJob(job);
+  if (whatsapp) await saveLead({ whatsapp, product, jobId: id, createdAt: job.createdAt }).catch(() => {});
   startJob(id);
   return Response.json({ id });
 }

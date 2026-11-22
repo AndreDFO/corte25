@@ -191,7 +191,7 @@ async function renderVariation(
   const ctaFile = `cta_${v.index}.txt`;
   await fs.writeFile(path.join(dir, hookFile), wrap(v.hook, 18));
   await fs.writeFile(path.join(dir, ctaFile), wrap(v.cta, 24));
-  if (job.plan === "free") await fs.writeFile(path.join(dir, "marca.txt"), "Corte25 · teste grátis");
+  if (job.plan === "free") await fs.writeFile(path.join(dir, "marca.txt"), "Corte25 · versão de teste");
 
   const args: string[] = ["-y", "-hide_banner", "-loglevel", "error"];
   for (const s of rc.segments) {

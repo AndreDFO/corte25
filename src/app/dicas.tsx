@@ -23,10 +23,10 @@ const BLOCOS: Bloco[] = [
     exemplos: [
       { angulo: "Dor", tela: "Cansada de cabelo armado?", cena: "😩", acao: "Mostre o problema" },
       { angulo: "Curiosidade", tela: "Ninguém me contou isso antes", cena: "🤫", acao: "Fale direto pra câmera" },
-      { angulo: "Resultado", tela: "Olha o antes e depois", cena: "✨", acao: "Mostre a mudança" },
+      { angulo: "Na prática", tela: "Olha como fica na prática", cena: "✨", acao: "Mostre o produto em uso" },
     ],
     dicas: [
-      "Cada gancho com um início diferente: dor, curiosidade, resultado.",
+      "Cada gancho com um início diferente: dor, curiosidade, na prática.",
       "O produto ou o problema aparece já no 1º segundo.",
       "Frase curta, falada com energia, celular em pé.",
     ],
@@ -57,12 +57,12 @@ const BLOCOS: Bloco[] = [
     exemplos: [
       { angulo: "Carrinho", tela: "Toca no carrinho laranja", cena: "👇", acao: "Aponte para baixo" },
       { angulo: "Oferta", tela: "De R$ 89 por R$ 39", cena: "🏷️", acao: "Mostre o preço" },
-      { angulo: "Urgência", tela: "Corre que tá acabando", cena: "⏰", acao: "Fale rápido e animado" },
+      { angulo: "Convite", tela: "Garanta o seu no carrinho", cena: "🛒", acao: "Fale animado, sem exagero" },
     ],
     dicas: [
       "Diga o que fazer: tocar no carrinho, garantir o seu.",
       "Mostre a oferta ou o preço, se tiver.",
-      "Termine com o produto bem visível.",
+      "Evite \"garantido\", \"só hoje\", \"grátis\" e chamar para o WhatsApp: o TikTok pode restringir o vídeo.",
     ],
   },
 ];
