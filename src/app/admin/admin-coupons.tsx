@@ -103,6 +103,19 @@ export default function AdminCoupons({ initial, now, children }: { initial: Coup
           <Link href="/contatos" className="underline">
             Contatos do teste grátis
           </Link>
+          <button
+            type="button"
+            className="underline"
+            onClick={async (e) => {
+              const b = e.currentTarget;
+              b.textContent = "Buscando músicas…";
+              const res = await fetch("/api/admin/musicas", { method: "POST" });
+              const j = await res.json().catch(() => ({}));
+              b.textContent = res.ok ? `Músicas atualizadas (${j.tracks})` : j.error || "Falhou";
+            }}
+          >
+            Atualizar músicas
+          </button>
           <Link href="/conta" className="text-foreground/60 underline">
             Voltar para a conta
           </Link>

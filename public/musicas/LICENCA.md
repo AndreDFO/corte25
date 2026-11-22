@@ -22,3 +22,11 @@ melodias de terceiros.
 
 Para acrescentar músicas de bancos livres (ex.: Pixabay Music), confira a licença de cada faixa,
 anote aqui a fonte e o link, e adicione a faixa em src/lib/music.ts.
+
+## Biblioteca automática (desde 22/11/2026)
+
+Além das 8 faixas acima, o servidor busca sozinho, 1x por semana, músicas na API pública do
+Openverse (https://openverse.org), só com licença **CC0** ou **Public Domain Mark**: uso comercial
+liberado e sem obrigação de dar crédito. Para cada faixa ficam guardados o título, o autor, a licença
+e o link da página original em DATA_DIR/musicas/biblioteca.json. Faixas com menos de 15 s ou mais de
+4 min são descartadas. Código: src/lib/music-library.ts. O admin tem o botão "Atualizar músicas".

@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Job, jobDir, newJobId, safeName, saveJob } from "@/lib/jobs";
 import { startJob } from "@/lib/engine";
-import { isTrack } from "@/lib/music";
+import { trackPath } from "@/lib/music-library";
 import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, VIDEO_CHOICES, bonusFor } from "@/lib/pricing";
 import { claimTrial, trialKeys } from "@/lib/trials";
 import { normalizeWhatsapp, saveLead } from "@/lib/leads";
@@ -105,10 +105,11 @@ export async function POST(req: Request) {
   };
   let musicName: string | undefined;
   const track = String(form.get("track") || "");
-  if (isTrack(track)) {
-    // Música da playlist pronta (arquivo em public/musicas).
-    musicName = `musica_${track}.mp3`;
-    await fs.copyFile(path.join(process.cwd(), "public", "musicas", `${track}.mp3`), path.join(dir, "inputs", musicName));
+  const trackFile = track && track !== "arquivo" ? await trackPath(track) : null;
+  if (trackFile) {
+    // Música da biblioteca (Openverse CC0/domínio público ou as faixas próprias).
+    musicName = `musica_${track}${path.extname(trackFile)}`;
+    await fs.copyFile(trackFile, path.join(dir, "inputs", musicName));
   } else if (music instanceof File && music.size > 0) {
     musicName = `musica_${safeName(music.name)}`;
     await fs.writeFile(path.join(dir, "inputs", musicName), Buffer.from(await music.arrayBuffer()));

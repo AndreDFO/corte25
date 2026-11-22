@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import PlanPicker from "./plan-picker";
-import { TRACKS, isTrack, trackUrl } from "@/lib/music";
 import { useEffect, useRef, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
 import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, comboCount } from "@/lib/pricing";
@@ -37,6 +36,16 @@ export default function UploadForm() {
   const [music, setMusic] = useState<File | null>(null);
   // Música: "" = sem música, slug da playlist, ou "arquivo" = a pessoa envia a dela.
   const [track, setTrack] = useState("");
+  const [tracks, setTracks] = useState<{ id: string; title: string; style: string }[]>([]);
+  useEffect(() => {
+    fetch("/api/musicas")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => j?.tracks && setTracks(j.tracks))
+      .catch(() => {});
+  }, []);
+  const isTrack = (v: string) => v !== "" && v !== "arquivo";
+  const trackUrl = (id: string) => `/api/musicas/${encodeURIComponent(id)}`;
+  const styles = [...new Set(tracks.map((t) => t.style))];
   const [playing, setPlaying] = useState(false);
   const player = useRef<HTMLAudioElement | null>(null);
   function preview() {
@@ -374,10 +383,16 @@ export default function UploadForm() {
               className="w-full min-w-0 rounded-lg bg-field border border-foreground/15 px-2 py-2 outline-none focus:border-brand"
             >
               <option value="">Sem música</option>
-              {TRACKS.map((t) => (
-                <option key={t.slug} value={t.slug}>
-                  {t.title}
-                </option>
+              {styles.map((s) => (
+                <optgroup key={s} label={s}>
+                  {tracks
+                    .filter((t) => t.style === s)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title}
+                      </option>
+                    ))}
+                </optgroup>
               ))}
               <option value="arquivo">Enviar minha música…</option>
             </select>
