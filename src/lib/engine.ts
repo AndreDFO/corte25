@@ -1,3 +1,4 @@
+import { releaseTrial } from "./trials";
 import { spawn } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
@@ -349,6 +350,7 @@ export function startJob(id: string) {
         job.status = "error";
         job.message = String(err?.message || err);
         await saveJob(job);
+        if (job.trialKeys?.length) await releaseTrial(job.trialKeys).catch(() => {});
       }
     })
     .finally(() => running.delete(id));
@@ -478,4 +480,6 @@ async function processJob(id: string) {
   final.status = ok > 0 ? "done" : "error";
   final.message = ok === final.variations.length ? "Pronto!" : `${ok} de ${final.variations.length} vídeos gerados.`;
   await saveJob(final);
+  // Teste grátis sem nenhum vídeo pronto: devolve o teste para a pessoa tentar de novo.
+  if (ok === 0 && final.trialKeys?.length) await releaseTrial(final.trialKeys).catch(() => {});
 }
