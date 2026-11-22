@@ -37,6 +37,7 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       hasCustomer={Boolean(profile?.asaas_customer_id)}
       paymentsOn={asaasConfigured()}
       buy={buy}
+      paid={sp.pago === "1"}
       affiliatePercent={AFFILIATE_PERCENT}
       payments={payments}
       siteUrl={process.env.SITE_URL || "https://corte25.com.br"}

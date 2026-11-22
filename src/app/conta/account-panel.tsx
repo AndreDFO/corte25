@@ -22,6 +22,7 @@ export default function AccountPanel(p: {
   hasCustomer: boolean;
   paymentsOn: boolean;
   buy: string | null;
+  paid?: boolean;
   affiliatePercent: number;
   payments: Payment[];
   siteUrl: string;
@@ -87,6 +88,12 @@ export default function AccountPanel(p: {
           Sair
         </button>
       </div>
+
+      {p.paid && (
+        <div className="rounded-2xl bg-brand/20 p-4 text-sm font-semibold ring-1 ring-brand">
+          Pagamento recebido, obrigado! Seus lotes entram no saldo em instantes. Se ainda não aparecerem, atualize a página.
+        </div>
+      )}
 
       <div className={`${card} flex flex-wrap items-center justify-between gap-3`}>
         <div>

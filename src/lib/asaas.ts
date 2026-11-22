@@ -56,14 +56,27 @@ export async function createCheckout(opts: {
     externalReference: `${opts.userId}:${opts.product}`,
     split: split(opts.affiliateWallet),
   };
+  // Depois de pagar, o Asaas volta para a conta. Ele só aceita se o domínio do site estiver
+  // cadastrado na conta do Asaas; se recusar, a cobrança é criada sem o retorno automático.
+  const site = (process.env.SITE_URL || "").replace(/\s+/g, "").replace(/\/+$/, "");
+  const callback = site ? { successUrl: `${site}/conta?pago=1`, autoRedirect: true } : undefined;
+  const withCallback = async <T,>(path: string, body: Record<string, unknown>) => {
+    if (!callback) return call<T>("POST", path, body);
+    try {
+      return await call<T>("POST", path, { ...body, callback });
+    } catch (err) {
+      console.warn("[asaas] retorno automático recusado, criando sem ele:", (err as Error).message);
+      return call<T>("POST", path, body);
+    }
+  };
   if (item.recurring) {
-    const sub = await call<{ id: string }>("POST", "/subscriptions", { ...base, cycle: "MONTHLY", nextDueDate: today() });
+    const sub = await withCallback<{ id: string }>("/subscriptions", { ...base, cycle: "MONTHLY", nextDueDate: today() });
     // A primeira mensalidade já nasce com a assinatura; pega o link dela.
     const list = await call<{ data: { id: string; invoiceUrl: string }[] }>("GET", `/subscriptions/${sub.id}/payments`);
     const first = list.data[0];
     return { id: first.id, url: first.invoiceUrl, subscription: sub.id };
   }
-  const pay = await call<{ id: string; invoiceUrl: string }>("POST", "/payments", { ...base, dueDate: today(1) });
+  const pay = await withCallback<{ id: string; invoiceUrl: string }>("/payments", { ...base, dueDate: today(1) });
   return { id: pay.id, url: pay.invoiceUrl };
 }
 
