@@ -1,5 +1,7 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { isAdmin } from "@/lib/admin";
+import { PACKAGES } from "@/lib/pricing";
 import { listLeads } from "@/lib/leads";
 
 export const metadata = { title: "Contatos do teste grátis · Corte25", robots: { index: false } };
@@ -36,6 +38,10 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
     );
   }
   const all = await listLeads();
+  // Endereço público do site para o link da mensagem (SITE_URL ou o endereço que você está usando agora).
+  const h = await headers();
+  const site = (process.env.SITE_URL || `https://${h.get("x-forwarded-host") || h.get("host")}`).replace(/\/$/, "");
+  const entry = PACKAGES[0];
   // Um por número, o mais recente primeiro.
   const seen = new Set<string>();
   const leads = all
@@ -54,7 +60,11 @@ async function Contatos({ searchParams }: { searchParams: Promise<Record<string,
       {leads.length === 0 && <p className="text-foreground/60">Ninguém fez o teste grátis ainda.</p>}
       <ul className="grid gap-2">
         {leads.map((l) => {
-          const msg = `Oi! Aqui é do Corte25. Vi que você testou os vídeos do produto "${l.product}". O que achou? Se quiser, te ajudo a gerar o lote completo com 25 vídeos + 2 de bônus.`;
+          const msg =
+            `Oi! Aqui é do Corte25 😊 Vi que você testou com o produto "${l.product}". Curtiu os 2 vídeos?\n\n` +
+            `No lote completo você recebe 25 vídeos prontos para o TikTok Shop, sem marca d'água, e ganha mais 2 totalmente grátis. ` +
+            `É só gravar 3 ganchos, 3 corpos e 3 CTAs que o Corte25 monta tudo.\n\n` +
+            `Para começar, o pacote de entrada tem ${entry.credits} lotes por ${entry.price} (${entry.perBatch}). Garanta o seu aqui: ${site}/conta?comprar=pacote-${entry.credits}`;
           return (
             <li key={l.whatsapp} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface p-4 ring-1 ring-foreground/10">
               <div className="min-w-0">
