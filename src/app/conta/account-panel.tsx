@@ -228,7 +228,7 @@ export default function AccountPanel(p: {
           {p.vip.active && <span className="rounded-full bg-accent px-3 py-1 text-xs font-black text-white">{p.vip.admin ? "VIP (admin)" : p.vip.coupon ? "VIP por cupom" : "VIP ativo"}</span>}
         </div>
         <p className="text-sm text-foreground/70">
-          Libera em todos os vídeos: <b>música</b>, <b>textos no vídeo</b>, <b>cortar partes sem som</b>, <b>narração</b> e <b>legenda automática</b>. E ainda
+          Libera em todos os vídeos: <b>música</b>, <b>textos no vídeo</b>, <b>cortar partes sem som</b>, <b>narração</b>, <b>legenda automática</b> e <b>transição suave</b>. E ainda
           inclui <b>25 vídeos + 2 grátis</b> no seu saldo a cada mês pago.
         </p>
         {p.vip.active && !p.vip.admin && p.vip.until && (

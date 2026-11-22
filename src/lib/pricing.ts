@@ -53,7 +53,7 @@ export const AFFILIATE_LATER_PERCENT = 3;
 export const discounted = (value: number, percent: number) => Math.round(value * (100 - percent)) / 100;
 export const brl = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 export const FREE_VIDEOS = 2;
-// Plano VIP (aprovado 22/11): extra mensal que libera textos, cortar silêncio, música, narração e legenda automática.
+// Plano VIP (aprovado 22/11): extra mensal que libera textos, cortar silêncio, música, narração, legenda automática e transição suave.
 export const VIP_PRICE = 14.99;
 export const VIP_DAYS = 31; // cada mensalidade paga vale 31 dias
 // Quem tem qualquer assinatura mensal (sem VIP) ganha 3 vídeos por mês com os recursos VIP (pedido do Andre, 22/11).
@@ -66,6 +66,7 @@ export const VIP_FEATURE_LIST = [
   { id: "musica", label: "Música" },
   { id: "narracao", label: "Narração" },
   { id: "legenda", label: "Legenda automática" },
+  { id: "transicao", label: "Transição suave" },
 ] as const;
 export type VipFeature = (typeof VIP_FEATURE_LIST)[number]["id"];
 export const ALL_VIP_FEATURES = VIP_FEATURE_LIST.map((f) => f.id) as VipFeature[];
