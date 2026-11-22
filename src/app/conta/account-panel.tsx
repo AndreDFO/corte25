@@ -148,6 +148,7 @@ export default function AccountPanel(p: {
   const [freeCode, setFreeCode] = useState("");
   const [freeMsg, setFreeMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [freeBusy, setFreeBusy] = useState(false);
+  const [freeOpen, setFreeOpen] = useState(false);
   async function redeemFree(e: React.FormEvent) {
     e.preventDefault();
     setFreeBusy(true);
@@ -273,31 +274,33 @@ export default function AccountPanel(p: {
             {p.credits} <span className="text-lg font-bold text-foreground/60">vídeo{p.credits === 1 ? "" : "s"}</span>
           </p>
           <p className="text-xs text-foreground/50">Cada lote = 25 vídeos. Gere quantos quiser por vez; gerando 25 de uma vez, ganha +2 grátis.</p>
+          {!freeOpen ? (
+            <button id="cupom" type="button" onClick={() => setFreeOpen(true)} className="mt-1 scroll-mt-24 text-xs font-semibold text-foreground/60 underline">
+              🎟 Tenho um cupom
+            </button>
+          ) : (
+            <form id="cupom" onSubmit={redeemFree} className="mt-1 flex max-w-xs scroll-mt-24 gap-1.5">
+              <input
+                autoFocus
+                value={freeCode}
+                onChange={(e) => setFreeCode(e.target.value.toUpperCase())}
+                placeholder="Código do cupom"
+                aria-label="Código do cupom"
+                autoComplete="off"
+                className="min-w-0 flex-1 rounded-lg border border-foreground/15 bg-field px-2.5 py-1 text-xs"
+              />
+              <button disabled={freeBusy || !freeCode.trim()} className="rounded-lg bg-brand px-3 text-xs font-bold text-on-brand hover:bg-brand-dark disabled:opacity-50">
+                {freeBusy ? "…" : "Resgatar"}
+              </button>
+            </form>
+          )}
+          {freeMsg && <p className={`text-xs font-semibold ${freeMsg.ok ? "text-foreground" : "text-brand-ink"}`}>{freeMsg.text}</p>}
         </div>
         <Link href="/#criar" className="rounded-xl bg-brand px-5 py-3 font-black text-on-brand hover:bg-brand-dark">
           Gerar vídeos
         </Link>
       </div>
 
-      <form id="cupom" onSubmit={redeemFree} className={`${card} grid scroll-mt-24 gap-2`}>
-        <h2 className="text-lg font-black">🎟 Tenho um cupom</h2>
-        <p className="text-sm text-foreground/60">Ganhou um cupom de vídeos grátis ou de VIP? Digite aqui: entra na hora, sem precisar comprar nada.</p>
-        <div className="flex max-w-md gap-2">
-          <input
-            value={freeCode}
-            onChange={(e) => setFreeCode(e.target.value.toUpperCase())}
-            placeholder="Código do cupom"
-            aria-label="Código do cupom"
-            autoComplete="off"
-            className="min-w-0 flex-1 rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm"
-          />
-          <button disabled={freeBusy || !freeCode.trim()} className="rounded-lg bg-brand px-4 font-bold text-on-brand hover:bg-brand-dark disabled:opacity-50">
-            {freeBusy ? "…" : "Resgatar"}
-          </button>
-        </div>
-        {freeMsg && <p className={`text-sm font-semibold ${freeMsg.ok ? "text-foreground" : "text-brand-ink"}`}>{freeMsg.text}</p>}
-        <p className="text-xs text-foreground/50">Cupom de desconto é usado na hora de comprar, no quadro &quot;Comprar vídeos&quot;.</p>
-      </form>
 
       <div id="vip" className={`${card} grid gap-2 scroll-mt-24 border-2 border-accent/40`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -340,9 +343,16 @@ export default function AccountPanel(p: {
           </button>
         )}
         {!p.vip.admin && (
-          <a href="#cupom" className="justify-self-start text-xs text-foreground/60 underline">
-            Tem um cupom VIP? Resgate em &quot;Tenho um cupom&quot;
-          </a>
+          <button
+            type="button"
+            onClick={() => {
+              setFreeOpen(true);
+              document.getElementById("cupom")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+            className="justify-self-start text-xs text-foreground/60 underline"
+          >
+            Tem um cupom VIP? Resgate aqui
+          </button>
         )}
         {p.vip.active && !p.vip.admin && !p.vip.coupon && !vipCanceled && (
           <button type="button" onClick={cancelVip} className="justify-self-start text-xs text-foreground/60 underline">
