@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
 import Link from "next/link";
 import type { Plano } from "@/lib/roteiro";
+import { limpaFala } from "@/lib/fala";
 import { FORM_TO_PLANO, ROTEIRO_EVENT, loadPlano, savePlano } from "@/lib/roteiro-store";
 import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, clipsToReach, comboCount, MIX_RULE, mixOk } from "@/lib/pricing";
 
@@ -376,8 +377,8 @@ export default function UploadForm() {
             {(() => {
               const next = roteiro?.[FORM_TO_PLANO[b.key]]?.[clips[b.key].length];
               return next && clips[b.key].length < maxPer ? (
-                <p className="rounded-md bg-surface/80 px-1.5 py-1 text-[11px] leading-snug ring-1 ring-foreground/10" title={`${next.fala}\n\n${next.enquadramento} · ${next.camera}`}>
-                  <b style={{ color: b.color }}>Grave {clips[b.key].length + 1}:</b> <span className="line-clamp-3">“{next.fala}”</span>
+                <p className="rounded-md bg-surface/80 px-1.5 py-1 text-[11px] leading-snug ring-1 ring-foreground/10" title={`${limpaFala(next.fala)}\n\n${next.enquadramento} · ${next.camera}`}>
+                  <b style={{ color: b.color }}>Grave {clips[b.key].length + 1}:</b> <span className="line-clamp-3">“{limpaFala(next.fala)}”</span>
                 </p>
               ) : null;
             })()}

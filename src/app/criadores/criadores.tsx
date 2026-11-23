@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { BlocoKey, Plano, RoteiroItem } from "@/lib/roteiro";
 import { loadPlano, savePlano } from "@/lib/roteiro-store";
+import DicasPostagem from "../dicas-postagem";
+import { contaPalavras, limpaFala, quebraFala } from "@/lib/fala";
+import { Contagem, Cronometro, RITMOS, TextoLeitura, useLeitura } from "../leitura";
 
 // Área "Criadores": a pessoa escreve o produto e/ou cola o link e recebe o plano completo de gravação
 // no modelo do site (3 ganchos, 3 corpos, 3 CTAs), com teleprompter e botão que leva ao gerador.
@@ -25,13 +28,13 @@ function planoTexto(p: Plano) {
     linhas.push(b.titulo.toUpperCase());
     p[b.key].forEach((it, i) =>
       linhas.push(
-        `${b.letra}${i + 1} · ${it.angulo} · ${it.duracao} s`,
-        `Fale: ${it.fala}`,
+        `${b.letra}${i + 1} · ${it.angulo} · ~${it.duracao} s (${contaPalavras(it.fala)} palavras)`,
+        `Fale: ${limpaFala(it.fala)}`,
         `Na tela: ${it.textoNaTela}`,
         `Enquadramento: ${it.enquadramento}`,
         `Câmera: ${it.camera}`,
         ...it.dicas.map((d) => `Dica: ${d}`),
-        `2º take: ${it.variacao}`,
+        `2º take: ${limpaFala(it.variacao)}`,
         "",
       ),
     );
@@ -44,6 +47,8 @@ export default function Criadores() {
   const router = useRouter();
   const [produto, setProduto] = useState("");
   const [link, setLink] = useState("");
+  // Aparecendo no vídeo ou sem aparecer (só produto + narração), pedido do Andre 23/11.
+  const [estilo, setEstilo] = useState<"rosto" | "sem_rosto">("rosto");
   const [plano, setPlano] = useState<Plano | null>(null);
   const [info, setInfo] = useState<Info | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,6 +71,7 @@ export default function Criadores() {
       if (r) {
         setProduto(String(r.produto || ""));
         setLink(String(r.link || ""));
+        if (r.estilo === "sem_rosto") setEstilo("sem_rosto");
         sessionStorage.removeItem("corte25_roteiro_rascunho");
       }
     } catch {}
@@ -77,7 +83,7 @@ export default function Criadores() {
     if (info?.precisaLogin) {
       // Só com login (pedido do Andre): guarda o que já foi digitado e volta para cá depois de entrar.
       try {
-        sessionStorage.setItem("corte25_roteiro_rascunho", JSON.stringify({ produto, link }));
+        sessionStorage.setItem("corte25_roteiro_rascunho", JSON.stringify({ produto, link, estilo }));
       } catch {}
       return router.push("/entrar?volta=/criadores");
     }
@@ -87,7 +93,7 @@ export default function Criadores() {
       const r = await fetch("/api/roteiro", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ produto, link }),
+        body: JSON.stringify({ produto, link, estilo }),
       });
       const j = await r.json().catch(() => ({}));
       if (r.status === 401 && j.login) return router.push("/entrar?volta=/criadores");
@@ -166,6 +172,28 @@ export default function Criadores() {
               className="rounded-lg border border-foreground/15 bg-field px-3 py-2 text-sm font-normal outline-none focus:border-brand"
             />
           </label>
+          <div className="grid gap-1 text-sm font-bold">
+            Como você vai gravar?
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["rosto", "🙋 Aparecendo", "Você fala para a câmera"],
+                  ["sem_rosto", "🤲 Sem aparecer", "Só o produto e sua voz"],
+                ] as const
+              ).map(([v, t, d]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setEstilo(v)}
+                  aria-pressed={estilo === v}
+                  className={`rounded-xl border px-3 py-2 text-left ${estilo === v ? "border-accent bg-accent/10 ring-2 ring-accent/30" : "border-foreground/15 hover:bg-foreground/5"}`}
+                >
+                  <span className="block text-sm font-black">{t}</span>
+                  <span className="block text-xs font-normal text-foreground/60">{d}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <button
             disabled={loading}
             className="rounded-xl bg-accent px-5 py-3 text-base font-black text-white shadow-[4px_4px_0_0_var(--brand)] transition hover:translate-y-[-1px] disabled:opacity-60"
@@ -200,7 +228,12 @@ export default function Criadores() {
         <div ref={result} className="mt-6 scroll-mt-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wide text-foreground/50">Seu plano de gravação</p>
+              <p className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                Seu plano de gravação
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 normal-case tracking-normal text-accent-ink">
+                  {plano.estilo === "sem_rosto" ? "🤲 Sem aparecer · narração" : "🙋 Aparecendo no vídeo"}
+                </span>
+              </p>
               <h2 className="text-2xl font-black leading-tight">{plano.produto}</h2>
               {plano.resumo && <p className="text-sm text-foreground/70">{plano.resumo}</p>}
               {plano.fonte === "modelo" && <p className="text-xs text-foreground/50">Plano básico (a IA não respondeu agora). Tente de novo mais tarde para um plano sob medida.</p>}
@@ -216,6 +249,38 @@ export default function Criadores() {
                 📜 Teleprompter
               </button>
             </div>
+          </div>
+
+          {/* Para quem, pontos fortes e dúvidas: logo no começo, para a pessoa ler antes do roteiro. */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {(plano.publico || plano.pontosFortes.length > 0) && (
+              <Card titulo="🎯 Público e pontos fortes">
+                {plano.publico && <p>{plano.publico}</p>}
+                {plano.pontosFortes.length > 0 && (
+                  <ul className="mt-1.5 grid gap-1">
+                    {plano.pontosFortes.map((x) => (
+                      <li key={x} className="flex gap-1.5">
+                        <span className="text-brand-ink">✓</span>
+                        {x}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            )}
+            {plano.objecoes.length > 0 && (
+              <Card titulo="🤔 Dúvidas do público (responda no vídeo)">
+                <ul className="grid gap-1.5">
+                  {plano.objecoes.map((o) => (
+                    <li key={o.duvida}>
+                      <b>{o.duvida}</b>
+                      <br />
+                      <span className="text-foreground/70">{o.resposta}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
           </div>
 
           {/* Celular: um bloco por vez (abas). PC: os 3 blocos lado a lado. */}
@@ -247,35 +312,7 @@ export default function Criadores() {
             Grave cada take separado. No gerador, o Corte25 mistura tudo: {plano.ganchos.length} × {plano.corpos.length} × {plano.ctas.length} = 27 vídeos diferentes.
           </p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {(plano.publico || plano.pontosFortes.length > 0) && (
-              <Card titulo="🎯 Para quem e o que mostrar">
-                {plano.publico && <p>{plano.publico}</p>}
-                {plano.pontosFortes.length > 0 && (
-                  <ul className="mt-1.5 grid gap-1">
-                    {plano.pontosFortes.map((x) => (
-                      <li key={x} className="flex gap-1.5">
-                        <span className="text-brand-ink">✓</span>
-                        {x}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Card>
-            )}
-            {plano.objecoes.length > 0 && (
-              <Card titulo="🤔 Dúvidas que travam a compra">
-                <ul className="grid gap-1.5">
-                  {plano.objecoes.map((o) => (
-                    <li key={o.duvida}>
-                      <b>{o.duvida}</b>
-                      <br />
-                      <span className="text-foreground/70">{o.resposta}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <Card titulo="✅ Antes de gravar">
               <Check texto={`Cenário: ${plano.checklist.cenario}`} />
               <Check texto={`Luz: ${plano.checklist.luz}`} />
@@ -299,6 +336,8 @@ export default function Criadores() {
               </p>
             </Card>
           </div>
+
+          <DicasPostagem aberto className="mt-3" />
 
           <div className="mt-5 flex flex-col items-center gap-2 rounded-2xl border border-brand/40 bg-brand/15 p-4 text-center sm:flex-row sm:justify-between sm:text-left">
             <p className="text-sm">
@@ -327,12 +366,16 @@ function Take({ it, cor, rotulo, onPrompter }: { it: RoteiroItem; cor: string; r
           {rotulo}
         </span>
         <b className="min-w-0 flex-1 truncate">{it.angulo}</b>
-        <span className="shrink-0 rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-bold">{it.duracao} s</span>
+        <span className="shrink-0 rounded-full bg-foreground/10 px-2 py-0.5 text-xs font-bold" title={`${contaPalavras(it.fala)} palavras, falando no ritmo normal`}>
+          ~{it.duracao} s · {contaPalavras(it.fala)} pal.
+        </span>
         <button onClick={onPrompter} title="Abrir no teleprompter" aria-label="Abrir no teleprompter" className="shrink-0 rounded-md px-1 text-base hover:bg-foreground/10">
           📜
         </button>
       </div>
-      <p className="text-[15px] font-semibold leading-snug">“{it.fala}”</p>
+      <p className="text-[15px] font-semibold leading-snug">
+        “<FalaMarcada s={it.fala} />”
+      </p>
       <p className="text-xs">
         <span className="rounded bg-foreground px-1.5 py-0.5 font-bold text-background">Na tela</span> {it.textoNaTela}
       </p>
@@ -344,7 +387,9 @@ function Take({ it, cor, rotulo, onPrompter }: { it: RoteiroItem; cor: string; r
       {it.dicas.length > 0 && <p className="text-xs text-foreground/60">💡 {it.dicas.join(" · ")}</p>}
       <details className="text-xs">
         <summary className="cursor-pointer font-bold text-accent-ink">2º take (outra forma de falar)</summary>
-        <p className="mt-1 text-foreground/80">“{it.variacao}”</p>
+        <p className="mt-1 text-foreground/80">
+          “<FalaMarcada s={it.variacao} />”
+        </p>
       </details>
     </article>
   );
@@ -368,79 +413,133 @@ function Check({ texto }: { texto: string }) {
   );
 }
 
-// Teleprompter: fala em letra grande, rolando sozinha. Serve para ler no PC ou num segundo celular enquanto grava.
+// Fala com as marcas: ênfase em destaque e pausa como um traço discreto.
+function FalaMarcada({ s }: { s: string }) {
+  return (
+    <>
+      {quebraFala(s).map((w, i) => (
+        <span key={i}>
+          {i > 0 && " "}
+          {w.enfase ? <span className="rounded bg-brand/40 px-0.5">{w.t}</span> : w.t}
+          {w.pausa && <span className="text-foreground/30"> /</span>}
+        </span>
+      ))}
+    </>
+  );
+}
+
+// Teleprompter (refeito 23/11 a pedido do Andre): letra grande, contagem regressiva 3-2-1,
+// a palavra da vez acende no ritmo da fala (pausas marcadas com /, ênfase em verde), cronômetro
+// com o tempo do take, velocidade e tamanho da letra ajustáveis e modo espelhado.
 function Teleprompter({ plano, start, onClose }: { plano: Plano; start: { k: BlocoKey; i: number }; onClose: () => void }) {
-  const lista = BLOCOS.flatMap((b) => plano[b.key].map((it, i) => ({ it, rotulo: `${b.letra}${i + 1}`, titulo: b.titulo, cor: b.cor, k: b.key, i })));
+  const lista = BLOCOS.flatMap((b) => plano[b.key].map((it, i) => ({ it, rotulo: `${b.letra}${i + 1}`, k: b.key, i })));
   const [pos, setPos] = useState(Math.max(0, lista.findIndex((x) => x.k === start.k && x.i === start.i)));
   const [segundo, setSegundo] = useState(false);
-  const [rolando, setRolando] = useState(false);
-  const [vel, setVel] = useState(2);
+  const [ritmo, setRitmo] = useState(1);
+  const [fonte, setFonte] = useState(1);
+  const [espelho, setEspelho] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const atual = lista[pos];
+  const texto = segundo ? atual.it.variacao : atual.it.fala;
+  const L = useLeitura(texto, RITMOS[ritmo].wps);
+  const { parar } = L;
+  const ir = (p: number) => {
+    parar();
+    setPos(Math.max(0, Math.min(lista.length - 1, p)));
+  };
 
-  useEffect(() => {
-    box.current?.scrollTo({ top: 0 });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setRolando(false);
-  }, [pos, segundo]);
-  useEffect(() => {
-    if (!rolando) return;
-    const t = setInterval(() => box.current?.scrollBy({ top: vel }), 40);
-    return () => clearInterval(t);
-  }, [rolando, vel]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowRight") setPos((p) => Math.min(lista.length - 1, p + 1));
-      if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 1));
+      if (e.key === "ArrowRight") ir(pos + 1);
+      if (e.key === "ArrowLeft") ir(pos - 1);
       if (e.key === " ") {
         e.preventDefault();
-        setRolando((r) => !r);
+        if (L.estado === "lendo" || L.estado === "contagem") L.parar();
+        else L.iniciar();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [lista.length, onClose]);
+  });
+
+  const tamanhos = ["text-[30px] sm:text-[44px]", "text-[38px] sm:text-[56px]", "text-[48px] sm:text-[72px]"];
+  const rodando = L.estado === "lendo" || L.estado === "contagem";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#0f1011] text-white" role="dialog" aria-label="Teleprompter">
-      <div className="flex items-center gap-2 px-4 py-3 text-sm">
+      <div className="flex items-center gap-2 px-3 py-2.5 text-sm sm:px-5">
         <span className="rounded-md px-2 py-0.5 font-black text-[#101106]" style={{ background: atual.k === "ctas" ? "#8b7bff" : "#c8f135" }}>
           {atual.rotulo}
         </span>
         <span className="min-w-0 flex-1 truncate font-bold">
-          {atual.titulo} · {atual.it.angulo} · {atual.it.duracao} s
+          {atual.it.angulo}
+          <span className="font-normal text-white/50"> · {contaPalavras(texto)} palavras</span>
         </span>
-        <button onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1.5 font-bold">
-          Fechar ✕
+        <Cronometro ms={L.ms} alvo={L.alvo} />
+        <button onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1.5 font-bold" aria-label="Fechar">
+          ✕
         </button>
       </div>
-      <div ref={box} className="flex-1 overflow-y-auto px-6 pb-[60vh] pt-[12vh] sm:px-16" onClick={() => setRolando((r) => !r)}>
-        <p className="mx-auto max-w-3xl text-center text-[34px] font-bold leading-snug sm:text-[52px]">{segundo ? atual.it.variacao : atual.it.fala}</p>
-        <p className="mx-auto mt-6 max-w-3xl text-center text-base text-white/50">🎥 {atual.it.enquadramento} · 📱 {atual.it.camera}</p>
+      <div className="h-1 bg-white/10">
+        <div className="h-full bg-[#c8f135] transition-all" style={{ width: `${L.palavras.length ? (Math.max(0, L.idx) / L.palavras.length) * 100 : 0}%` }} />
       </div>
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-t border-white/10 px-3 py-3 text-sm sm:px-6">
-        <button disabled={pos === 0} onClick={() => setPos(pos - 1)} className="rounded-lg bg-white/10 px-3 py-2 font-bold disabled:opacity-30">
-          ←
-        </button>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <button onClick={() => setRolando(!rolando)} className="rounded-lg bg-[#c8f135] px-4 py-2 font-black text-[#101106]">
-            {rolando ? "⏸ Pausar" : "▶ Rolar"}
+
+      <div className="relative flex-1 overflow-hidden">
+        <div ref={box} className="absolute inset-0 overflow-y-auto px-5 pb-[50vh] pt-[8vh] sm:px-16" style={espelho ? { transform: "scaleX(-1)" } : undefined}>
+          <TextoLeitura palavras={L.palavras} idx={L.idx} estado={L.estado} scroller={box} className={`mx-auto max-w-4xl text-center ${tamanhos[fonte]}`} />
+          <p className="mx-auto mt-8 max-w-3xl text-center text-sm text-white/45 sm:text-base">
+            🎥 {atual.it.enquadramento} · 📱 {atual.it.camera}
+          </p>
+        </div>
+        {L.estado === "contagem" && <Contagem conta={L.conta} />}
+      </div>
+
+      <div className="grid gap-2 border-t border-white/10 px-3 py-3 text-sm sm:px-6">
+        <div className="flex items-center justify-center gap-2">
+          <button disabled={pos === 0} onClick={() => ir(pos - 1)} className="rounded-lg bg-white/10 px-3 py-2.5 font-bold disabled:opacity-30" aria-label="Take anterior">
+            ←
           </button>
-          <button onClick={() => setVel((v) => Math.max(1, v - 1))} className="rounded-lg bg-white/10 px-2.5 py-2 font-bold" aria-label="mais devagar">
-            −
-          </button>
-          <span className="w-14 text-center text-xs text-white/60">vel. {vel}</span>
-          <button onClick={() => setVel((v) => Math.min(6, v + 1))} className="rounded-lg bg-white/10 px-2.5 py-2 font-bold" aria-label="mais rápido">
-            +
-          </button>
-          <button onClick={() => setSegundo(!segundo)} className={`rounded-lg px-3 py-2 font-bold ${segundo ? "bg-[#8b7bff]" : "bg-white/10"}`}>
-            2º take
+          {rodando ? (
+            <button onClick={L.parar} className="min-w-40 rounded-xl bg-white px-5 py-2.5 text-base font-black text-[#101106]">
+              ■ Parar
+            </button>
+          ) : (
+            <button onClick={L.iniciar} className="min-w-40 rounded-xl bg-[#c8f135] px-5 py-2.5 text-base font-black text-[#101106]">
+              {L.estado === "fim" ? "↻ De novo" : "▶ Começar"}
+            </button>
+          )}
+          <button disabled={pos === lista.length - 1} onClick={() => ir(pos + 1)} className="rounded-lg bg-white/10 px-3 py-2.5 font-bold disabled:opacity-30" aria-label="Próximo take">
+            →
           </button>
         </div>
-        <button disabled={pos === lista.length - 1} onClick={() => setPos(pos + 1)} className="rounded-lg bg-white/10 px-3 py-2 font-bold disabled:opacity-30">
-          →
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs">
+          <div className="flex rounded-lg bg-white/10 p-0.5">
+            {RITMOS.map((r, i) => (
+              <button key={r.nome} onClick={() => setRitmo(i)} className={`rounded-md px-2.5 py-1.5 font-bold ${ritmo === i ? "bg-[#8b7bff]" : "text-white/70"}`}>
+                {r.nome}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setFonte((f) => (f + 1) % 3)} className="rounded-lg bg-white/10 px-2.5 py-2 font-bold" aria-label="Tamanho da letra">
+            A{["", "+", "++"][fonte]}
+          </button>
+          <button
+            onClick={() => {
+              parar();
+              setSegundo(!segundo);
+            }}
+            className={`rounded-lg px-2.5 py-2 font-bold ${segundo ? "bg-[#8b7bff]" : "bg-white/10"}`}
+          >
+            2º take
+          </button>
+          <button onClick={() => setEspelho(!espelho)} className={`rounded-lg px-2.5 py-2 font-bold ${espelho ? "bg-[#8b7bff]" : "bg-white/10"}`}>
+            Espelhar
+          </button>
+        </div>
+        <p className="text-center text-[11px] text-white/40">
+          <span className="text-[#c8f135]">Verde</span> = fale com ênfase · <span className="text-[#8b7bff]">/</span> = respire ou pause
+        </p>
       </div>
     </div>
   );
