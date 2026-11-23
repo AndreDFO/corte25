@@ -86,6 +86,7 @@ export default function AccountPanel(p: {
   ];
   const [copiedKit, setCopiedKit] = useState("");
   const [kitOpen, setKitOpen] = useState(false);
+  const [allPayments, setAllPayments] = useState(false);
 
   async function pay() {
     if (!chosen) return;
@@ -496,29 +497,52 @@ export default function AccountPanel(p: {
         </p>
       </div>
 
-      <div id="afiliado" className={`${card} grid gap-2 scroll-mt-24`}>
-        <h2 className="text-lg font-black">
-          Indique: eles ganham {REFERRAL_DISCOUNT}%, você ganha {p.affiliatePercent}%
-        </h2>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-xl bg-accent px-4 py-3 text-white">
-            <p className="text-2xl font-black">🎁 {REFERRAL_DISCOUNT}% OFF</p>
-            <p className="text-sm font-semibold">para quem você indicar, na primeira compra</p>
-          </div>
-          <div className="rounded-xl bg-brand px-4 py-3 text-on-brand">
-            <p className="text-2xl font-black">💰 {p.affiliatePercent}% para você</p>
-            <p className="text-sm font-semibold">
-              nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada indicado, depois {AFFILIATE_LATER_PERCENT}% para sempre
-            </p>
-          </div>
+      <div id="afiliado" className="grid scroll-mt-24 gap-2 rounded-2xl bg-surface px-4 py-3.5 ring-1 ring-foreground/10">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-foreground/60">💸 Indique e ganhe</p>
+          <p className="text-xs">
+            <span className="rounded-full bg-accent px-2 py-0.5 font-black text-white">{REFERRAL_DISCOUNT}% OFF para eles</span>{" "}
+            <span className="rounded-full bg-brand px-2 py-0.5 font-black text-on-brand">{p.affiliatePercent}% para você</span>
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowComm((v) => !v)}
-          className="justify-self-start rounded-lg border border-foreground/20 px-3 py-1.5 text-sm font-bold"
-        >
-          {showComm ? "Fechar comissões" : "💰 Comissões: veja quanto você ganha"}
-        </button>
+        <p className="text-xs leading-snug text-foreground/60">
+          {p.affiliatePercent}% nas {AFFILIATE_MAX_PURCHASES} primeiras compras de cada indicado e {AFFILIATE_LATER_PERCENT}% para sempre depois. Cai direto na sua conta do Asaas.
+        </p>
+        <div className="flex gap-2">
+          <input readOnly value={refLink} aria-label="Seu link de indicação" className="min-w-0 flex-1 rounded-lg border border-foreground/15 bg-field px-3 py-1.5 text-sm" />
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(refLink);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+            className="rounded-lg bg-foreground/10 px-3 text-sm font-semibold"
+          >
+            {copied ? "Copiado!" : "Copiar"}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground/60">
+          <span><b className="text-sm text-foreground">{p.affiliate.referrals}</b> indicações</span>
+          <span><b className="text-sm text-foreground">{p.affiliate.sales}</b> compras</span>
+          <span><b className="text-sm text-foreground">R$ {p.affiliate.commission.toFixed(2).replace(".", ",")}</b> de comissão</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setKitOpen((v) => !v)}
+            className={`rounded-lg border-2 border-accent px-3 py-1 text-sm font-bold ${kitOpen ? "bg-accent text-white" : "bg-accent/10 text-accent"}`}
+          >
+            🧰 {kitOpen ? "Fechar kit" : "Textos prontos"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowComm((v) => !v)}
+            className="rounded-lg border-2 border-foreground/15 px-3 py-1 text-sm font-bold"
+          >
+            💰 {showComm ? "Fechar" : "Quanto ganho?"}
+          </button>
+        </div>
         {showComm && (
           <div className="grid gap-2 rounded-xl bg-foreground/5 p-3">
             <p className="text-xs text-foreground/70">
@@ -554,18 +578,8 @@ export default function AccountPanel(p: {
             </p>
           </div>
         )}
-        <p className="text-sm text-foreground/70">
-          Quem criar conta pelo seu link vira sua indicação. A comissão cai direto na sua conta do Asaas, sem pedir saque.
-        </p>
-        <div className="grid gap-2 rounded-lg border border-dashed border-accent/60 bg-accent/10 px-3 py-2 text-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-black">🧰 Kit do afiliado: textos prontos com o seu link</p>
-            <button type="button" onClick={() => setKitOpen((v) => !v)} className="rounded-lg border border-accent/60 px-3 py-1 text-xs font-bold">
-              {kitOpen ? "Fechar" : "Abrir kit"}
-            </button>
-          </div>
-          {!kitOpen && <p className="text-xs text-foreground/70">5 textos para copiar ou mandar direto no WhatsApp, e dicas de onde divulgar.</p>}
-          {kitOpen && (
+        {kitOpen && (
+          <div className="grid gap-2 rounded-lg border border-dashed border-accent/60 bg-accent/10 px-3 py-2 text-sm">
             <>
               {kit.map((k) => (
                 <div key={k.id} className="grid gap-1.5 rounded-lg bg-background/70 px-3 py-2">
@@ -612,51 +626,18 @@ export default function AccountPanel(p: {
                 <p className="text-foreground/60">Dica: sem spam. Uma mensagem por grupo e responda as dúvidas, isso vende mais.</p>
               </div>
             </>
-          )}
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          {[
-            ["Indicações", String(p.affiliate.referrals)],
-            ["Compras", String(p.affiliate.sales)],
-            ["Comissão", `R$ ${p.affiliate.commission.toFixed(2).replace(".", ",")}`],
-          ].map(([k, v]) => (
-            <div key={k} className="rounded-xl bg-foreground/5 py-2">
-              <p className="text-lg font-black">{v}</p>
-              <p className="text-[11px] text-foreground/60">{k}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input readOnly value={refLink} aria-label="Seu link de indicação" className="min-w-0 flex-1 rounded-lg bg-field border border-foreground/15 px-3 py-2 text-sm" />
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(refLink);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-            className="rounded-lg bg-foreground/10 px-3 text-sm font-semibold"
-          >
-            {copied ? "Copiado!" : "Copiar"}
-          </button>
-        </div>
-        {!savedWallet && (
-          <div className="mt-1 flex flex-wrap items-center gap-2 rounded-lg bg-accent/10 px-3 py-2">
-            <p className="min-w-0 flex-1 text-xs text-foreground/70">
-              Para receber, você precisa de uma conta no Asaas (é grátis). Depois, cole aqui o seu Wallet ID.{" "}
-              <b>O código só aparece no site do Asaas, pelo navegador. No app não aparece.</b>
-            </p>
-            <a
-              href="https://www.asaas.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-white hover:bg-accent-dark"
-            >
-              Abrir conta no Asaas ↗
-            </a>
           </div>
         )}
-        <details className="rounded-lg border border-foreground/10 px-3 py-2 text-xs text-foreground/70">
+        {!savedWallet && (
+          <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs leading-snug text-foreground/70">
+            Para receber, crie uma conta grátis no{" "}
+            <a href="https://www.asaas.com/" target="_blank" rel="noopener noreferrer" className="font-bold text-accent underline">
+              Asaas ↗
+            </a>{" "}
+            e cole aqui o seu Wallet ID. <b>Ele só aparece no site do Asaas, pelo navegador (no app não aparece).</b>
+          </p>
+        )}
+        <details className="rounded-lg border border-foreground/10 px-3 py-1.5 text-xs text-foreground/70">
           <summary className="cursor-pointer font-semibold text-foreground">Onde acho o Wallet ID?</summary>
           <p className="mt-2 rounded-md border border-amber-400 bg-amber-100 px-2 py-1.5 font-bold text-amber-900">
             ⚠ O Wallet ID NÃO aparece no aplicativo do Asaas. Ele só aparece no site: abra <u>asaas.com</u> no
@@ -698,7 +679,7 @@ export default function AccountPanel(p: {
             onChange={(e) => setWallet(e.target.value)}
             placeholder="Cole aqui seu Wallet ID do Asaas"
             aria-label="ID da carteira do Asaas"
-            className="min-w-0 flex-1 rounded-lg bg-field border border-foreground/15 px-3 py-2 text-sm"
+            className="min-w-0 flex-1 rounded-lg bg-field border border-foreground/15 px-3 py-1.5 text-sm"
           />
           <button
             type="button"
@@ -716,16 +697,22 @@ export default function AccountPanel(p: {
       </div>
 
       {p.payments.length > 0 && (
-        <div className={card}>
-          <h2 className="mb-2 text-lg font-black">Compras</h2>
-          <ul className="grid gap-1 text-sm">
-            {p.payments.map((x) => (
-              <li key={x.id} className="flex justify-between gap-2">
-                <span>
-                  {CATALOG[x.product as ProductId]?.label ?? x.product} ·{" "}
-                  {new Date(x.created_at).toLocaleDateString("pt-BR")}
+        <div className="rounded-2xl bg-surface px-4 py-3 ring-1 ring-foreground/10">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-xs text-foreground/60">🧾 Suas compras</p>
+            {p.payments.length > 3 && (
+              <button type="button" onClick={() => setAllPayments((v) => !v)} className="text-xs font-semibold text-accent underline">
+                {allPayments ? "Ver menos" : `Ver todas (${p.payments.length})`}
+              </button>
+            )}
+          </div>
+          <ul className="grid divide-y divide-foreground/5 text-xs">
+            {(allPayments ? p.payments : p.payments.slice(0, 3)).map((x) => (
+              <li key={x.id} className="flex justify-between gap-2 py-1">
+                <span className="min-w-0 truncate">
+                  {CATALOG[x.product as ProductId]?.label ?? x.product} · {new Date(x.created_at).toLocaleDateString("pt-BR")}
                 </span>
-                <span className="text-foreground/60">
+                <span className="shrink-0 text-foreground/60">
                   R$ {Number(x.value).toFixed(2).replace(".", ",")} · {STATUS[x.status] ?? x.status}
                 </span>
               </li>
