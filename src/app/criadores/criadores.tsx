@@ -15,7 +15,7 @@ const BLOCOS: { key: BlocoKey; titulo: string; letra: string; cor: string; dica:
   { key: "ctas", titulo: "CTAs", letra: "CTA", cor: "var(--color-accent-ink)", dica: "Chamada para o carrinho" },
 ];
 
-type Info = { logado: boolean; plano: "anon" | "conta" | "vip"; restantes: number; limite: number };
+type Info = { logado: boolean; precisaLogin?: boolean; plano: "anon" | "conta" | "vip"; restantes: number; limite: number };
 
 function planoTexto(p: Plano) {
   const linhas = [`PLANO DE GRAVAÇÃO · ${p.produto}`, p.resumo, ""];
@@ -61,11 +61,26 @@ export default function Criadores() {
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => j && setInfo(j))
       .catch(() => {});
+    try {
+      const r = JSON.parse(sessionStorage.getItem("corte25_roteiro_rascunho") || "null");
+      if (r) {
+        setProduto(String(r.produto || ""));
+        setLink(String(r.link || ""));
+        sessionStorage.removeItem("corte25_roteiro_rascunho");
+      }
+    } catch {}
   }, []);
 
   async function criar(e: React.FormEvent) {
     e.preventDefault();
     setErro("");
+    if (info?.precisaLogin) {
+      // Só com login (pedido do Andre): guarda o que já foi digitado e volta para cá depois de entrar.
+      try {
+        sessionStorage.setItem("corte25_roteiro_rascunho", JSON.stringify({ produto, link }));
+      } catch {}
+      return router.push("/entrar?volta=/criadores");
+    }
     if (produto.trim().length < 3 && !link.trim()) return setErro("Escreva o produto que você quer vender ou cole o link dele.");
     setLoading(true);
     try {
@@ -75,6 +90,7 @@ export default function Criadores() {
         body: JSON.stringify({ produto, link }),
       });
       const j = await r.json().catch(() => ({}));
+      if (r.status === 401 && j.login) return router.push("/entrar?volta=/criadores");
       if (!r.ok || !j.plano) throw new Error(j.error || "Não deu para criar o plano agora. Tente de novo.");
       setPlano(j.plano);
       savePlano(j.plano);
@@ -154,29 +170,28 @@ export default function Criadores() {
             disabled={loading}
             className="rounded-xl bg-accent px-5 py-3 text-base font-black text-white shadow-[4px_4px_0_0_var(--brand)] transition hover:translate-y-[-1px] disabled:opacity-60"
           >
-            {loading ? "Montando seu plano... (uns 30 s)" : "Criar meu plano de gravação"}
+            {loading ? "Montando seu plano... (uns 30 s)" : info?.precisaLogin ? "Entrar e criar meu plano" : "Criar meu plano de gravação"}
           </button>
           {erro && (
             <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-700">
               {erro}{" "}
-              {info && !info.logado && /Entre/.test(erro) && (
-                <Link href="/entrar?volta=/criadores" className="underline">
-                  Entrar
-                </Link>
-              )}
             </p>
           )}
           <p className="text-center text-xs text-foreground/50">
-            {info ? `Você ainda pode criar ${info.restantes} plano${info.restantes === 1 ? "" : "s"} hoje.` : "Grátis, com limite por dia."}{" "}
-            {info && !info.logado && (
+            {info?.precisaLogin ? (
               <>
+                Grátis para quem tem conta (5 planos por dia).{" "}
                 <Link href="/entrar?volta=/criadores" className="font-semibold underline">
-                  Entre
-                </Link>{" "}
-                para ter 5 por dia.
+                  Entrar ou criar conta
+                </Link>
+                .
               </>
-            )}
-            {" "}Se o link não abrir, usamos só o que você escreveu.
+            ) : info ? (
+              `Você ainda pode criar ${info.restantes} plano${info.restantes === 1 ? "" : "s"} hoje.`
+            ) : (
+              "Grátis, com limite por dia."
+            )}{" "}
+            Se o link não abrir, usamos só o que você escreveu.
           </p>
         </form>
       </div>
