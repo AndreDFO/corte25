@@ -22,7 +22,7 @@ async function affiliateStats(userId: string) {
   return { referrals: count ?? 0, sales: paid?.length ?? 0, commission: Math.round(total) / 100 };
 }
 
-export const metadata = { title: "Minha conta · Corte25" };
+export const metadata = { title: "Minha conta · Corte25", robots: { index: false, follow: false } };
 
 async function Account({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;

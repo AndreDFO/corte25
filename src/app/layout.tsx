@@ -6,11 +6,43 @@ import RefBanner from "./ref-banner";
 import InAppBanner from "./in-app-banner";
 import HomeLink from "./home-link";
 import RelatarProblema from "./relatar-problema";
+import { SITE } from "@/lib/site";
 import "./globals.css";
 
+const DESCRICAO =
+  "Grave 3 ganchos, 3 corpos e 3 CTAs e receba 25 vídeos + 2 grátis prontos para vender no TikTok Shop. Legenda automática, música e edição diferente em cada vídeo. Teste grátis.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
   title: "Corte25 · 25 vídeos para o TikTok Shop",
-  description: "Envie ganchos, corpos e CTAs e receba todas as combinações prontas para o TikTok Shop.",
+  description: DESCRICAO,
+  applicationName: "Corte25",
+  keywords: [
+    "TikTok Shop",
+    "vídeos para TikTok Shop",
+    "gerador de vídeos",
+    "multiplicar vídeos",
+    "criativos TikTok",
+    "ganchos",
+    "vendedor TikTok Shop",
+    "Corte25",
+  ],
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "/",
+    siteName: "Corte25",
+    title: "Corte25 · 25 vídeos + 2 grátis para o TikTok Shop",
+    description: DESCRICAO,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Corte25 · 25 vídeos + 2 grátis para o TikTok Shop",
+    description: DESCRICAO,
+  },
+  // Código do Google Search Console (opcional; a verificação pelo DNS da Cloudflare não precisa disto).
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

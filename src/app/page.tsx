@@ -1,9 +1,24 @@
 import Dicas from "./dicas";
 import UploadForm from "./upload-form";
 
+// Dados estruturados para o Google entender o que é o site (nome, preço inicial, idioma).
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Corte25",
+  url: "https://corte25.com.br/",
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Web",
+  inLanguage: "pt-BR",
+  description:
+    "Grave 3 ganchos, 3 corpos e 3 CTAs e receba 25 vídeos + 2 grátis prontos para vender no TikTok Shop.",
+  offers: { "@type": "Offer", price: "7.99", priceCurrency: "BRL" },
+};
+
 export default function Home() {
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
       <div className="mx-auto max-w-6xl px-5 py-6 lg:py-8 grid gap-6 lg:gap-10 lg:grid-cols-[1.1fr_1fr] items-start">
         <section>
           <p className="mb-3 flex flex-wrap items-center gap-2">
