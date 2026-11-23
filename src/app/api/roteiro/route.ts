@@ -1,15 +1,18 @@
 import { connection } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { vipAllowance } from "@/lib/vip";
+import { supabaseConfigured } from "@/lib/supabase-admin";
 import { ipKey, rateLimited } from "@/lib/support";
 import { MAX_PRODUCT_CHARS, generatePlano } from "@/lib/roteiro";
 
 // Área "Criadores": gera o plano de gravação (roteiro 3x3x3 e o resto) com a IA.
-// Grátis, com limites para o custo da IA ficar sob controle (cada plano custa centavos):
-// sem login: 2 por dia por aparelho/IP; com login: 5 por dia; VIP ou assinante: 30 por dia.
+// Grátis, mas SÓ COM LOGIN (escolha do Andre, 23/11), com limites para o custo da IA (cada plano custa centavos):
+// com login: 5 por dia; VIP ou assinante: 30 por dia. Sem Supabase (modo de teste local) libera 2 por dia por IP.
 // Mais um teto por IP (10/dia) e um teto geral do site por dia (ROTEIRO_LIMITE_DIA, padrão 500).
 const DAY = 24 * 3600_000;
 const LIMITS = { anon: 2, conta: 5, vip: 30 };
+// Exige conta só quando o login existe (no PC de teste, sem Supabase, não dá para entrar).
+const loginRequired = () => supabaseConfigured();
 const PER_IP = 10;
 
 type Tier = keyof typeof LIMITS;
@@ -41,7 +44,7 @@ async function who(req: Request) {
 export async function GET(req: Request) {
   await connection();
   const w = await who(req);
-  return Response.json({ logado: Boolean(w.user), plano: w.tier, restantes: w.left, limite: LIMITS[w.tier] }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ logado: Boolean(w.user), precisaLogin: !w.user && loginRequired(), plano: w.tier, restantes: w.left, limite: LIMITS[w.tier] }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(req: Request) {
@@ -60,10 +63,12 @@ export async function POST(req: Request) {
   if (product.length < 3 && !link) return Response.json({ error: "Escreva o produto que você quer vender ou cole o link dele." }, { status: 400 });
 
   const w = await who(req);
+  if (!w.user && loginRequired())
+    return Response.json({ error: "Entre na sua conta (é grátis) para criar seu plano de gravação.", login: true }, { status: 401 });
   if (w.left <= 0) {
     const msg =
       w.tier === "anon"
-        ? "Você já usou os 2 planos grátis de hoje. Entre na sua conta (é grátis) para ganhar mais 5 por dia."
+        ? "Você já usou os 2 planos de teste de hoje."
         : w.tier === "conta"
           ? "Você já usou os 5 planos de hoje. Amanhã libera de novo, ou assine/seja VIP para criar até 30 por dia."
           : "Você chegou ao limite de 30 planos de hoje. Amanhã libera de novo.";
