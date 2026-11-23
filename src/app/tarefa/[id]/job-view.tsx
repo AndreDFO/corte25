@@ -26,7 +26,7 @@ const PHRASES = [
 function Generating({ message, done, total, pct, slow }: { message?: string; done: number; total: number; pct: number; slow?: string }) {
   const [i, setI] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setI((n) => (n + 1) % PHRASES.length), 6000);
+    const t = setInterval(() => setI((n) => (n + 1) % PHRASES.length), 9000);
     return () => clearInterval(t);
   }, []);
   return (
