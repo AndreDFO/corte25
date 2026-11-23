@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import PlanPicker from "./plan-picker";
 import { useEffect, useRef, useState } from "react";
 import { rememberJob } from "@/lib/my-jobs";
+import Link from "next/link";
+import type { Plano } from "@/lib/roteiro";
+import { FORM_TO_PLANO, ROTEIRO_EVENT, loadPlano, savePlano } from "@/lib/roteiro-store";
 import { BATCH_VIDEOS, FREE_MAX_PER_BLOCK, FREE_VIDEOS, MAX_PER_BLOCK, PACKAGES, SUBSCRIPTION_OPTIONS, VIDEO_CHOICES, VIDEOS_PER_LOT, bonusFor, clipsToReach, comboCount, MIX_RULE, mixOk } from "@/lib/pricing";
 
 function clientId() {
@@ -102,6 +105,18 @@ export default function UploadForm() {
   }
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const [product, setProduct] = useState("");
+  // Plano da área Criadores: cada bloco mostra a fala do próximo take a gravar.
+  const [roteiro, setRoteiro] = useState<Plano | null>(null);
+  useEffect(() => {
+    const sync = () => {
+      const p = loadPlano();
+      setRoteiro(p);
+      if (p) setProduct((v) => v || (p.produto === "Seu produto" ? "" : p.produto));
+    };
+    sync();
+    window.addEventListener(ROTEIRO_EVENT, sync);
+    return () => window.removeEventListener(ROTEIRO_EVENT, sync);
+  }, []);
   const [details, setDetails] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [duration, setDuration] = useState("auto");
@@ -323,6 +338,24 @@ export default function UploadForm() {
         />
       </div>
 
+      {roteiro ? (
+        <div className="-mb-1 flex items-center gap-2 rounded-lg bg-accent/10 px-3 py-1.5 text-xs">
+          <span className="min-w-0 flex-1 truncate">
+            📋 Roteiro: <b>{roteiro.produto}</b>
+          </span>
+          <Link href="/criadores" className="shrink-0 font-bold text-accent-ink underline">
+            ver tudo
+          </Link>
+          <button type="button" onClick={() => savePlano(null)} aria-label="tirar roteiro" title="Tirar o roteiro" className="shrink-0 text-foreground/40 hover:text-foreground">
+            ✕
+          </button>
+        </div>
+      ) : (
+        <Link href="/criadores" className="-mb-1 rounded-lg bg-accent/10 px-3 py-1.5 text-center text-xs font-semibold text-accent-ink hover:bg-accent/15">
+          🎬 Não sabe o que gravar? <u>Crie seu roteiro grátis</u>
+        </Link>
+      )}
+
       <div className="grid grid-cols-3 gap-2">
         {BLOCKS.map((b) => (
           <div
@@ -340,6 +373,14 @@ export default function UploadForm() {
             <a href={`#${TIP_ID[b.key]}`} className="-mt-1 text-[10px] font-semibold text-foreground/50 underline hover:text-foreground">
               ver dicas ↓
             </a>
+            {(() => {
+              const next = roteiro?.[FORM_TO_PLANO[b.key]]?.[clips[b.key].length];
+              return next && clips[b.key].length < maxPer ? (
+                <p className="rounded-md bg-surface/80 px-1.5 py-1 text-[11px] leading-snug ring-1 ring-foreground/10" title={`${next.fala}\n\n${next.enquadramento} · ${next.camera}`}>
+                  <b style={{ color: b.color }}>Grave {clips[b.key].length + 1}:</b> <span className="line-clamp-3">“{next.fala}”</span>
+                </p>
+              ) : null;
+            })()}
             {clips[b.key].map((f, i) => (
               <div key={i} className="flex min-w-0 items-center gap-1 rounded-md bg-foreground/5 px-2 py-1 text-xs">
                 <span className="min-w-0 flex-1 truncate" title={f.name}>
