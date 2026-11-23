@@ -82,6 +82,7 @@ export async function POST(req: Request) {
 
   mark(w.key);
   mark(`ipall:${w.ip}`);
-  const plano = await generatePlano(product, link);
+  const estilo = body?.estilo === "sem_rosto" ? "sem_rosto" : "rosto";
+  const plano = await generatePlano(product, link, estilo);
   return Response.json({ plano, restantes: Math.max(0, w.left - 1) });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import DicasPostagem from "../../dicas-postagem";
 import Link from "next/link";
 import type { Job, Variation } from "@/lib/jobs";
 import { rememberJob, timeLeft } from "@/lib/my-jobs";
@@ -171,6 +172,8 @@ export default function JobView({ id }: { id: string }) {
           </Link>
         </div>
       )}
+
+      {finished && done > 0 && <DicasPostagem className="mt-2" />}
 
       {job.status === "error" && done === 0 && (
         <p className="mt-6 rounded-lg bg-brand/10 border border-brand/40 p-4 text-sm">{job.message}</p>

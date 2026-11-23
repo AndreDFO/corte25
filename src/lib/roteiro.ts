@@ -4,6 +4,7 @@ import net from "net";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { riskyReason, safeHashtags } from "./compliance";
+import { WPS, contaPalavras, limpaFala } from "./fala";
 
 // Área "Criadores" (23/11/2026): a pessoa escreve o produto e/ou cola um link e recebe um plano
 // completo para gravar no modelo do site: 3 ganchos, 3 corpos e 3 CTAs, com o que falar,
@@ -45,7 +46,16 @@ const PlanoSchema = z.object({
 });
 
 export type RoteiroItem = z.infer<typeof Item>;
-export type Plano = z.infer<typeof PlanoSchema> & { fonte: "ia" | "modelo"; linkLido: boolean };
+export type Estilo = "rosto" | "sem_rosto";
+export type Plano = z.infer<typeof PlanoSchema> & { fonte: "ia" | "modelo"; linkLido: boolean; estilo?: Estilo };
+
+// Modo de gravação (Andre, 23/11): aparecendo no vídeo ou sem aparecer, só o produto com narração.
+const ESTILO_PROMPT: Record<Estilo, string> = {
+  rosto:
+    "MODO COM ROSTO: a pessoa aparece falando para a câmera em pelo menos 2 ganchos e 2 CTAs. Nos corpos, misture takes de rosto e de produto em uso (mãos, close).",
+  sem_rosto:
+    "MODO SEM APARECER: a pessoa NÃO aparece no vídeo, nem o rosto. Todos os takes mostram só o produto, as mãos, o uso e o ambiente (close, de cima, POV em primeira pessoa). A fala vira NARRAÇÃO (voz por cima do vídeo). Enquadramento e câmera nunca pedem rosto nem 'olhar para a lente'. Ganchos com impacto visual nos primeiros segundos (produto em movimento, detalhe de perto, o problema acontecendo). Nas dicas, lembre de gravar a voz perto do celular em lugar silencioso, ou gravar só as imagens e narrar depois pelo botão Narração (🎙) do lote no Corte25.",
+};
 export type BlocoKey = "ganchos" | "corpos" | "ctas";
 
 const SYSTEM = `Você é diretor de vídeos curtos e roteirista de criadores que vendem no TikTok Shop Brasil.
@@ -59,13 +69,17 @@ Escreva em português do Brasil, natural, como criador falando com amigo. Frases
 Entregue exatamente 3 ganchos, 3 corpos e 3 CTAs, cada um com um ângulo diferente (ex.: dor do dia a dia, curiosidade, opinião sincera, POV, demonstração, unboxing, benefícios, uso no dia a dia, presente, praticidade). Os 3 de cada bloco não podem parecer repetidos.
 Para cada item:
 - angulo: nome curto do ângulo (até 3 palavras).
-- fala: o que falar, pronto para ler. Gancho: 1 frase (até 15 palavras). Corpo: 2 a 4 frases. CTA: 1 ou 2 frases.
+- fala: o que falar, pronto para ler em voz alta. A fala PRECISA PREENCHER o tempo do take (ritmo de 2,5 palavras por segundo), sem enrolação: cada frase traz um detalhe concreto do produto, um uso real ou uma sensação.
+  Gancho: 3 a 5 segundos = 8 a 13 palavras (1 ou 2 frases).
+  Corpo: 10 a 15 segundos = 25 a 38 palavras (3 a 5 frases): mostre o produto funcionando, detalhes, como usa, para quem serve.
+  CTA: 3 a 5 segundos = 8 a 13 palavras (1 ou 2 frases).
+  Marque " / " onde a pessoa respira ou faz uma pausa curta, e *palavra* (entre asteriscos) em 1 ou 2 palavras para falar com mais ênfase.
 - textoNaTela: texto curto para aparecer escrito no vídeo (até 40 caracteres, sem emoji).
 - enquadramento: plano e posição (ex.: "rosto de perto, produto na mão na altura do queixo").
 - camera: ângulo e movimento do celular (ex.: "celular em pé, na altura dos olhos, parado"; "de cima, mãos na mesa").
-- duracao: segundos. Gancho 2 a 4. Corpo 8 a 15. CTA 3 a 5.
-- dicas: 2 dicas práticas e curtas de gravação para esse take.
-- variacao: outra forma de falar a mesma ideia, para gravar um segundo take e não ficar repetitivo.
+- duracao: segundos que a fala leva, de acordo com o número de palavras. Gancho 3 a 5. Corpo 10 a 15. CTA 3 a 5.
+- dicas: 2 dicas práticas e curtas de gravação para esse take (o que mostrar ou fazer com as mãos enquanto fala).
+- variacao: outra forma de falar a mesma ideia, do MESMO tamanho da fala e com as mesmas marcações, para gravar um segundo take e não ficar repetitivo.
 Também:
 - produto: nome curto do produto (até 40 caracteres).
 - resumo: 1 frase do que é o produto e para quem.
@@ -235,14 +249,21 @@ export async function readProductLink(raw: string): Promise<string> {
 // ---------- Geração ----------
 
 const TEXT_FIELDS: (keyof RoteiroItem)[] = ["angulo", "fala", "textoNaTela", "variacao"];
+// Mínimo de palavras para a fala preencher o take (Andre, 23/11: "quase não tem fala").
+const MIN_WORDS: Record<BlocoKey, number> = { ganchos: 8, corpos: 24, ctas: 8 };
+const RANGE: Record<BlocoKey, [number, number]> = { ganchos: [3, 5], corpos: [10, 15], ctas: [3, 5] };
 
 function problems(p: z.infer<typeof PlanoSchema>) {
   const out: string[] = [];
   for (const k of ["ganchos", "corpos", "ctas"] as BlocoKey[])
     p[k].forEach((it, i) => {
       for (const f of TEXT_FIELDS) {
-        const why = riskyReason(String(it[f]));
+        const why = riskyReason(limpaFala(String(it[f])));
         if (why) out.push(`${k}[${i}].${f} (${why}): "${it[f]}"`);
+      }
+      for (const f of ["fala", "variacao"] as const) {
+        const n = contaPalavras(String(it[f]));
+        if (n < MIN_WORDS[k]) out.push(`${k}[${i}].${f} (curta demais: ${n} palavras, precisa de pelo menos ${MIN_WORDS[k]} para preencher o take): "${it[f]}"`);
       }
     });
   for (const [f, v] of [["legenda", p.legenda], ["resumo", p.resumo]] as const) {
@@ -255,9 +276,8 @@ function problems(p: z.infer<typeof PlanoSchema>) {
 const clip = (s: unknown, n: number) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 const strs = (a: unknown, max: number, n: number) => (Array.isArray(a) ? a.map((x) => clip(x, n)).filter(Boolean).slice(0, max) : []);
 
-function finish(raw: z.infer<typeof PlanoSchema>, product: string, linkLido: boolean, fonte: Plano["fonte"]): Plano {
-  const fb = templatePlano(product, linkLido);
-  const range: Record<BlocoKey, [number, number]> = { ganchos: [2, 4], corpos: [8, 15], ctas: [3, 5] };
+function finish(raw: z.infer<typeof PlanoSchema>, product: string, linkLido: boolean, fonte: Plano["fonte"], estilo: Estilo): Plano {
+  const fb = templatePlano(product, linkLido, estilo);
   const block = (k: BlocoKey) =>
     Array.from({ length: 3 }, (_, i) => {
       const it = raw[k]?.[i];
@@ -265,25 +285,32 @@ function finish(raw: z.infer<typeof PlanoSchema>, product: string, linkLido: boo
       if (!it) return safe;
       const item: RoteiroItem = {
         angulo: clip(it.angulo, 30),
-        fala: clip(it.fala, 400),
+        fala: clip(it.fala, 500),
         textoNaTela: clip(it.textoNaTela, 50),
         enquadramento: clip(it.enquadramento, 160),
         camera: clip(it.camera, 160),
-        duracao: Math.min(range[k][1], Math.max(range[k][0], Math.round(Number(it.duracao) || range[k][0]))),
+        duracao: 0,
         dicas: strs(it.dicas, 3, 140),
-        variacao: clip(it.variacao, 400),
+        variacao: clip(it.variacao, 500),
       };
       // Campo com termo de risco é trocado pelo modelo seguro (nunca vai texto arriscado para a pessoa ler).
-      for (const f of TEXT_FIELDS) if (!item[f] || riskyReason(String(item[f]))) (item as Record<string, unknown>)[f] = safe[f];
+      for (const f of TEXT_FIELDS) if (!item[f] || riskyReason(limpaFala(String(item[f])))) (item as Record<string, unknown>)[f] = safe[f];
+      // Fala curta demais para o take: usa a do modelo pronto, que já preenche o tempo.
+      if (contaPalavras(item.fala) < MIN_WORDS[k] - 2) item.fala = safe.fala;
+      if (contaPalavras(item.variacao) < MIN_WORDS[k] - 2) item.variacao = safe.variacao;
+      item.duracao = tempo(k, item.fala);
       return item;
     });
   const legenda = clip(raw.legenda, 220);
   return {
     produto: clip(raw.produto, 50) || fb.produto,
     resumo: riskyReason(raw.resumo) ? "" : clip(raw.resumo, 220),
-    publico: clip(raw.publico, 300),
-    pontosFortes: strs(raw.pontosFortes, 5, 160),
-    objecoes: (raw.objecoes || []).slice(0, 4).map((o) => ({ duvida: clip(o.duvida, 140), resposta: clip(o.resposta, 260) })).filter((o) => o.duvida && o.resposta),
+    publico: clip(raw.publico, 300) || fb.publico,
+    pontosFortes: strs(raw.pontosFortes, 5, 160).length ? strs(raw.pontosFortes, 5, 160) : fb.pontosFortes,
+    objecoes: (() => {
+      const o = (raw.objecoes || []).slice(0, 4).map((x) => ({ duvida: clip(x.duvida, 140), resposta: clip(x.resposta, 260) })).filter((x) => x.duvida && x.resposta && !riskyReason(`${x.duvida} ${x.resposta}`));
+      return o.length ? o : fb.objecoes;
+    })(),
     ganchos: block("ganchos"),
     corpos: block("corpos"),
     ctas: block("ctas"),
@@ -305,12 +332,12 @@ export function aiEnabled() {
   return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 }
 
-export async function generatePlano(product: string, link: string): Promise<Plano> {
+export async function generatePlano(product: string, link: string, estilo: Estilo = "rosto"): Promise<Plano> {
   const fromLink = link ? await readProductLink(link) : "";
   const slug = link && !fromLink ? nameFromUrl(link) : "";
   const linkLido = Boolean(fromLink);
   const name = product || slug || "";
-  if (!aiEnabled()) return templatePlano(name, linkLido);
+  if (!aiEnabled()) return templatePlano(name, linkLido, estilo);
 
   const info = [
     product && `O que a pessoa escreveu sobre o produto: ${product}`,
@@ -320,7 +347,7 @@ export async function generatePlano(product: string, link: string): Promise<Plan
     .filter(Boolean)
     .join("\n\n");
   const client = new Anthropic();
-  const messages: Anthropic.MessageParam[] = [{ role: "user", content: `<produto>\n${info}\n</produto>\n\nMonte o plano de gravação completo.` }];
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: `<produto>\n${info}\n</produto>\n\n${ESTILO_PROMPT[estilo]}\n\nMonte o plano de gravação completo.` }];
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await client.messages.parse({
@@ -332,7 +359,7 @@ export async function generatePlano(product: string, link: string): Promise<Plan
       });
       if (res.stop_reason === "refusal" || !res.parsed_output) break;
       const found = problems(res.parsed_output);
-      if (!found.length || attempt === 1) return finish(res.parsed_output, name, linkLido, "ia");
+      if (!found.length || attempt === 1) return { ...finish(res.parsed_output, name, linkLido, "ia", estilo), estilo };
       // Uma segunda volta para reescrever só o que caiu no filtro de palavras de risco.
       console.warn(`[roteiro] ${found.length} trecho(s) com termo de risco, pedindo para reescrever`);
       messages.push(
@@ -343,11 +370,17 @@ export async function generatePlano(product: string, link: string): Promise<Plan
   } catch (err) {
     console.error("[roteiro] falha ao chamar Claude, usando modelo pronto:", err);
   }
-  return templatePlano(name, linkLido);
+  return templatePlano(name, linkLido, estilo);
+}
+
+// Duração real do take pelo tamanho da fala (2,5 palavras por segundo), dentro da faixa do bloco.
+function tempo(k: BlocoKey, fala: string) {
+  const [a, b] = RANGE[k];
+  return Math.min(b + 3, Math.max(a, Math.round(contaPalavras(fala) / WPS)));
 }
 
 // Plano pronto (sem a chave da IA ou se a IA falhar). Revisado contra as regras do TikTok Shop.
-export function templatePlano(product: string, linkLido = false): Plano {
+export function templatePlano(product: string, linkLido = false, estilo: Estilo = "rosto"): Plano {
   const p = clip(product, 40) && !riskyReason(product) ? clip(product, 40) : "";
   const nome = p || "o produto";
   const it = (angulo: string, fala: string, textoNaTela: string, enquadramento: string, camera: string, duracao: number, dicas: string[], variacao: string): RoteiroItem => ({
@@ -356,30 +389,34 @@ export function templatePlano(product: string, linkLido = false): Plano {
     textoNaTela,
     enquadramento,
     camera,
-    duracao,
+    duracao: Math.max(duracao, Math.round(contaPalavras(fala) / WPS)),
     dicas,
     variacao,
   });
-  return {
+  const plano: Plano = {
     produto: p || "Seu produto",
     resumo: "",
-    publico: "",
-    pontosFortes: [],
-    objecoes: [],
+    publico: "Quem procura algo prático para o dia a dia e quer ver o produto funcionando antes de comprar.",
+    pontosFortes: ["Mostre o produto em uso, de perto", "Mostre o tamanho real na mão", "Mostre o acabamento e os detalhes", "Mostre onde e quando você usa"],
+    objecoes: [
+      { duvida: "É do tamanho que parece na foto?", resposta: "Mostre o produto na mão ou ao lado de um objeto conhecido." },
+      { duvida: "Funciona mesmo?", resposta: "Mostre o produto sendo usado do começo ao fim, sem cortes." },
+      { duvida: "É bem feito?", resposta: "Chegue a câmera perto do acabamento e mostre os detalhes." },
+    ],
     ganchos: [
-      it("Curiosidade", "Ninguém me contou sobre isso antes, olha só.", "Ninguém me contou isso", "Rosto de perto, produto aparecendo na mão", "Celular em pé, na altura dos olhos, parado", 3, ["Fale olhando para a lente", "Comece já falando, sem respirar antes"], "Queria ter descoberto isso antes, olha."),
-      it("Na prática", `Olha como ${nome} funciona na prática.`, "Olha na prática", "Mãos e produto em primeiro plano", "De cima, celular parado sobre a mesa", 3, ["O produto aparece no 1º segundo", "Fundo limpo, sem bagunça"], `Deixa eu te mostrar ${nome} de verdade.`),
-      it("Dia a dia", "Isso aqui facilitou muito meu dia a dia.", "Facilitou meu dia", "Meio corpo, segurando o produto", "Celular em pé, um pouco acima dos olhos", 3, ["Sorria no começo da fala", "Mostre o produto perto da câmera"], "Isso mudou minha rotina, sério."),
+      it("Curiosidade", "Ninguém me contou sobre isso antes / e agora eu *não largo* mais.", "Ninguém me contou isso", "Rosto de perto, produto aparecendo na mão", "Celular em pé, na altura dos olhos, parado", 4, ["Fale olhando para a lente", "Comece já falando, sem respirar antes"], "Queria ter descoberto isso antes / olha o que ele *faz* na prática."),
+      it("Na prática", `Deixa eu te mostrar como ${nome} funciona / *na vida real*.`, "Olha na prática", "Mãos e produto em primeiro plano", "De cima, celular parado sobre a mesa", 4, ["O produto aparece no 1º segundo", "Fundo limpo, sem bagunça"], `Esquece a foto da loja / olha ${nome} *de verdade* aqui.`),
+      it("Dia a dia", "Isso aqui facilitou *muito* o meu dia a dia / e eu vou te mostrar por quê.", "Facilitou meu dia", "Meio corpo, segurando o produto", "Celular em pé, um pouco acima dos olhos", 5, ["Sorria no começo da fala", "Mostre o produto perto da câmera"], "Uma coisa simples que mudou a minha rotina / *olha só* isso aqui."),
     ],
     corpos: [
-      it("Demonstração", `Esse é ${nome}. Olha como é simples de usar. Eu uso todo dia e é bem prático.`, "Olha como é simples", "Produto em uso, bem de perto", "Celular na mão, chegando perto do produto devagar", 12, ["Boa luz de frente", "Mostre cada detalhe sem pressa"], "Vou te mostrar como eu uso. Repara como é fácil."),
-      it("Benefícios", "Três coisas que eu mais gosto: é prático, é bonito e cabe em qualquer lugar.", "3 motivos pra ter", "Produto na mesa, você apontando cada detalhe", "Celular parado, de frente", 12, ["Um motivo por frase", "Aponte o detalhe enquanto fala"], "O que me ganhou foi a praticidade. E ainda é bonito."),
-      it("Unboxing", "Chegou assim, bem embalado. Olha o tamanho, olha o acabamento.", "Chegou assim", "Caixa nas mãos, abrindo na frente da câmera", "De cima, celular parado", 10, ["Abra a caixa ao vivo", "Mostre o produto inteiro no fim"], "Vem abrir comigo. Olha que capricho."),
+      it("Demonstração", `Esse é ${nome}. / Olha como é *simples* de usar: é só pegar, usar e pronto. / Repara no acabamento e no tamanho, cabe em qualquer lugar. / Eu uso todo dia / e ele deixou tudo mais *prático* pra mim.`, "Olha como é simples", "Produto em uso, bem de perto", "Celular na mão, chegando perto do produto devagar", 13, ["Boa luz de frente", "Mostre cada detalhe enquanto fala dele"], "Vou te mostrar como eu uso no dia a dia. / Primeiro eu pego assim, / depois é só usar, *sem complicação*. / Olha o acabamento de perto / e repara como ele é fácil de levar pra qualquer lugar."),
+      it("Benefícios", "Três coisas que eu mais gosto nele. / *Primeiro*, é muito prático de usar. / *Segundo*, é bonito e combina com tudo. / E *terceiro*, cabe em qualquer lugar / então eu levo pra onde eu for.", "3 motivos pra ter", "Produto na mesa, você apontando cada detalhe", "Celular parado, de frente", 13, ["Um motivo por frase", "Aponte o detalhe enquanto fala"], "Se eu tivesse que resumir em três palavras: / *prático*, bonito e fácil de levar. / Eu uso em casa, no trabalho e na rua, / e em todo lugar ele resolve. / Olha esse detalhe aqui de pertinho."),
+      it("Unboxing", "Chegou assim, *bem embalado*. / Vem abrir comigo. / Olha o tamanho dele na minha mão, / olha o acabamento, / tudo bem feitinho. / Já deu pra ver que eu vou usar *muito* isso aqui.", "Chegou assim", "Caixa nas mãos, abrindo na frente da câmera", "De cima, celular parado", 12, ["Abra a caixa ao vivo", "Mostre o produto inteiro no fim"], "Acabou de chegar e eu vou abrir *agora*. / Olha o capricho na embalagem. / E aqui está ele: / repara no tamanho, no acabamento e nos detalhes. / *Gostei* logo de primeira."),
     ],
     ctas: [
-      it("Carrinho", "Se gostou, toca no carrinho laranja aqui embaixo.", "Toca no carrinho", "Rosto de perto, apontando para baixo", "Celular em pé, na altura dos olhos", 4, ["Aponte para o carrinho", "Fale animado, sem exagero"], "Quer o seu? Tá no carrinho aqui embaixo."),
-      it("Convite", "Garanta o seu no carrinho e me conta depois.", "Garanta o seu no carrinho", "Meio corpo, produto na mão", "Celular parado, de frente", 4, ["Mostre o produto uma última vez", "Termine sorrindo"], "Ele tá no carrinho, garante o seu."),
-      it("Opinião", "Eu recomendo. Confere no carrinho.", "Confere no carrinho", "Produto em primeiro plano", "De cima, celular parado", 3, ["Fale com segurança", "Produto bem iluminado"], "Pra mim valeu a pena. Confere no carrinho."),
+      it("Carrinho", "Se você gostou, / toca no *carrinho laranja* aqui embaixo e garante o seu.", "Toca no carrinho", "Rosto de perto, apontando para baixo", "Celular em pé, na altura dos olhos", 5, ["Aponte para o carrinho", "Fale animado, sem exagero"], "Quer um igual? / Ele tá no *carrinho* aqui embaixo, é só tocar."),
+      it("Convite", "Garanta o seu no *carrinho* / e depois me conta o que achou.", "Garanta o seu no carrinho", "Meio corpo, produto na mão", "Celular parado, de frente", 4, ["Mostre o produto uma última vez", "Termine sorrindo"], "Ele tá no carrinho aqui embaixo, / garante o seu e *vem me contar* depois."),
+      it("Opinião", "Pra mim *valeu a pena*. / Confere no carrinho aqui embaixo e garante o seu.", "Confere no carrinho", "Produto em primeiro plano", "De cima, celular parado", 4, ["Fale com segurança", "Produto bem iluminado"], "Eu *recomendo* de verdade. / Toca no carrinho aqui embaixo e confere."),
     ],
     checklist: {
       cenario: "Um canto limpo da casa, com fundo simples (parede lisa ou estante arrumada).",
@@ -392,5 +429,44 @@ export function templatePlano(product: string, linkLido = false): Plano {
     som: "Pop animado da biblioteca comercial do TikTok",
     fonte: "modelo",
     linkLido,
+    estilo,
+  };
+  return estilo === "sem_rosto" ? semRosto(plano) : plano;
+}
+
+// Versão "sem aparecer" do plano pronto: só produto, mãos e narração.
+const SEM_ROSTO: Record<BlocoKey, [string, string, string[]][]> = {
+  ganchos: [
+    ["Produto em close, a mão entrando no quadro e pegando", "Celular parado bem perto, na altura da mesa", ["O produto se mexe já no 1º segundo", "Narre com energia, como quem conta uma novidade"]],
+    ["Mãos usando o produto, sem mostrar o rosto", "POV: celular na altura do peito, como se fossem seus olhos", ["Mostre o uso real, sem cortes", "Fundo limpo e bem iluminado"]],
+    ["O problema acontecendo e o produto aparecendo para resolver", "De cima, celular parado sobre a mesa", ["Comece pelo problema, depois o produto", "Narre por cima, sem pressa"]],
+  ],
+  corpos: [
+    ["Mãos mostrando cada detalhe do produto, bem de perto", "Celular na mão, chegando perto devagar", ["Um detalhe por frase da narração", "Luz de janela de lado"]],
+    ["Produto na mesa, a mão apontando cada parte", "De cima, celular parado", ["Aponte o que a narração está falando", "Mesa sem bagunça"]],
+    ["Caixa sendo aberta só com as mãos", "De cima, celular parado", ["Abra a caixa de verdade, sem pressa", "Mostre o produto inteiro no fim"]],
+  ],
+  ctas: [
+    ["Produto em primeiro plano, a mão apontando para baixo", "Celular parado, de frente para o produto", ["Aponte para onde fica o carrinho", "Narre animado, sem exagero"]],
+    ["O produto girando na mão para mostrar todos os lados", "Celular parado, bem perto", ["Gire devagar", "Termine com o produto parado no centro"]],
+    ["Produto em uso pela última vez, bem iluminado", "POV, celular na altura do peito", ["Feche com a melhor imagem do produto", "Narre com segurança"]],
+  ],
+};
+
+function semRosto(p: Plano): Plano {
+  const troca = (k: BlocoKey) =>
+    p[k].map((it, i) => ({ ...it, enquadramento: SEM_ROSTO[k][i][0], camera: SEM_ROSTO[k][i][1], dicas: SEM_ROSTO[k][i][2] }));
+  return {
+    ...p,
+    ganchos: troca("ganchos"),
+    corpos: troca("corpos"),
+    ctas: troca("ctas"),
+    checklist: {
+      ...p.checklist,
+      luz: "Luz de janela de lado no produto, ou uma luz branca apontada para a mesa.",
+      roupa: "Mãos e unhas limpas; manga lisa, de cor que não se confunda com o produto.",
+      objetos: [...p.checklist.objetos, "Lugar silencioso para narrar (ou narre depois pelo 🎙 Narração do lote)"],
+    },
+    estilo: "sem_rosto",
   };
 }
