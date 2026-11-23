@@ -4,7 +4,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { DATA_DIR, Job, Variation, jobDir, loadJob, saveJob } from "./jobs";
 import { generateCopy } from "./copy";
-import { VIDEO_CTA_BG, VIDEO_CTA_TEXT } from "./theme";
+import { VIDEO_CTA_BG, VIDEO_CTA_LILAC, VIDEO_CTA_TEXT } from "./theme";
 import { Word, transcribeClip, whisperAvailable } from "./transcribe";
 import { buildAss } from "./captions-ass";
 import { refundJobVideos } from "./credits";
@@ -115,6 +115,8 @@ interface Segment {
   dur: number; // duração final no vídeo
   speed: number;
   zoom: number;
+  panX: number; // -1 a 1: para onde o enquadramento desliza dentro da sobra do zoom (0 = centro)
+  panY: number;
 }
 
 export interface Recipe {
@@ -124,6 +126,11 @@ export interface Recipe {
   contrast: number;
   brightness: number;
   hookStyle: number;
+  hookSize: number;
+  ctaStyle: number;
+  ctaY: number;
+  captionY: number;
+  warmth: number; // -1 a 1: leve tom frio (azulado) ou quente (amarelado)
   musicOffset: number;
   fade: number; // VIP: transição suave entre os blocos (segundos de sobreposição); 0 = corte seco
 }
@@ -172,31 +179,79 @@ export function buildRecipe(
   const hook = blocks.hooks[combo.hook];
   const body = blocks.bodies[combo.body];
   const cta = blocks.ctas[combo.cta];
+  // Edição diferente em cada vídeo (pedido do Andre 23/11): enquadramento, zoom, ritmo, cor e textos mudam
+  // de um vídeo para o outro, sempre de leve. As escolhas "giram" pelo número do vídeo, então dois vídeos
+  // seguidos nunca ficam com a mesma cara, e a semente do lote embaralha o resto.
+  const v = variationFor(index, r);
+  const speed = v.speed;
   // Gancho e CTA entram inteiros (até 8 s cada). O corpo é cortado para caber na duração máxima.
-  const hDur = Math.min(hook.duration, 8);
+  // Com o ritmo um pouco mais rápido, cada clipe dura clipe/velocidade no vídeo final.
+  const hDur = Math.min(hook.duration / speed, 8);
   // O CTA fecha o vídeo: até 12 s para não cortar a fala no fim (com duração máxima, só o que couber, no mínimo 8 s).
-  const cDur = Math.min(cta.duration, maxDur ? Math.max(8, Math.min(12, maxDur - hDur - 2)) : 12);
+  const cDur = Math.min(cta.duration / speed, maxDur ? Math.max(8, Math.min(12, maxDur - hDur - 2)) : 12);
+  const bFull = body.duration / speed;
   // Com transição, cada emenda sobrepõe "fade" segundos; o corpo ganha esse tempo para manter a duração escolhida.
   // Clipes muito curtos usam uma transição menor (no máximo 1/3 do clipe).
-  const fade = transition ? Math.round(Math.min(TRANSITION_SEC, hDur / 3, body.duration / 3, cDur / 3) * 100) / 100 : 0;
-  let bDur = body.duration;
-  if (maxDur) bDur = Math.max(Math.min(2, body.duration), Math.min(body.duration, maxDur - hDur - cDur + 2 * fade));
-  // Pequenas diferenças visuais em cada vídeo para não ficarem idênticos.
-  const zoom = r() < 0.5 ? 1 : 1.04 + r() * 0.06;
-  const segments: Segment[] = [
-    { clip: hook, input: 0, start: hook.offset ?? 0, dur: hDur, speed: 1, zoom },
-    { clip: body, input: 1, start: body.offset ?? 0, dur: bDur, speed: 1, zoom },
-    { clip: cta, input: 2, start: cta.offset ?? 0, dur: cDur, speed: 1, zoom },
-  ];
+  const fade = transition ? Math.round(Math.min(TRANSITION_SEC, hDur / 3, bFull / 3, cDur / 3) * 100) / 100 : 0;
+  let bDur = bFull;
+  if (maxDur) bDur = Math.max(Math.min(2, bFull), Math.min(bFull, maxDur - hDur - cDur + 2 * fade));
+  // Cada bloco ganha um enquadramento um pouco diferente (zoom e posição), dentro da sobra do zoom:
+  // a imagem nunca sai da tela e nada fica com borda preta.
+  const seg = (clip: ClipInfo, input: number, dur: number, k: number): Segment => {
+    const p = PANS[(v.pan + k * 2) % PANS.length];
+    return {
+      clip, input, start: clip.offset ?? 0, dur, speed,
+      zoom: Math.round((v.zoom + (k === 1 ? 0.015 : 0) + (r() - 0.5) * 0.01) * 1000) / 1000,
+      panX: p[0] * (0.55 + r() * 0.45),
+      panY: p[1] * (0.55 + r() * 0.45),
+    };
+  };
+  const segments: Segment[] = [seg(hook, 0, hDur, 0), seg(body, 1, bDur, 1), seg(cta, 2, cDur, 2)];
   return {
     segments,
     total: Math.round((hDur + bDur + cDur - 2 * fade) * 10) / 10,
     fade,
-    saturation: 1 + r() * 0.15,
-    contrast: 1 + r() * 0.05,
-    brightness: (r() - 0.5) * 0.04,
-    hookStyle: Math.floor(r() * 3),
+    saturation: v.saturation,
+    contrast: v.contrast,
+    brightness: v.brightness,
+    hookStyle: v.hookStyle,
+    hookSize: v.hookSize,
+    ctaStyle: v.ctaStyle,
+    ctaY: v.ctaY,
+    captionY: v.captionY,
+    warmth: v.warmth,
     musicOffset: r() * 30,
+  };
+}
+
+// Direções do enquadramento: centro, cantos e lados (x, y de -1 a 1).
+const PANS: [number, number][] = [[0, 0], [-1, -0.6], [1, 0.6], [1, -0.6], [-1, 0.6], [0, -1], [0, 1], [-1, 0], [1, 0]];
+// Opções que giram pelo número do vídeo. Os tamanhos das listas são primos entre si (3, 4, 5, 7…),
+// então a mesma combinação de escolhas só se repete muito depois do vídeo 27.
+const ZOOMS = [1.03, 1.06, 1.04, 1.08, 1.05, 1.07, 1.045]; // no máximo ~8% a mais: não corta textos perto da borda
+const SPEEDS = [1, 1.03, 1.015, 1.045, 1.02];
+const WARMTH = [0, 0.8, -0.7, 0.4, -0.35, 1, -1];
+const HOOK_SIZES = [78, 72, 84, 76, 80];
+const CTA_YS = [0.7, 0.66, 0.73];
+const CAPTION_YS = [0.6, 0.56, 0.63];
+export const HOOK_STYLES = 4;
+export const CTA_STYLES = 3;
+
+export function variationFor(index: number, r: () => number = Math.random) {
+  const pick = <T,>(list: T[], step = 1) => list[(index * step) % list.length];
+  return {
+    zoom: pick(ZOOMS, 3),
+    pan: index % PANS.length,
+    speed: pick(SPEEDS, 2),
+    saturation: 0.97 + ((index * 5) % 9) * 0.025 + r() * 0.01,
+    contrast: 1 + ((index * 3) % 5) * 0.015,
+    brightness: (((index * 2) % 5) - 2) * 0.012,
+    warmth: pick(WARMTH, 3),
+    hookStyle: index % HOOK_STYLES,
+    hookSize: pick(HOOK_SIZES, 2),
+    ctaStyle: Math.floor(index / 2) % CTA_STYLES,
+    ctaY: pick(CTA_YS),
+    captionY: pick(CAPTION_YS, 2),
   };
 }
 
@@ -222,16 +277,17 @@ async function renderVariation(
     for (const s of rc.segments) {
       const cut = s.clip.offset ?? 0;
       for (const w of speech.get(s.clip.file) || []) {
-        const ws = w.s - cut;
+        // Com o ritmo mais rápido (speed > 1), a fala chega antes: tempo no vídeo = tempo no clipe / velocidade.
+        const ws = (w.s - cut) / s.speed;
         if (ws < -0.05 || ws >= s.dur - 0.05) continue;
-        words.push({ w: w.w, s: offset + Math.max(0, ws), e: offset + Math.min(w.e - cut, s.dur) });
+        words.push({ w: w.w, s: offset + Math.max(0, ws), e: offset + Math.min((w.e - cut) / s.speed, s.dur) });
       }
       offset += s.dur - rc.fade; // com transição, o próximo bloco começa "fade" segundos antes
 
     }
     if (words.length) {
       assFile = `legenda_${v.index}.ass`;
-      await fs.writeFile(path.join(dir, assFile), buildAss(words, null));
+      await fs.writeFile(path.join(dir, assFile), buildAss(words, null, rc.captionY));
     }
   }
   const hookFile = `hook_${v.index}.txt`;
@@ -264,7 +320,9 @@ async function renderVariation(
     const zh = Math.round((H * s.zoom) / 2) * 2;
     f.push(
       `[${k}:v]setpts=(PTS-STARTPTS)/${s.speed},fps=${FPS},` +
-        `scale=${zw}:${zh}:force_original_aspect_ratio=increase,crop=${W}:${H},tpad=stop_mode=clone:stop_duration=0.5,` +
+        `scale=${zw}:${zh}:force_original_aspect_ratio=increase,` +
+        // Enquadramento: desliza o recorte para um lado/canto dentro da sobra do zoom (nunca sai da imagem).
+        `crop=${W}:${H}:x='(iw-ow)/2*(1+${esc(s.panX)})':y='(ih-oh)/2*(1+${esc(s.panY)})',tpad=stop_mode=clone:stop_duration=0.5,` +
         `trim=duration=${esc(s.dur)},setpts=PTS-STARTPTS,setsar=1,format=yuv420p` +
         // xfade (transição) exige taxa de quadros constante declarada; no FFmpeg 7 o setpts a deixa "1/0".
         (rc.fade > 0 ? `,settb=1/${FPS},fps=${FPS}` : "") +
@@ -298,26 +356,39 @@ async function renderVariation(
   }
 
   const T = rc.total;
-  const hookY = ["h*0.14", "h*0.20", "(h-text_h)/2-h*0.12"][rc.hookStyle];
+  // Estilos dos textos variam por vídeo: posição e caixa do gancho, cor e altura da chamada final.
+  // Sempre centralizados na horizontal e com quebra de linha, para nada ficar cortado na borda.
+  const hookY = ["h*0.14", "h*0.20", "(h-text_h)/2-h*0.12", "h*0.17"][rc.hookStyle] ?? "h*0.14";
   const hookBox =
     rc.hookStyle === 1
       ? ":box=1:boxcolor=white@0.95:boxborderw=28:fontcolor=black"
-      : ":fontcolor=white:borderw=9:bordercolor=black";
+      : rc.hookStyle === 3
+        ? `:box=1:boxcolor=${VIDEO_CTA_BG}@0.95:boxborderw=28:fontcolor=${VIDEO_CTA_TEXT}`
+        : ":fontcolor=white:borderw=9:bordercolor=black";
+  const ctaBox = [
+    `:fontcolor=${VIDEO_CTA_TEXT}:box=1:boxcolor=${VIDEO_CTA_BG}@0.95`,
+    ":fontcolor=black:box=1:boxcolor=white@0.95",
+    `:fontcolor=white:box=1:boxcolor=${VIDEO_CTA_LILAC}@0.95`,
+  ][rc.ctaStyle] ?? `:fontcolor=${VIDEO_CTA_TEXT}:box=1:boxcolor=${VIDEO_CTA_BG}@0.95`;
   // Textos gravados no vídeo (gancho no início e chamada no fim). Opcional: job.captions === false tira os dois.
   const texts =
     job.captions === false
       ? ""
-      : `,drawtext=fontfile=font.otf:textfile=${hookFile}:fontsize=78:line_spacing=14:text_align=C` +
+      : `,drawtext=fontfile=font.otf:textfile=${hookFile}:fontsize=${rc.hookSize}:line_spacing=14:text_align=C` +
         `${hookBox}:x=(w-text_w)/2:y=${hookY}:enable='lt(t,${esc(Math.min(3.2, rc.segments[0].dur))})',` +
         `drawtext=fontfile=font.otf:textfile=${ctaFile}:fontsize=64:line_spacing=10:text_align=C` +
-        `:fontcolor=${VIDEO_CTA_TEXT}:box=1:boxcolor=${VIDEO_CTA_BG}@0.95:boxborderw=26` +
-        `:x=(w-text_w)/2:y=h*0.70:enable='gte(t,${esc(Math.max(0, T - Math.min(2.8, rc.segments[2].dur)))})'`;
+        `${ctaBox}:boxborderw=26` +
+        `:x=(w-text_w)/2:y=h*${rc.ctaY}:enable='gte(t,${esc(Math.max(0, T - Math.min(2.8, rc.segments[2].dur)))})'`;
+  // Tom: desloca de leve a cor (U/V) para o quente ou o frio. lutyuv é quase de graça; colorbalance deixava o lote 2,5× mais lento.
+  const wm = Math.round(Math.max(-1, Math.min(1, rc.warmth)) * 4);
   f.push(
     `[vc]eq=saturation=${esc(rc.saturation)}:contrast=${esc(rc.contrast)}:brightness=${esc(rc.brightness)}` +
+      (wm ? `,lutyuv=u=val${wm > 0 ? "-" : "+"}${Math.abs(wm)}:v=val${wm > 0 ? "+" : "-"}${Math.abs(wm)}` : "") +
       texts +
+      // Marca d'água do teste grátis: com legenda automática ela sobe um pouco para não ficar em cima da fala.
       (job.plan === "free"
         ? `,drawtext=fontfile=font.otf:textfile=marca.txt:fontsize=46:fontcolor=white@0.55` +
-          `:borderw=3:bordercolor=black@0.4:x=(w-text_w)/2:y=h*0.58`
+          `:borderw=3:bordercolor=black@0.4:x=(w-text_w)/2:y=h*${assFile ? "0.47" : "0.58"}`
         : "") +
       (assFile ? `,subtitles=${assFile}:fontsdir=.` : "") +
       `[vout]`,
