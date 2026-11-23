@@ -64,7 +64,7 @@ export default function UploadForm() {
     setSearching(true);
     setSearchErr("");
     try {
-      const r = await fetch(`/api/musicas?q=${encodeURIComponent(q)}`);
+      const r = await fetch(`/api/musicas?q=${encodeURIComponent(q)}${plan === "free" ? "&teste=1" : ""}`);
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "A busca falhou.");
       setFound(j.tracks || []);
@@ -121,7 +121,8 @@ export default function UploadForm() {
   // Recursos VIP (música, textos no vídeo, cortar silêncio): bloqueados para quem não é VIP.
   // Assinante mensal sem VIP: libera no lote pago, valendo para os primeiros vídeos da cota do mês.
   const quota = saldo?.vip ? 0 : (saldo?.vipQuota ?? 0);
-  const vip = Boolean(saldo?.vip) || (plan === "full" && quota > 0);
+  // Teste grátis (pedido do Andre, 23/11): tudo do VIP liberado nos 2 vídeos grátis, para a pessoa testar o site inteiro.
+  const vip = Boolean(saldo?.vip) || plan === "free" || (plan === "full" && quota > 0);
   // Cupom de recursos VIP libera cada recurso escolhido pelo admin.
   const can = (f: string) => vip || Boolean(saldo?.vipFeatures?.includes(f));
   const canMusic = can("musica");
@@ -156,6 +157,15 @@ export default function UploadForm() {
   function choosePlan(next: "free" | "full") {
     touched.current = true;
     setPlan(next);
+    // Saindo do teste grátis sem VIP: desliga o que fica trancado no lote pago, para não parecer ligado.
+    if (next === "full" && !saldo?.vip && !(quota > 0)) {
+      const ok = (f: string) => Boolean(saldo?.vipFeatures?.includes(f));
+      if (!ok("textos")) setCaptions(false);
+      if (!ok("silencio")) setTrimSilence(false);
+      if (!ok("legenda")) setAutoCaptions(false);
+      if (!ok("transicao")) setTransition(false);
+      if (!ok("musica")) setTrack("");
+    }
     if (next === "free") setClips((c) => ({ hooks: c.hooks.slice(0, FREE_MAX_PER_BLOCK), bodies: c.bodies.slice(0, FREE_MAX_PER_BLOCK), ctas: c.ctas.slice(0, FREE_MAX_PER_BLOCK) }));
   }
   const total = comboCount(clips.hooks.length, clips.bodies.length, clips.ctas.length);
@@ -624,6 +634,12 @@ export default function UploadForm() {
         </span>
       </label>
 
+      {!saldo?.vip && plan === "free" && (
+        <p className="rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
+          ⭐ <b>No teste grátis você experimenta tudo do VIP:</b> música, legenda automática, textos no vídeo, cortar partes sem som,
+          transição suave e narração.
+        </p>
+      )}
       {!saldo?.vip && quota > 0 && plan === "full" && (
         <p className="rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
           ⭐ <b>Assinante:</b> você ainda tem <b>{quota} vídeo{quota === 1 ? "" : "s"} VIP</b> este mês. Os primeiros {quota} vídeos deste lote

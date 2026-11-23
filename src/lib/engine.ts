@@ -601,7 +601,8 @@ async function processJob(id: string) {
     recipe: describeCombo(c),
     durationSec: recipes[i].total,
     status: "pending",
-    ...(job.vipLimit !== undefined && i < job.vipLimit ? { vip: true } : {}),
+    // Selo VIP: vídeos da cota do assinante e os 2 do teste grátis (que saem com tudo do VIP liberado).
+    ...(job.plan === "free" || (job.vipLimit !== undefined && i < job.vipLimit) ? { vip: true } : {}),
   }));
   job.status = "rendering";
   job.message = "Montando os vídeos…";

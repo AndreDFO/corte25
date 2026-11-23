@@ -8,7 +8,7 @@ import { hasVipFeature } from "./vip";
 // Narração pelo microfone: a pessoa grava a voz enquanto o vídeo roda sem som e o servidor
 // troca o áudio original pela narração (novo arquivo video_XX_narrado.mp4, apagado junto
 // com o lote depois de 24 h).
-// Exclusivo do plano VIP (e do admin). Vídeo feito pela cota VIP do assinante (v.vip) também pode.
+// Exclusivo do plano VIP (e do admin). Vídeo com selo VIP (v.vip: cota do assinante ou teste grátis) também pode.
 // Para liberar a todos: NARRACAO=todos no Railway.
 
 const FFMPEG = process.env.FFMPEG_PATH || "ffmpeg";

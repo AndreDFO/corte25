@@ -119,7 +119,9 @@ async function handle(req: Request, ctx: { claimed: string[] }) {
   const wantMusic = Boolean(musicAudio);
   const needsQuota = (wantCaptions && !has("textos")) || (wantTrim && !has("silencio")) || (wantMusic && !has("musica")) || (wantAuto && !has("legenda")) || (wantFade && !has("transicao"));
   const quotaVideos = !allowance.vip && plan === "full" && needsQuota ? allowance.quota : 0;
-  const allow = (f: VipFeature) => has(f) || quotaVideos > 0;
+  // Teste grátis (pedido do Andre, 23/11): os 2 vídeos grátis saem com TODOS os recursos VIP liberados,
+  // para a pessoa experimentar tudo. O lote pago continua exigindo VIP (ou cota/cupom).
+  const allow = (f: VipFeature) => plan === "free" || has(f) || quotaVideos > 0;
   // Recursos que valem em todos os vídeos mesmo fora da cota (vieram de cupom).
   const vipKeep = (["textos", "silencio", "musica", "legenda", "transicao"] as const).filter((f) => has(f));
   const whatsapp = plan === "free" ? normalizeWhatsapp(String(form.get("whatsapp") || "")) : null;
