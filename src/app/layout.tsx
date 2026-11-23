@@ -34,6 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/meus-videos" className="flex-1 whitespace-nowrap rounded-lg bg-foreground/5 px-2 py-2 text-center font-semibold hover:bg-foreground/10 max-[350px]:px-1 max-[350px]:text-xs sm:flex-none sm:px-3 sm:py-1.5">
                 Meus vídeos
               </Link>
+              <Link href="/criadores" className="order-last sm:order-none flex-1 whitespace-nowrap rounded-lg bg-accent/15 px-2 py-2 text-center font-semibold text-accent-ink hover:bg-accent/25 max-[350px]:px-1 max-[350px]:text-xs sm:flex-none sm:px-3 sm:py-1.5">
+                🎬 Criadores
+              </Link>
               <Suspense fallback={<HeaderAccountFallback />}>
                 <HeaderAccount />
               </Suspense>
