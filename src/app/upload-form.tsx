@@ -654,7 +654,7 @@ export default function UploadForm() {
         <span className="relative h-4 w-7 shrink-0 rounded-full bg-foreground/20 transition peer-checked:bg-brand after:absolute after:left-0.5 after:top-0.5 after:h-3 after:w-3 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-3" />
         <span>
           {!canTrim && "🔒 "}Cortar partes sem som{" "}
-          <span className="text-foreground/45">({trimSilence ? "tira o silêncio do começo e do fim de cada clipe" : "desligado, clipes inteiros"})</span>
+          <span className="text-foreground/45">({trimSilence ? "tira o silêncio do começo, do fim e as pausas longas" : "desligado, clipes inteiros"})</span>
         </span>
       </label>
 

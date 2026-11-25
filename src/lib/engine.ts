@@ -24,6 +24,20 @@ interface ClipInfo {
   duration: number; // duração usada (já sem as partes sem som, se o corte estiver ligado)
   hasAudio: boolean;
   offset?: number; // segundos cortados no começo (corte das partes sem som)
+  keep?: [number, number][]; // trechos com som que ficam (tempo original do clipe), com o corte das partes sem som
+}
+
+// Posição de um instante do clipe original depois do corte das partes sem som.
+// Instante dentro de um trecho cortado vai para o começo do trecho seguinte.
+function keptTime(c: ClipInfo, t: number): number {
+  if (!c.keep) return t - (c.offset ?? 0);
+  let acc = 0;
+  for (const [a, b] of c.keep) {
+    if (t <= a) return acc;
+    if (t < b) return acc + (t - a);
+    acc += b - a;
+  }
+  return acc;
 }
 
 // Processos do FFmpeg de cada lote (pela pasta do lote), para encerrar quando o lote é cancelado.
@@ -275,12 +289,13 @@ async function renderVariation(
     const words: Word[] = [];
     let offset = 0;
     for (const s of rc.segments) {
-      const cut = s.clip.offset ?? 0;
       for (const w of speech.get(s.clip.file) || []) {
         // Com o ritmo mais rápido (speed > 1), a fala chega antes: tempo no vídeo = tempo no clipe / velocidade.
-        const ws = (w.s - cut) / s.speed;
-        if (ws < -0.05 || ws >= s.dur - 0.05) continue;
-        words.push({ w: w.w, s: offset + Math.max(0, ws), e: offset + Math.min((w.e - cut) / s.speed, s.dur) });
+        // Com o corte das partes sem som, o tempo conta só os trechos que ficaram.
+        const ws = keptTime(s.clip, w.s) / s.speed;
+        const we = Math.min(keptTime(s.clip, w.e) / s.speed, s.dur);
+        if (we - ws < 0.05 || ws >= s.dur - 0.05) continue; // palavra que caiu num trecho cortado
+        words.push({ w: w.w, s: offset + ws, e: offset + we });
       }
       offset += s.dur - rc.fade; // com transição, o próximo bloco começa "fade" segundos antes
 
@@ -298,7 +313,10 @@ async function renderVariation(
 
   const args: string[] = ["-y", "-hide_banner", "-loglevel", "error"];
   for (const s of rc.segments) {
-    args.push("-ss", esc(s.start), "-t", esc(s.dur * s.speed + 0.1), "-i", path.relative(dir, s.clip.file));
+    // Com pausas cortadas no meio, o trecho lido do arquivo vai até o fim do último pedaço com som.
+    const k = s.clip.keep;
+    const span = k && k.length > 1 ? k[k.length - 1][1] - s.start : s.dur * s.speed;
+    args.push("-ss", esc(s.start), "-t", esc(span + 0.1), "-i", path.relative(dir, s.clip.file));
   }
   let nextInput = rc.segments.length;
   const silentInputs: Record<number, number> = {};
@@ -318,8 +336,27 @@ async function renderVariation(
   rc.segments.forEach((s, k) => {
     const zw = Math.round((W * s.zoom) / 2) * 2;
     const zh = Math.round((H * s.zoom) / 2) * 2;
+    // Corte das pausas no meio da fala: pega só os trechos com som (imagem e som juntos) e emenda.
+    let vIn = `[${k}:v]`;
+    let aIn = s.clip.hasAudio ? `[${k}:a]` : `[${silentInputs[k]}:a]`;
+    const keep = s.clip.keep;
+    if (keep && keep.length > 1 && s.clip.hasAudio) {
+      const n = keep.length;
+      const ids = keep.map((_, j) => j);
+      f.push(`[${k}:v]setpts=PTS-STARTPTS,split=${n}${ids.map((j) => `[kv${k}_${j}]`).join("")}`);
+      f.push(`[${k}:a]asetpts=PTS-STARTPTS,asplit=${n}${ids.map((j) => `[ka${k}_${j}]`).join("")}`);
+      keep.forEach(([a, b], j) => {
+        const from = esc(Math.max(0, a - s.start));
+        const to = esc(b - s.start);
+        f.push(`[kv${k}_${j}]trim=start=${from}:end=${to},setpts=PTS-STARTPTS[kvt${k}_${j}]`);
+        f.push(`[ka${k}_${j}]atrim=start=${from}:end=${to},asetpts=PTS-STARTPTS[kat${k}_${j}]`);
+      });
+      f.push(`${ids.map((j) => `[kvt${k}_${j}][kat${k}_${j}]`).join("")}concat=n=${n}:v=1:a=1[kv${k}][ka${k}]`);
+      vIn = `[kv${k}]`;
+      aIn = `[ka${k}]`;
+    }
     f.push(
-      `[${k}:v]setpts=(PTS-STARTPTS)/${s.speed},fps=${FPS},` +
+      `${vIn}setpts=(PTS-STARTPTS)/${s.speed},fps=${FPS},` +
         `scale=${zw}:${zh}:force_original_aspect_ratio=increase,` +
         // Enquadramento: desliza o recorte para um lado/canto dentro da sobra do zoom (nunca sai da imagem).
         `crop=${W}:${H}:x='(iw-ow)/2*(1+${esc(s.panX)})':y='(ih-oh)/2*(1+${esc(s.panY)})',tpad=stop_mode=clone:stop_duration=0.5,` +
@@ -328,7 +365,7 @@ async function renderVariation(
         (rc.fade > 0 ? `,settb=1/${FPS},fps=${FPS}` : "") +
         `[v${k}]`,
     );
-    const aSrc = s.clip.hasAudio ? `[${k}:a]` : `[${silentInputs[k]}:a]`;
+    const aSrc = aIn;
     const tempo = s.clip.hasAudio && s.speed !== 1 ? `atempo=${s.speed},` : "";
     f.push(
       `${aSrc}${tempo}aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo,` +
@@ -419,20 +456,30 @@ async function renderVariation(
   await run(FFMPEG, args, dir);
 }
 
-// Corte das partes sem som (opcional, chave na tela de geração): acha onde o som começa e termina
-// em cada clipe pelo volume (silencedetect do FFmpeg) e deixa uma folga para não comer a fala.
-// Devolve null quando não há o que cortar (clipe sem áudio, com música o tempo todo, ou corte pequeno).
-// 22/11: o fim cortava em cima da fala (Andre). Folga maior no fim e limite de silêncio mais baixo,
-// para o final mais baixo de uma palavra não ser tratado como silêncio.
-const TRIM_BEFORE = 0.25;
-const TRIM_AFTER = 0.7;
-async function soundBounds(c: ClipInfo): Promise<{ start: number; end: number } | null> {
+// Corte das partes sem som (opcional, chave na tela de geração): tira o silêncio do começo, do fim
+// e as pausas longas no meio da fala, deixando uma folga para não comer as palavras.
+// 25/11 (Andre: "não está cortando"): o limite fixo de -45 dB não achava silêncio em vídeo de celular
+// (o ruído do ambiente fica acima disso) e só olhava começo e fim. Agora o limite se ajusta a cada
+// clipe: mede o volume a cada 50 ms, compara o volume da fala com o do fundo e corta o que fica perto do fundo.
+// Devolve null quando não há o que cortar (clipe sem áudio, música o tempo todo, ou corte pequeno).
+const TRIM_START = 0.2; // folga antes da primeira fala do clipe
+const TRIM_BEFORE = 0.12; // folga antes de cada fala depois de uma pausa cortada
+const TRIM_AFTER = 0.28; // folga depois de cada fala antes de uma pausa cortada (o fim da palavra é mais baixo)
+const TRIM_END = 0.5; // folga maior no fim do clipe (22/11: cortava em cima da fala)
+const MIN_PAUSE = 0.7; // pausa no meio só é cortada se tiver pelo menos isso
+const WIN = 0.05;
+
+async function soundBounds(c: ClipInfo): Promise<[number, number][] | null> {
   if (!c.hasAudio) return null;
   const dur = c.duration;
   const log = await new Promise<string>((resolve) => {
     const p = spawn(
       FFMPEG,
-      ["-hide_banner", "-nostats", "-i", c.file, "-vn", "-af", "silencedetect=noise=-45dB:d=0.3", "-f", "null", "-"],
+      [
+        "-hide_banner", "-nostats", "-i", c.file, "-vn", "-ac", "1",
+        "-af", `aresample=16000,asetnsamples=n=${16000 * WIN}:p=0,astats=metadata=1:reset=1:measure_perchannel=none:measure_overall=RMS_level,ametadata=print:key=lavfi.astats.Overall.RMS_level`,
+        "-f", "null", "-",
+      ],
       { windowsHide: true },
     );
     let err = "";
@@ -440,20 +487,44 @@ async function soundBounds(c: ClipInfo): Promise<{ start: number; end: number } 
     p.on("error", () => resolve(""));
     p.on("close", () => resolve(err));
   });
-  const starts = [...log.matchAll(/silence_start: (-?[\d.]+)/g)].map((m) => Number(m[1]));
-  const ends = [...log.matchAll(/silence_end: ([\d.]+)/g)].map((m) => Number(m[1]));
-  if (!starts.length) return null;
-  let start = 0;
-  let end = dur;
-  // Silêncio desde o 0: o som começa quando ele termina.
-  if (starts[0] <= 0.05 && ends.length) start = Math.max(0, ends[0] - TRIM_BEFORE);
-  // Silêncio que vai até o fim: o som termina quando ele começa.
-  const lastStart = starts[starts.length - 1];
-  if ((ends.length < starts.length || ends[ends.length - 1] >= dur - 0.05) && lastStart > start)
-    end = Math.min(dur, lastStart + TRIM_AFTER);
-  // Só corta se tirar pelo menos 0,15 s e sobrar pelo menos 1 s.
-  if (end - start < 1 || dur - (end - start) < 0.15) return null;
-  return { start: Math.round(start * 100) / 100, end: Math.round(end * 100) / 100 };
+  const db = [...log.matchAll(/RMS_level=(\S+)/g)].map((m) => {
+    const v = Number(m[1]);
+    return Number.isFinite(v) ? v : -120;
+  });
+  if (db.length < 10) return null;
+  const sorted = [...db].sort((a, b) => a - b);
+  const pct = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+  const floor = pct(0.1);
+  const loud = pct(0.95);
+  // Sem diferença clara entre fala e fundo (música ou barulho o tempo todo): não corta nada.
+  if (loud - floor < 12) return null;
+  const thr = Math.max(floor + 8, loud - 30);
+  // Trechos com som, juntando os que têm pausa curta entre eles.
+  const voiced: [number, number][] = [];
+  db.forEach((v, i) => {
+    if (v < thr) return;
+    const a = i * WIN;
+    const last = voiced[voiced.length - 1];
+    if (last && a - last[1] < MIN_PAUSE) last[1] = a + WIN;
+    else voiced.push([a, a + WIN]);
+  });
+  // Estalo isolado (menos de 0,15 s) não é fala.
+  const speech = voiced.filter(([a, b]) => b - a >= 0.15);
+  if (!speech.length) return null;
+  const keep: [number, number][] = [];
+  speech.forEach(([a, b], i) => {
+    const from = Math.max(0, a - (i === 0 ? TRIM_START : TRIM_BEFORE));
+    const to = Math.min(dur, b + (i === speech.length - 1 ? TRIM_END : TRIM_AFTER));
+    const last = keep[keep.length - 1];
+    if (last && from <= last[1] + 0.05) last[1] = Math.max(last[1], to);
+    else keep.push([from, to]);
+  });
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const out = keep.map(([a, b]) => [round(a), round(b)] as [number, number]);
+  const total = out.reduce((t, [a, b]) => t + b - a, 0);
+  // Só corta se tirar pelo menos 0,3 s e sobrar pelo menos 1 s.
+  if (total < 1 || dur - total < 0.3) return null;
+  return out;
 }
 
 // Compartilhado entre as cópias do módulo (o Next carrega a instrumentation separada das rotas).
@@ -645,8 +716,10 @@ async function processJob(id: string) {
     for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) {
       const r = await soundBounds(c).catch(() => null);
       if (!r) continue;
-      c.offset = r.start;
-      c.duration = r.end - r.start;
+      c.offset = r[0][0];
+      c.keep = r;
+      c.duration = Math.round(r.reduce((t, [a, b]) => t + b - a, 0) * 100) / 100;
+      console.log(`[corte] ${path.basename(c.file)}: ${r.map(([a, b]) => `${a}-${b}`).join(", ")}`);
     }
   }
   // Sempre entrega job.count vídeos. Se houver menos combinações que isso, elas se repetem

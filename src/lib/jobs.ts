@@ -34,7 +34,7 @@ export interface Job {
   createdAt: string;
   product: string;
   captions?: boolean; // false = vídeo sem textos gravados (gancho e chamada); a legenda para postar continua
-  trimSilence?: boolean; // true = corta o começo e o fim sem som de cada clipe (desligado por padrão)
+  trimSilence?: boolean; // true = corta o silêncio do começo, do fim e as pausas longas de cada clipe (desligado por padrão)
   transition?: boolean; // VIP: transição suave entre gancho, corpo e CTA (desligada por padrão = corte seco)
   autoCaptions?: boolean; // VIP: legenda automática da fala, palavra por palavra (desligada por padrão)
   productGiven?: boolean; // false = sem nome (o "product" é só a data); os textos não citam o nome
