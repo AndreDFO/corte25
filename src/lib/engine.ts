@@ -466,39 +466,62 @@ const TRIM_START = 0.2; // folga antes da primeira fala do clipe
 const TRIM_BEFORE = 0.12; // folga antes de cada fala depois de uma pausa cortada
 const TRIM_AFTER = 0.28; // folga depois de cada fala antes de uma pausa cortada (o fim da palavra é mais baixo)
 const TRIM_END = 0.5; // folga maior no fim do clipe (22/11: cortava em cima da fala)
-const MIN_PAUSE = 0.7; // pausa no meio só é cortada se tiver pelo menos isso
+const MIN_PAUSE = 0.5; // pausa no meio só é cortada se tiver pelo menos isso
+const MIN_CONTRAST = 9; // diferença mínima (dB) entre a fala e o fundo para saber o que é silêncio
 const WIN = 0.05;
 
-async function soundBounds(c: ClipInfo): Promise<[number, number][] | null> {
-  if (!c.hasAudio) return null;
+// Volume (dB) a cada 50 ms. Tenta com as opções do astats que deixam mais leve e, se o FFmpeg
+// do servidor não aceitar, repete com o astats simples (mesma medida).
+async function rmsWindows(file: string): Promise<{ db: number[]; err: string }> {
+  const tryRun = (astats: string) =>
+    new Promise<string>((resolve) => {
+      const p = spawn(
+        FFMPEG,
+        [
+          "-hide_banner", "-nostats", "-i", file, "-vn", "-ac", "1",
+          "-af", `aresample=16000,asetnsamples=n=${16000 * WIN}:p=0,${astats},ametadata=print:key=lavfi.astats.Overall.RMS_level`,
+          "-f", "null", "-",
+        ],
+        { windowsHide: true },
+      );
+      let err = "";
+      p.stderr.on("data", (d) => (err += d));
+      p.on("error", (e) => resolve(String(e)));
+      p.on("close", () => resolve(err));
+    });
+  const parse = (log: string) =>
+    [...log.matchAll(/RMS_level=(\S+)/g)].map((m) => {
+      const v = Number(m[1]);
+      return Number.isFinite(v) ? Math.max(-120, v) : -120;
+    });
+  let log = await tryRun("astats=metadata=1:reset=1:measure_perchannel=none:measure_overall=RMS_level");
+  let db = parse(log);
+  if (db.length < 10) {
+    log = await tryRun("astats=metadata=1:reset=1");
+    db = parse(log);
+  }
+  return { db, err: db.length < 10 ? log.slice(-400) : "" };
+}
+
+interface TrimResult {
+  keep: [number, number][] | null;
+  info: string; // resumo para o relato e o log (o que achou e por que cortou ou não)
+}
+
+async function soundBounds(c: ClipInfo): Promise<TrimResult> {
+  const name = path.basename(c.file);
+  if (!c.hasAudio) return { keep: null, info: `${name}: sem áudio` };
   const dur = c.duration;
-  const log = await new Promise<string>((resolve) => {
-    const p = spawn(
-      FFMPEG,
-      [
-        "-hide_banner", "-nostats", "-i", c.file, "-vn", "-ac", "1",
-        "-af", `aresample=16000,asetnsamples=n=${16000 * WIN}:p=0,astats=metadata=1:reset=1:measure_perchannel=none:measure_overall=RMS_level,ametadata=print:key=lavfi.astats.Overall.RMS_level`,
-        "-f", "null", "-",
-      ],
-      { windowsHide: true },
-    );
-    let err = "";
-    p.stderr.on("data", (d) => (err += d));
-    p.on("error", () => resolve(""));
-    p.on("close", () => resolve(err));
-  });
-  const db = [...log.matchAll(/RMS_level=(\S+)/g)].map((m) => {
-    const v = Number(m[1]);
-    return Number.isFinite(v) ? v : -120;
-  });
-  if (db.length < 10) return null;
+  const { db, err } = await rmsWindows(c.file);
+  if (db.length < 10) return { keep: null, info: `${name}: não deu para medir o volume (${err.replace(/\s+/g, " ")})` };
   const sorted = [...db].sort((a, b) => a - b);
   const pct = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
   const floor = pct(0.1);
   const loud = pct(0.95);
+  const stats = `fundo ${floor.toFixed(0)} dB, fala ${loud.toFixed(0)} dB, ${dur.toFixed(1)} s`;
   // Sem diferença clara entre fala e fundo (música ou barulho o tempo todo): não corta nada.
-  if (loud - floor < 12) return null;
-  const thr = Math.max(floor + 8, loud - 30);
+  if (loud - floor < MIN_CONTRAST) return { keep: null, info: `${name}: som o tempo todo, nada sem som (${stats})` };
+  const thr = Math.max(floor + Math.min(8, (loud - floor) / 2), loud - 30);
   // Trechos com som, juntando os que têm pausa curta entre eles.
   const voiced: [number, number][] = [];
   db.forEach((v, i) => {
@@ -510,7 +533,7 @@ async function soundBounds(c: ClipInfo): Promise<[number, number][] | null> {
   });
   // Estalo isolado (menos de 0,15 s) não é fala.
   const speech = voiced.filter(([a, b]) => b - a >= 0.15);
-  if (!speech.length) return null;
+  if (!speech.length) return { keep: null, info: `${name}: nenhuma fala encontrada (${stats})` };
   const keep: [number, number][] = [];
   speech.forEach(([a, b], i) => {
     const from = Math.max(0, a - (i === 0 ? TRIM_START : TRIM_BEFORE));
@@ -522,9 +545,10 @@ async function soundBounds(c: ClipInfo): Promise<[number, number][] | null> {
   const round = (n: number) => Math.round(n * 100) / 100;
   const out = keep.map(([a, b]) => [round(a), round(b)] as [number, number]);
   const total = out.reduce((t, [a, b]) => t + b - a, 0);
-  // Só corta se tirar pelo menos 0,3 s e sobrar pelo menos 1 s.
-  if (total < 1 || dur - total < 0.3) return null;
-  return out;
+  // Só corta se tirar pelo menos 0,2 s e sobrar pelo menos 1 s.
+  if (total < 1) return { keep: null, info: `${name}: sobraria menos de 1 s, não cortou (${stats})` };
+  if (dur - total < 0.2) return { keep: null, info: `${name}: sem partes sem som para tirar (${stats})` };
+  return { keep: out, info: `${name}: tirou ${(dur - total).toFixed(1)} s (${stats})` };
 }
 
 // Compartilhado entre as cópias do módulo (o Next carrega a instrumentation separada das rotas).
@@ -713,14 +737,21 @@ async function processJob(id: string) {
   if (job.trimSilence) {
     job.message = "Cortando as partes sem som…";
     await saveJobChecked(job);
+    const infos: string[] = [];
+    let cutAny = false;
     for (const c of [...blocks.hooks, ...blocks.bodies, ...blocks.ctas]) {
-      const r = await soundBounds(c).catch(() => null);
-      if (!r) continue;
-      c.offset = r[0][0];
-      c.keep = r;
-      c.duration = Math.round(r.reduce((t, [a, b]) => t + b - a, 0) * 100) / 100;
-      console.log(`[corte] ${path.basename(c.file)}: ${r.map(([a, b]) => `${a}-${b}`).join(", ")}`);
+      const r = await soundBounds(c).catch((e) => ({ keep: null, info: `${path.basename(c.file)}: erro ${String(e?.message || e)}` }));
+      infos.push(r.info);
+      if (!r.keep) continue;
+      cutAny = true;
+      c.offset = r.keep[0][0];
+      c.keep = r.keep;
+      c.duration = Math.round(r.keep.reduce((t, [a, b]) => t + b - a, 0) * 100) / 100;
     }
+    console.log(`[job ${id}] corte sem som:\n  ${infos.join("\n  ")}`);
+    job.trimInfo = infos;
+    // Pediu o corte e nada foi cortado: vira relato no Admin com o motivo de cada clipe.
+    if (!cutAny) void reportJobError(job, "corte sem som não cortou nada", infos.join("\n")).catch(() => {});
   }
   // Sempre entrega job.count vídeos. Se houver menos combinações que isso, elas se repetem
   // com outro texto de gancho, outra legenda e pequenas mudanças visuais.

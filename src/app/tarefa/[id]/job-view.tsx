@@ -121,6 +121,16 @@ export default function JobView({ id }: { id: string }) {
           <h1 className="truncate text-base font-extrabold sm:text-2xl">{job.product}</h1>
           <p className="text-[11px] text-foreground/60 sm:text-xs">
             {finished && job.message}
+            {finished && job.trimSilence && job.trimInfo && (
+              <span className="ml-1">
+                · ✂️ {(() => {
+                  const cut = job.trimInfo.filter((t) => t.includes(": tirou ")).length;
+                  return cut
+                    ? `Corte sem som em ${cut} de ${job.trimInfo.length} clipes`
+                    : "Corte sem som: não achou partes sem som nos clipes";
+                })()}
+              </span>
+            )}
             {job.expiresAt && now > 0 && (
               <span className="ml-1 font-bold text-accent-ink">· ⏱ disponível por mais {timeLeft(job.expiresAt, now)}</span>
             )}
